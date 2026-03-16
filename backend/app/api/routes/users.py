@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/users", tags=["users"])
+router = APIRouter()
 
 # ---------------------------------------------------------------------------
 # Request / response models

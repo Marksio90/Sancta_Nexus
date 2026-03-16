@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/spiritual-director", tags=["Spiritual Director"])
+router = APIRouter()
 
 # ---------------------------------------------------------------------------
 # Traditions
@@ -278,8 +278,8 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     The director analyses the user's emotional state, references
     relevant scripture and responds with spiritual guidance.
     """
-    from backend.app.services.emotion.emotion_service import EmotionService
-    from backend.app.services.scripture.scripture_matcher import MatchContext, ScriptureMatcher
+    from app.services.emotion.emotion_service import EmotionService
+    from app.services.scripture.scripture_matcher import IgnatianState, MatchContext, ScriptureMatcher
 
     session = _direction_sessions.get(request.session_id)
     if not session:
@@ -319,11 +319,9 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     context = MatchContext(
         user_id=request.user_id,
         ignatian_state=(
-            __import__("backend.app.services.scripture.scripture_matcher", fromlist=["IgnatianState"])
-            .IgnatianState(spiritual_state.ignatian_movement.replace("towards_", ""))
+            IgnatianState(spiritual_state.ignatian_movement.replace("towards_", ""))
             if spiritual_state.ignatian_movement.startswith("towards_")
-            else __import__("backend.app.services.scripture.scripture_matcher", fromlist=["IgnatianState"])
-            .IgnatianState.NEUTRAL
+            else IgnatianState.NEUTRAL
         ),
     )
     matches = matcher.match(analysis.vector, context)

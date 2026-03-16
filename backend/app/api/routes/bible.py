@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/bible", tags=["Bible"])
+router = APIRouter()
 
 # ---------------------------------------------------------------------------
 # Request / response models
@@ -94,7 +94,7 @@ async def ask_scripture(request: AskRequest) -> FourDimensionalResponse:
     scripture (literal, allegorical, moral, anagogical) and optionally
     includes Magisterium and patristic references.
     """
-    from backend.app.services.rag.rag_service import RAGService
+    from app.services.rag.rag_service import RAGService
 
     rag = RAGService()
 
@@ -167,7 +167,7 @@ async def get_passage(
 
     Optionally filter by verse range.
     """
-    from backend.app.services.rag.rag_service import RAGService
+    from app.services.rag.rag_service import RAGService
 
     rag = RAGService()
 
@@ -213,7 +213,7 @@ async def search_scripture(
     book: str | None = Query(default=None, description="Filter by book"),
 ) -> SearchResponse:
     """Full-text semantic search across scripture."""
-    from backend.app.services.rag.rag_service import RAGService
+    from app.services.rag.rag_service import RAGService
 
     rag = RAGService()
 

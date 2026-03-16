@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/lectio-divina", tags=["Lectio Divina"])
+router = APIRouter()
 
 # ---------------------------------------------------------------------------
 # Request / response models
@@ -125,7 +125,7 @@ async def start_session(request: StartSessionRequest) -> SessionResponse:
     Creates a session, determines liturgical context and selects an
     initial scripture passage.
     """
-    from backend.app.services.scripture.liturgical_calendar import LiturgicalCalendar
+    from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 
     session_id = str(uuid.uuid4())
     now = datetime.utcnow()
@@ -171,8 +171,8 @@ async def analyze_emotion(request: EmotionInputRequest) -> EmotionResponse:
     Returns the detected emotion vector, spiritual state and
     suggested scripture passages.
     """
-    from backend.app.services.emotion.emotion_service import EmotionService
-    from backend.app.services.scripture.scripture_matcher import MatchContext, ScriptureMatcher
+    from app.services.emotion.emotion_service import EmotionService
+    from app.services.scripture.scripture_matcher import MatchContext, ScriptureMatcher
 
     session = _sessions.get(request.session_id)
     if not session:
@@ -232,7 +232,7 @@ async def analyze_emotion(request: EmotionInputRequest) -> EmotionResponse:
 @router.get("/scripture/{date}", response_model=ScriptureForDateResponse)
 async def get_scripture_for_date(date: str) -> ScriptureForDateResponse:
     """Get scripture readings for a specific date (YYYY-MM-DD)."""
-    from backend.app.services.scripture.liturgical_calendar import LiturgicalCalendar
+    from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 
     calendar = LiturgicalCalendar()
     try:

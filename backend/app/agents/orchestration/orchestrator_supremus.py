@@ -120,7 +120,7 @@ class OrchestratorSupremus:
 
     async def _dispatch_lectio_divina(self, state: SanctaState) -> SanctaState:
         """Delegate to the Lectio Divina sub-graph."""
-        from backend.app.agents.lectio_divina.lectio_divina_graph import (
+        from app.agents.lectio_divina.lectio_divina_graph import (
             LectioDivinaSupervisor,
         )
 
@@ -166,7 +166,7 @@ class OrchestratorSupremus:
 
     async def _quality_gate(self, state: SanctaState) -> SanctaState:
         """Final quality validation before returning to the user."""
-        from backend.app.agents.orchestration.quality_gate import QualityGateAgent
+        from app.agents.orchestration.quality_gate import QualityGateAgent
 
         gate = QualityGateAgent()
         return await gate.validate(state)
