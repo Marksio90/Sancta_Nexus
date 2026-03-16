@@ -67,6 +67,9 @@ Desktop.ini
 *.crt
 *.p12
 
+# ----- TypeScript -----
+*.tsbuildinfo
+
 # ----- Misc -----
 *.log
 tmp/
