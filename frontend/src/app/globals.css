@@ -1,0 +1,214 @@
+@import "tailwindcss";
+
+/*
+ * Sancta Nexus — Sacred Design Tokens
+ * A spiritual aesthetic with warm, reverent colors
+ */
+
+:root {
+  --color-gold: #D4AF37;
+  --color-gold-light: #e8cc6e;
+  --color-gold-dark: #b8941e;
+  --color-sacred-blue: #1a237e;
+  --color-sacred-blue-light: #283593;
+  --color-sacred-red: #8b0000;
+  --color-sacred-red-light: #a52a2a;
+  --color-parchment: #f5f0e1;
+  --color-parchment-dark: #e8dcc8;
+  --color-ink: #2c1810;
+  --color-ink-light: #4a3728;
+  --color-candlelight: #ffd700;
+  --color-candlelight-soft: #fff3b0;
+  --color-ember: #ff6b35;
+  --color-sacred-bg: #0d0b1a;
+  --color-sacred-surface: #1a1630;
+  --color-sacred-surface-light: #252040;
+  --color-sacred-border: #2a2450;
+  --color-sacred-text: #e8e0d0;
+  --color-sacred-text-muted: #9a8e7e;
+}
+
+@theme {
+  --color-gold: #D4AF37;
+  --color-gold-light: #e8cc6e;
+  --color-gold-dark: #b8941e;
+  --color-sacred-blue: #1a237e;
+  --color-sacred-blue-light: #283593;
+  --color-sacred-red: #8b0000;
+  --color-sacred-red-light: #a52a2a;
+  --color-parchment: #f5f0e1;
+  --color-parchment-dark: #e8dcc8;
+  --color-ink: #2c1810;
+  --color-ink-light: #4a3728;
+  --color-candlelight: #ffd700;
+  --color-candlelight-soft: #fff3b0;
+  --color-ember: #ff6b35;
+  --color-sacred-bg: #0d0b1a;
+  --color-sacred-surface: #1a1630;
+  --color-sacred-surface-light: #252040;
+  --color-sacred-border: #2a2450;
+  --color-sacred-text: #e8e0d0;
+  --color-sacred-text-muted: #9a8e7e;
+
+  --font-serif: "Crimson Text", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* Base styles */
+* {
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-sacred-bg);
+  color: var(--color-sacred-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sacred typography */
+.font-scripture {
+  font-family: var(--font-serif);
+  font-style: italic;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+.font-heading {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Sacred glow effects */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3),
+              0 0 40px rgba(212, 175, 55, 0.1);
+}
+
+.glow-gold-text {
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5),
+               0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.glow-candle {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.2),
+              0 0 60px rgba(255, 215, 0, 0.1),
+              0 0 90px rgba(255, 107, 53, 0.05);
+}
+
+/* Breathing animation for Contemplatio */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+/* Candle flicker animation */
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.01);
+  }
+  75% {
+    opacity: 0.9;
+    transform: scale(0.99);
+  }
+}
+
+.animate-flicker {
+  animation: flicker 3s ease-in-out infinite;
+}
+
+/* Gentle fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* Slow pulse for sacred elements */
+@keyframes sacredPulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-sacred-pulse {
+  animation: sacredPulse 4s ease-in-out infinite;
+}
+
+/* Sacred divider */
+.sacred-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-gold) 20%,
+    var(--color-gold) 80%,
+    transparent
+  );
+  opacity: 0.4;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-sacred-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-sacred-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-dark);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(212, 175, 55, 0.3);
+  color: var(--color-parchment);
+}
