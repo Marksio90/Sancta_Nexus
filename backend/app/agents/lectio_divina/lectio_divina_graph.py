@@ -19,11 +19,11 @@ from typing import Any, Literal, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from backend.app.agents.lectio_divina.actio_agent import ActioAgent
-from backend.app.agents.lectio_divina.contemplatio_agent import ContemplatioAgent
-from backend.app.agents.lectio_divina.lectio_agent import LectioAgent
-from backend.app.agents.lectio_divina.meditatio_agent import MeditatioAgent
-from backend.app.agents.lectio_divina.oratio_agent import OratioAgent
+from app.agents.lectio_divina.actio_agent import ActioAgent
+from app.agents.lectio_divina.contemplatio_agent import ContemplatioAgent
+from app.agents.lectio_divina.lectio_agent import LectioAgent
+from app.agents.lectio_divina.meditatio_agent import MeditatioAgent
+from app.agents.lectio_divina.oratio_agent import OratioAgent
 
 logger = logging.getLogger("sancta_nexus.lectio_divina_graph")
 

@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from backend.app.services.rag.rag_service import RAGService, ScriptureResult
-from backend.app.services.scripture.liturgical_calendar import LiturgicalCalendar
+from app.services.rag.rag_service import RAGService, ScriptureResult
+from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 
 logger = logging.getLogger(__name__)
 

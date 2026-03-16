@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+router = APIRouter()
 
 security = HTTPBearer(auto_error=False)
 
