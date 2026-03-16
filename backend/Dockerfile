@@ -22,10 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --------------- Dependencies stage ---------------
 FROM base AS dependencies
 
-COPY pyproject.toml .
-RUN mkdir -p app && touch app/__init__.py \
-    && pip install --no-cache-dir . \
-    && rm -rf app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # --------------- Production stage ---------------
 FROM python:3.12-slim AS production
