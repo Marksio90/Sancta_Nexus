@@ -19,7 +19,9 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core.llm import get_llm_fast
 
 logger = logging.getLogger("sancta_nexus.actio_agent")
 
@@ -84,9 +86,13 @@ class ActioAgent:
     along with an evening check-in prompt.
     """
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.7)
-        logger.info("ActioAgent (A-014) initialised with model=%s.", model_name)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_fast(temperature=0.7, max_tokens=1024)
+            logger.info("ActioAgent (A-014) initialised.")
+        except Exception as exc:
+            logger.warning("ActioAgent: LLM init failed (%s); will use fallbacks.", exc)
+            self._llm = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -112,7 +118,10 @@ class ActioAgent:
         # Flatten reflection into a readable string for the prompt
         reflection_text = self._format_reflection(reflection)
 
-        prompt = ACTIO_SYSTEM_PROMPT.format(
+        if self._llm is None:
+            return dict(FALLBACK_ACTION)
+
+        system_prompt = ACTIO_SYSTEM_PROMPT.format(
             book=scripture.get("book", ""),
             chapter=scripture.get("chapter", ""),
             verse_start=scripture.get("verse_start", ""),
@@ -122,7 +131,10 @@ class ActioAgent:
         )
 
         try:
-            response = await self._llm.ainvoke(prompt)
+            response = await self._llm.ainvoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content="Wygeneruj wyzwanie dnia."),
+            ])
             action = self._parse_json(response.content)
 
             # Validate required fields

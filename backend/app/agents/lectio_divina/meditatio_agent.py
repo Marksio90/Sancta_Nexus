@@ -19,7 +19,9 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core.llm import get_llm_primary
 
 logger = logging.getLogger("sancta_nexus.meditatio_agent")
 
@@ -28,8 +30,10 @@ logger = logging.getLogger("sancta_nexus.meditatio_agent")
 # ---------------------------------------------------------------------------
 
 MEDITATIO_SYSTEM_PROMPT = """\
-Jestes mistrzem medytacji chrzescijanskiej w tradycji Lectio Divina.
-Na podstawie podanego fragmentu Pisma Swietego wygeneruj gleboka,
+Jestes mistrzem medytacji chrzescijanskiej w tradycji Lectio Divina, \
+uformowanym w katolickiej tradycji egzegetycznej i kontemplacyjnej.
+
+Na podstawie podanego fragmentu Pisma Swietego wygeneruj gleboka, \
 spersonalizowana refleksje wielowarstwowa.
 
 Fragment: {book} {chapter}:{verse_start}-{verse_end}
@@ -38,12 +42,22 @@ Kontekst historyczny: {historical_context}
 
 Kontekst uzytkownika: {user_context}
 
-Zastosuj analize wielowarstwowa:
+Zastosuj analize czterowarstwowa (Quadriga):
 
-WARSTWA EGZEGETYCZNA -- Co tekst mowi w swoim oryginalnym kontekscie?
-WARSTWA EGZYSTENCJALNA -- Co to znaczy dla mojego obecnego zycia?
-WARSTWA MISTYCZNA -- Co Bog szepcze przez ten tekst do mojego serca?
-WARSTWA PRAKTYCZNA -- Do jakiej konkretnej zmiany zaprasza mnie ten fragment?
+WARSTWA EGZEGETYCZNA (sensus literalis) -- Co tekst mowi w swoim oryginalnym \
+kontekscie? Jakie sa kluczowe slowa w oryginale (hebr./gr.)? Jaki gatunek \
+literacki? Jaki Sitz im Leben?
+
+WARSTWA EGZYSTENCJALNA (sensus moralis) -- Co to znaczy dla mojego obecnego \
+zycia? Jakie cnoty lub wady tekst odsłania? Jak odnosza sie te slowa do \
+mojego codziennego doswiadczenia?
+
+WARSTWA MISTYCZNA (sensus anagogicus) -- Co Bog szepcze przez ten tekst do \
+mojego serca? Jak ten tekst prowadzi ku kontemplacji i zjednoczeniu z Bogiem? \
+Jakie otwiera przestrzenie modlitwy?
+
+WARSTWA PRAKTYCZNA (sensus allegoricus ad vitam) -- Do jakiej konkretnej \
+zmiany zaprasza mnie ten fragment? Jakie postanowienie moge podjac dzisiaj?
 
 Zasady:
 - Pytania powinny byc osobiste (w drugiej osobie)
@@ -52,7 +66,7 @@ Zasady:
 - Kazde pytanie powinno pochodzic z innej warstwy analizy
 - Wygeneruj 2-3 pytan refleksyjnych
 
-Odpowiedz w formacie JSON:
+Odpowiedz WYLACZNIE w formacie JSON (bez komentarzy, bez markdown):
 {{
   "questions": [
     "pytanie refleksyjne 1",
@@ -60,10 +74,10 @@ Odpowiedz w formacie JSON:
     "pytanie refleksyjne 3"
   ],
   "reflection_layers": {{
-    "exegetical": "Refleksja egzegetyczna -- co tekst mowi w oryginale",
-    "existential": "Refleksja egzystencjalna -- co to znaczy dla mojego zycia",
-    "mystical": "Refleksja mistyczna -- co Bog szepcze",
-    "practical": "Refleksja praktyczna -- do czego zaprasza"
+    "exegetical": "Refleksja egzegetyczna",
+    "existential": "Refleksja egzystencjalna",
+    "mystical": "Refleksja mistyczna",
+    "practical": "Refleksja praktyczna"
   }}
 }}
 """
@@ -89,7 +103,7 @@ FALLBACK_MEDITATION: dict[str, Any] = {
         ),
         "mystical": (
             "Pozwol, by cisza wypelnila twoje serce. "
-            "Bog moze mowic przez jedno slowo, ktore cie poruszyla."
+            "Bog moze mowic przez jedno slowo, ktore cie poruszylo."
         ),
         "practical": (
             "Czy jest cos konkretnego, do czego zaprasza cie ten fragment dzisiaj?"
@@ -106,9 +120,13 @@ class MeditatioAgent:
     analysis (exegetical, existential, mystical, practical).
     """
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.7)
-        logger.info("MeditatioAgent (A-011) initialised with model=%s.", model_name)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_primary(temperature=0.7, max_tokens=2048)
+            logger.info("MeditatioAgent (A-011) initialised.")
+        except Exception as exc:
+            logger.warning("MeditatioAgent: LLM init failed (%s); will use fallbacks.", exc)
+            self._llm = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -133,7 +151,10 @@ class MeditatioAgent:
               - reflection_layers: dict with exegetical, existential,
                 mystical, practical reflections
         """
-        prompt = MEDITATIO_SYSTEM_PROMPT.format(
+        if self._llm is None:
+            return dict(FALLBACK_MEDITATION)
+
+        system_prompt = MEDITATIO_SYSTEM_PROMPT.format(
             book=scripture.get("book", ""),
             chapter=scripture.get("chapter", ""),
             verse_start=scripture.get("verse_start", ""),
@@ -144,7 +165,10 @@ class MeditatioAgent:
         )
 
         try:
-            response = await self._llm.ainvoke(prompt)
+            response = await self._llm.ainvoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content="Wygeneruj medytacje wielowarstwowa."),
+            ])
             meditation = self._parse_json(response.content)
 
             # Validate questions
@@ -157,9 +181,7 @@ class MeditatioAgent:
             layers = meditation.get("reflection_layers", {})
             required_layers = ("exegetical", "existential", "mystical", "practical")
             if not all(layers.get(layer) for layer in required_layers):
-                logger.warning(
-                    "Reflection layers incomplete; filling from fallback."
-                )
+                logger.warning("Reflection layers incomplete; filling from fallback.")
                 fallback_layers = FALLBACK_MEDITATION["reflection_layers"]
                 for layer in required_layers:
                     layers.setdefault(layer, fallback_layers[layer])

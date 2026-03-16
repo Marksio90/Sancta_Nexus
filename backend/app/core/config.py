@@ -51,6 +51,22 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ELEVENLABS_API_KEY: str = ""
 
+    # ── LLM Configuration ─────────────────────────────────────────────────
+    LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"
+    LLM_FALLBACK_PROVIDER: str = "anthropic"  # secondary provider
+
+    # Primary models (theology, exegesis, spiritual direction)
+    LLM_PRIMARY_MODEL: str = "gpt-4o"
+    LLM_PRIMARY_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+
+    # Fast models (emotion detection, classification, quick checks)
+    LLM_FAST_MODEL: str = "gpt-4o-mini"
+    LLM_FAST_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+
+    # Creative models (prayer generation, reflections)
+    LLM_CREATIVE_MODEL: str = "gpt-4o"
+    LLM_CREATIVE_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+
     # ── Authentication / JWT ─────────────────────────────────────────────
     SECRET_KEY: str = "CHANGE-ME-IN-PRODUCTION"
     ALGORITHM: str = "HS256"

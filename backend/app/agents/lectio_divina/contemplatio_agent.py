@@ -17,7 +17,9 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core.llm import get_llm_creative
 
 logger = logging.getLogger("sancta_nexus.contemplatio_agent")
 
@@ -84,9 +86,13 @@ class ContemplatioAgent:
     prayer phase. Aims for gentleness and economy of words.
     """
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.6)
-        logger.info("ContemplatioAgent (A-013) initialised with model=%s.", model_name)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_creative(temperature=0.6, max_tokens=1024)
+            logger.info("ContemplatioAgent (A-013) initialised.")
+        except Exception as exc:
+            logger.warning("ContemplatioAgent: LLM init failed (%s); will use fallbacks.", exc)
+            self._llm = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -103,7 +109,10 @@ class ContemplatioAgent:
             Dict with: guidance_text, breathing_pattern, duration_minutes,
             ambient_suggestion.
         """
-        prompt = CONTEMPLATIO_SYSTEM_PROMPT.format(
+        if self._llm is None:
+            return dict(FALLBACK_CONTEMPLATION)
+
+        system_prompt = CONTEMPLATIO_SYSTEM_PROMPT.format(
             book=scripture.get("book", ""),
             chapter=scripture.get("chapter", ""),
             verse_start=scripture.get("verse_start", ""),
@@ -112,7 +121,10 @@ class ContemplatioAgent:
         )
 
         try:
-            response = await self._llm.ainvoke(prompt)
+            response = await self._llm.ainvoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content="Przygotuj przewodnictwo kontemplacyjne."),
+            ])
             contemplation = self._parse_json(response.content)
 
             # Validate and clamp duration

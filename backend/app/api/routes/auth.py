@@ -1,28 +1,33 @@
 """Authentication API routes for Sancta Nexus.
 
-Provides placeholder endpoints for user registration, login, and
-profile retrieval. A production implementation would integrate with
-a proper authentication backend (e.g. Firebase Auth, Auth0, or
-a custom JWT solution).
+Provides JWT-based user registration, login, token refresh, and profile
+retrieval backed by the PostgreSQL database via async SQLAlchemy.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import uuid
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from sqlalchemy import select
+
+from app.core.dependencies import DbSession
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    get_current_user,
+    hash_password,
+    verify_password,
+    verify_token,
+)
+from app.core.config import settings
+from app.models.database import User
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-security = HTTPBearer(auto_error=False)
 
 # ---------------------------------------------------------------------------
 # Request / response models
@@ -39,15 +44,22 @@ class RegisterRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100, description="Display name.")
 
 
+class UserInfo(BaseModel):
+    """User info nested in auth responses."""
+
+    id: str
+    email: str
+    displayName: str
+
+
 class RegisterResponse(BaseModel):
     """User registration response."""
 
-    model_config = ConfigDict(strict=True)
-
-    user_id: str
-    email: str
-    display_name: str
-    created_at: str
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: UserInfo
 
 
 class LoginRequest(BaseModel):
@@ -65,9 +77,29 @@ class LoginResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
-    expires_in: int = Field(description="Token validity in seconds.")
-    user_id: str
+    expires_in: int = Field(description="Access-token validity in seconds.")
+    user: UserInfo
+
+
+class RefreshRequest(BaseModel):
+    """Token refresh request."""
+
+    model_config = ConfigDict(strict=True)
+
+    refresh_token: str = Field(..., description="A valid refresh token.")
+
+
+class RefreshResponse(BaseModel):
+    """Token refresh response."""
+
+    model_config = ConfigDict(strict=True)
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(description="Access-token validity in seconds.")
 
 
 class UserProfile(BaseModel):
@@ -82,56 +114,6 @@ class UserProfile(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# In-memory user store (MVP placeholder)
-# ---------------------------------------------------------------------------
-
-_users: dict[str, dict[str, Any]] = {}
-_tokens: dict[str, str] = {}  # token -> user_id
-
-
-def _hash_password(password: str) -> str:
-    """Create a simple hash of the password (placeholder, not production-safe)."""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-def _generate_token(user_id: str) -> str:
-    """Generate a placeholder bearer token."""
-    token = str(uuid.uuid4())
-    _tokens[token] = user_id
-    return token
-
-
-async def _get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
-) -> dict[str, Any]:
-    """Extract the current user from the bearer token."""
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user_id = _tokens.get(credentials.credentials)
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = _users.get(user_id)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
-
-
-# ---------------------------------------------------------------------------
 # POST /register
 # ---------------------------------------------------------------------------
 
@@ -142,38 +124,41 @@ async def _get_current_user(
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-async def register(request: RegisterRequest) -> RegisterResponse:
+async def register(request: RegisterRequest, db: DbSession) -> RegisterResponse:
     """Register a new user account.
 
     Creates a new user with the provided email, password, and display name.
     Returns the created user profile.
     """
-    # Check if email already exists
-    for user in _users.values():
-        if user["email"] == request.email:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A user with this email already exists.",
-            )
+    # Check if email already taken
+    existing = await db.execute(select(User).where(User.email == request.email))
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        )
 
-    user_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    user = User(
+        email=request.email,
+        name=request.display_name,
+        hashed_password=hash_password(request.password),
+    )
+    db.add(user)
+    await db.flush()  # populate server defaults (id, created_at)
+    await db.refresh(user)
 
-    _users[user_id] = {
-        "user_id": user_id,
-        "email": request.email,
-        "display_name": request.display_name,
-        "password_hash": _hash_password(request.password),
-        "created_at": now,
-    }
+    logger.info("Registered new user: %s (%s)", user.id, user.email)
 
-    logger.info("Registered new user: %s (%s)", user_id, request.email)
+    token_data = {"sub": user.id}
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     return RegisterResponse(
-        user_id=user_id,
-        email=request.email,
-        display_name=request.display_name,
-        created_at=now,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=expires_in,
+        user=UserInfo(id=user.id, email=user.email, displayName=user.name),
     )
 
 
@@ -185,34 +170,69 @@ async def register(request: RegisterRequest) -> RegisterResponse:
 @router.post(
     "/login",
     response_model=LoginResponse,
-    summary="Authenticate and receive an access token",
+    summary="Authenticate and receive access + refresh tokens",
 )
-async def login(request: LoginRequest) -> LoginResponse:
+async def login(request: LoginRequest, db: DbSession) -> LoginResponse:
     """Authenticate a user with email and password.
 
-    Returns a bearer token for subsequent authenticated requests.
+    Returns JWT access and refresh tokens for subsequent authenticated
+    requests.
     """
-    password_hash = _hash_password(request.password)
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalar_one_or_none()
 
-    matched_user: dict[str, Any] | None = None
-    for user in _users.values():
-        if user["email"] == request.email and user["password_hash"] == password_hash:
-            matched_user = user
-            break
-
-    if matched_user is None:
+    if user is None or not verify_password(request.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
 
-    token = _generate_token(matched_user["user_id"])
-    expires_in = int(timedelta(hours=24).total_seconds())
+    token_data = {"sub": user.id}
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
     return LoginResponse(
-        access_token=token,
+        access_token=access_token,
+        refresh_token=refresh_token,
         expires_in=expires_in,
-        user_id=matched_user["user_id"],
+        user=UserInfo(id=user.id, email=user.email, displayName=user.name),
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /refresh
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/refresh",
+    response_model=RefreshResponse,
+    summary="Refresh an access token",
+)
+async def refresh(request: RefreshRequest, db: DbSession) -> RefreshResponse:
+    """Exchange a valid refresh token for a new access + refresh token pair."""
+    payload = verify_token(request.refresh_token, expected_type="refresh")
+    user_id: str = payload["sub"]
+
+    # Ensure the user still exists
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found.",
+        )
+
+    token_data = {"sub": user.id}
+    access_token = create_access_token(token_data)
+    new_refresh_token = create_refresh_token(token_data)
+    expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
+    return RefreshResponse(
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+        expires_in=expires_in,
     )
 
 
@@ -227,15 +247,15 @@ async def login(request: LoginRequest) -> LoginResponse:
     summary="Get the current authenticated user's profile",
 )
 async def get_me(
-    current_user: dict[str, Any] = Depends(_get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> UserProfile:
     """Return the profile of the currently authenticated user.
 
     Requires a valid bearer token in the Authorization header.
     """
     return UserProfile(
-        user_id=current_user["user_id"],
-        email=current_user["email"],
-        display_name=current_user["display_name"],
-        created_at=current_user["created_at"],
+        user_id=current_user.id,
+        email=current_user.email,
+        display_name=current_user.name,
+        created_at=current_user.created_at.isoformat(),
     )
