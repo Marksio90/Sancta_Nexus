@@ -14,6 +14,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.core.dependencies import RedisDep
+from app.services.cache.session_store import SessionStore
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -163,13 +166,6 @@ class TraditionInfo(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# In-memory session store (production: use Redis / DB)
-# ---------------------------------------------------------------------------
-
-_direction_sessions: dict[str, dict[str, Any]] = {}
-
-
-# ---------------------------------------------------------------------------
 # Tradition-specific opening messages
 # ---------------------------------------------------------------------------
 
@@ -214,6 +210,7 @@ _OPENING_MESSAGES: dict[str, str] = {
 )
 async def start_direction_session(
     request: StartDirectionRequest,
+    redis: RedisDep,
 ) -> DirectionSessionResponse:
     """Start a new spiritual direction session.
 
@@ -252,7 +249,8 @@ async def start_direction_session(
         "emotions": [],
         "previous_session_id": request.previous_session_id,
     }
-    _direction_sessions[session_id] = session_data
+    store = SessionStore(redis, namespace="direction")
+    await store.create(session_id, session_data)
 
     logger.info(
         "Started spiritual direction session %s (tradition=%s) for user %s",
@@ -272,7 +270,7 @@ async def start_direction_session(
 
 
 @router.post("/message", response_model=MessageResponse)
-async def send_message(request: MessageRequest) -> MessageResponse:
+async def send_message(request: MessageRequest, redis: RedisDep) -> MessageResponse:
     """Send a message in a spiritual direction session.
 
     The director analyses the user's emotional state, references
@@ -281,7 +279,8 @@ async def send_message(request: MessageRequest) -> MessageResponse:
     from app.services.emotion.emotion_service import EmotionService
     from app.services.scripture.scripture_matcher import IgnatianState, MatchContext, ScriptureMatcher
 
-    session = _direction_sessions.get(request.session_id)
+    store = SessionStore(redis, namespace="direction")
+    session = await store.get(request.session_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -349,6 +348,7 @@ async def send_message(request: MessageRequest) -> MessageResponse:
         "content": director_response,
         "timestamp": datetime.utcnow().isoformat(),
     })
+    await store.update(request.session_id, session)
 
     follow_ups = _generate_follow_up_questions(
         session["tradition"], analysis.primary_emotion
