@@ -75,7 +75,11 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(1024), nullable=False)
     spiritual_profile_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     subscription_tier: Mapped[SubscriptionTier] = mapped_column(
-        Enum(SubscriptionTier, name="subscription_tier"),
+        Enum(
+            SubscriptionTier,
+            name="subscription_tier",
+            values_callable=lambda e: [x.value for x in e],
+        ),
         default=SubscriptionTier.FREE,
         server_default=SubscriptionTier.FREE.value,
         nullable=False,
@@ -120,7 +124,11 @@ class Session(Base):
         index=True,
     )
     session_type: Mapped[SessionType] = mapped_column(
-        Enum(SessionType, name="session_type"),
+        Enum(
+            SessionType,
+            name="session_type",
+            values_callable=lambda e: [x.value for x in e],
+        ),
         nullable=False,
     )
     emotion_vector_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
