@@ -7,14 +7,84 @@ export type LectioDivinaStage =
   | "contemplatio"
   | "actio";
 
-/** A single scripture passage */
+/** A single scripture passage with patristic enrichment */
 export interface ScripturePassage {
   book: string;
+  bookAbbrev?: string;
   chapter: number;
   startVerse: number;
   endVerse: number;
   text: string;
   translation: string;
+  historicalContext?: string;
+  patristicNote?: string;
+  originalLanguageKey?: string;
+  catechismRef?: string;
+}
+
+/** Reflective question with Quadriga layer */
+export interface ReflectiveQuestion {
+  text: string;
+  layer: "literalis" | "allegoricus" | "moralis" | "anagogicus";
+  scriptureEcho?: string;
+}
+
+/** Meditation / Quadriga reflection layers */
+export interface ReflectionLayers {
+  literalis: string;
+  allegoricus: string;
+  moralis: string;
+  anagogicus: string;
+}
+
+/** Full meditation output */
+export interface MeditationResult {
+  questions: ReflectiveQuestion[];
+  reflectionLayers: ReflectionLayers;
+  patristicInsight?: string;
+  keyWord?: string;
+}
+
+/** Prayer output with tradition */
+export interface PrayerResult {
+  prayerText: string;
+  tradition: string;
+  elements: string[];
+  spiritualMovement?: "consolation" | "desolation" | "peace";
+}
+
+/** Contemplation guidance */
+export interface ContemplationResult {
+  guidanceText: string;
+  sacredWord?: string;
+  sacredWordMeaning?: string;
+  breathingPattern: {
+    inhaleSeconds: number;
+    holdSeconds: number;
+    exhaleSeconds: number;
+    cycles: number;
+  };
+  jesusPrayerRhythm?: string;
+  durationMinutes: number;
+  ambientSuggestion: string;
+  closingPrayer?: string;
+}
+
+/** Evening examen structure */
+export interface EveningExamen {
+  retrospection: string;
+  divinePresence: string;
+  resolution: string;
+}
+
+/** Action / micro-quest output */
+export interface ActionResult {
+  challengeText: string;
+  scriptureAnchor?: string;
+  difficulty: "easy" | "medium" | "hard";
+  category: string;
+  virtueFocus?: string;
+  eveningExamen: EveningExamen;
 }
 
 /** Lectio Divina session stored in the database */
@@ -24,9 +94,15 @@ export interface LectioDivinaSession {
   passage: ScripturePassage;
   emotion: string;
   meditationResponse: string;
+  meditation?: MeditationResult;
+  prayer?: PrayerResult;
+  contemplation?: ContemplationResult;
+  action?: ActionResult;
   generatedPrayer: string;
   challenge: string;
   completedStages: LectioDivinaStage[];
+  tradition?: string;
+  kerygmaticTheme?: string;
   createdAt: Date;
 }
 
@@ -43,12 +119,15 @@ export interface BibleAnalysisResponse {
   analyses: Record<BibleDimension, string>;
 }
 
-/** Spiritual direction tradition */
+/** Spiritual direction tradition — 7 traditions */
 export type SpiritualTradition =
   | "ignacjanska"
   | "karmelitanska"
   | "benedyktynska"
-  | "franciszkanska";
+  | "franciszkanska"
+  | "charyzmatyczna"
+  | "dominikanska"
+  | "maryjna";
 
 /** Chat message in the spiritual director */
 export interface ChatMessage {
@@ -56,6 +135,7 @@ export interface ChatMessage {
   role: "user" | "director";
   content: string;
   timestamp: Date;
+  tradition?: SpiritualTradition;
 }
 
 /** Dashboard session summary */
@@ -65,6 +145,8 @@ export interface SessionSummary {
   passage: string;
   emotion: string;
   keyInsight: string;
+  tradition?: string;
+  kerygmaticTheme?: string;
 }
 
 /** Recurring spiritual theme */
@@ -72,6 +154,14 @@ export interface SpiritualTheme {
   theme: string;
   count: number;
   trend: "up" | "down" | "stable";
+}
+
+/** Kerygmatic journey pillar */
+export interface KerygmaticPillar {
+  theme: string;
+  label: string;
+  progress: number;
+  sessionsCount: number;
 }
 
 /** Spiritual journey stage */
@@ -89,4 +179,7 @@ export interface SpiritualProfile {
   recentSessions: SessionSummary[];
   themes: SpiritualTheme[];
   journeyStages: JourneyStage[];
+  kerygmaticPillars?: KerygmaticPillar[];
+  traditionsExplored?: string[];
+  canonCoverage?: number; // percentage of 73 books encountered
 }

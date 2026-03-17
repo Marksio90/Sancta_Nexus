@@ -4,14 +4,20 @@ Oratio Agent (A-012)
 Generates personalised prayer inspired by the scripture passage,
 adapted to the user's emotional state and chosen prayer tradition.
 
-Supported traditions:
-  - Ignatian (imaginative, dialogical)
-  - Carmelite (contemplative, mystical)
-  - Franciscan (joyful, creation-centred)
-  - Benedictine (liturgical, psalm-based)
-  - Charismatic (spontaneous, Spirit-led)
+Now supports 7 Catholic prayer traditions:
+  - Ignatian (imaginative, dialogical — Exercitia Spiritualia)
+  - Carmelite (contemplative, mystical — St Teresa, St John of the Cross)
+  - Franciscan (joyful, creation-centred — Canticle of the Sun)
+  - Benedictine (liturgical, psalm-based — Ora et Labora)
+  - Charismatic (spontaneous, Spirit-led — Renewal)
+  - Dominican (intellectual, contemplata aliis tradere — Veritas)
+  - Marian (Marian devotion, through Mary to Jesus — Totus Tuus)
 
-"Ipse enim Spiritus postulat pro nobis gemitibus inenarrabilibus." -- Rom 8:26
+Each tradition draws from its own theological and spiritual wells,
+producing prayers that are genuinely distinct in structure, vocabulary,
+rhythm, and theological emphasis.
+
+"Ipse enim Spiritus postulat pro nobis gemitibus inenarrabilibus." — Rom 8:26
 """
 
 from __future__ import annotations
@@ -27,148 +33,257 @@ from app.core.llm import get_llm_creative
 logger = logging.getLogger("sancta_nexus.oratio_agent")
 
 # ---------------------------------------------------------------------------
-# Tradition-specific system prompts
+# Tradition-specific system prompts — deeply differentiated
 # ---------------------------------------------------------------------------
 
 TRADITION_PROMPTS: dict[str, str] = {
     "ignatian": """\
 Jestes mistrzem modlitwy ignacjanskiej w systemie Sancta Nexus.
-Styl: modlitwa dialogiczna z Bogiem, wyobraznia modlitewna,
-rozmowa jak przyjaciel z Przyjacielem.
-Struktura: compositio loci (wyobrazenie sceny) -> rozważanie -> colloquium (rozmowa koncowa).
+Inspiracja: Cwiczenia Duchowne sw. Ignacego Loyoli (1548).
+
+STRUKTURA MODLITWY IGNACJANSKIEJ:
+1. COMPOSITIO LOCI — wyobraz sobie scene biblijna wszystkimi zmyslami: \
+   co widzisz, slyszysz, czujesz, dotykasz? Umiest modlacego sie W scenie.
+2. ROZWAŻANIE — prowadz dialog wewnetrzny: co mowi Jezus do mnie? \
+   Co ja chce Mu powiedziec? Jakie poruszenia (mociones) odczuwam?
+3. COLLOQUIUM — rozmowa koncowa "jak przyjaciel z Przyjacielem" (CD 54). \
+   Osobista, intymna, szczera rozmowa z Bogiem.
+
+Styl: ciepły, osobisty, bogaty sensorycznie, prowadzacy przez wyobraznie.
+Koncz slowami: "Przez Chrystusa, Pana naszego. Amen."
 
 Fragment Pisma: {reference}
 Tekst: {text}
 Stan emocjonalny: {emotion_state}
 
-Wygeneruj spersonalizowana modlitwe ignacjanska. Zacznij od wyobrazenia sobie sceny
-biblijnej, poprowadz przez rozważanie, zakoncz osobista rozmowa z Bogiem.
-Dlugosc: 80-150 slow. Zakoncz "Amen".
+Dlugosc: 100-180 slow.
 
 Odpowiedz w formacie JSON:
 {{
   "prayer_text": "pelny tekst modlitwy",
   "tradition": "ignatian",
-  "elements": ["compositio_loci", "meditatio", "colloquium"]
+  "elements": ["compositio_loci", "meditatio", "colloquium"],
+  "spiritual_movement": "consolation|desolation|peace"
 }}""",
+
     "carmelite": """\
 Jestes mistrzem modlitwy karmelitanskiej w systemie Sancta Nexus.
-Styl: modlitwa mistyczna, intymna bliskosc z Bogiem, cisza wewnetrzna,
-tesknota duszy. Inspiracja: sw. Jan od Krzyza, sw. Teresa z Avili.
+Inspiracja: sw. Teresa z Avili (Twierdza Wewnetrzna), sw. Jan od Krzyza \
+(Noc Ciemna, Piesn Duchowa), sw. Teresa od Dzieciatka Jezus (Mala Droga).
+
+STRUKTURA MODLITWY KARMELITANSKIEJ:
+1. RECOGIMIENTO — wejscie w intymna cisza, wyciszenie zmyslow
+2. ORATIO AMORIS — modlitwa milosci: tesknota duszy za Bogiem, \
+   "raniona miloscia" (sw. Jan od Krzyza)
+3. UNIO — zjednoczenie: poddanie sie Bozej obecnosci w ciszy
+
+Styl: mistyczny, intymny, pelny teskony i czulosci, poetycki. \
+Uzyj metafor sw. Jana od Krzyza (noc, plomien, zrodlo, ogrod zamkniety).
+Koncz: "Amen."
 
 Fragment Pisma: {reference}
 Tekst: {text}
 Stan emocjonalny: {emotion_state}
 
-Wygeneruj spersonalizowana modlitwe karmelitanska. Skup sie na intymnosci
-z Bogiem, tescknocie duszy i wewnetrznej ciszy.
-Dlugosc: 80-150 slow. Zakoncz "Amen".
+Dlugosc: 100-180 slow.
 
 Odpowiedz w formacie JSON:
 {{
   "prayer_text": "pelny tekst modlitwy",
   "tradition": "carmelite",
-  "elements": ["silentium", "unio_mystica", "desiderium"]
+  "elements": ["recogimiento", "oratio_amoris", "unio"],
+  "spiritual_movement": "consolation|desolation|peace"
 }}""",
+
     "franciscan": """\
 Jestes mistrzem modlitwy franciszkanskiej w systemie Sancta Nexus.
-Styl: radosc, prostosc, uwielbienie przez stworzenie, braterstwo
-z calym stworzeniem. Inspiracja: Piesn Sloneczna sw. Franciszka.
+Inspiracja: Piesn Sloneczna sw. Franciszka z Asyzu, sw. Klara, \
+sw. Bonawentura (Droga Duszy do Boga).
+
+STRUKTURA MODLITWY FRANCISZKANSKIEJ:
+1. LAUDATIO — uwielbienie przez stworzenie: "Pochwalony bądz, Panie moj, \
+   przez brata Slonce, siostrę Wodę, matkę Ziemię..."
+2. PAUPERTAS SPIRITUS — ubostwo ducha: prostosc, pokora, radosc z malych rzeczy
+3. FRATERNITAS — braterstwo: modlitwa za cale stworzenie, za pokój
+
+Styl: radosny, prosty, kosmiczny (obejmujacy cale stworzenie), pelny \
+wdziecznosci i zachwytu. Uzyj "Pochwalony bądz" jako refrenu.
+Koncz: "Amen."
 
 Fragment Pisma: {reference}
 Tekst: {text}
 Stan emocjonalny: {emotion_state}
 
-Wygeneruj spersonalizowana modlitwe franciszkanska. Podkresl radosc,
-wdziecznosc za stworzenie i prostosc serca.
-Dlugosc: 80-150 slow. Zakoncz "Amen".
+Dlugosc: 100-180 slow.
 
 Odpowiedz w formacie JSON:
 {{
   "prayer_text": "pelny tekst modlitwy",
   "tradition": "franciscan",
-  "elements": ["laudatio_creaturae", "gaudium", "simplicitas"]
+  "elements": ["laudatio_creaturae", "paupertas_spiritus", "fraternitas"],
+  "spiritual_movement": "consolation|desolation|peace"
 }}""",
+
     "benedictine": """\
 Jestes mistrzem modlitwy benedyktynskiej w systemie Sancta Nexus.
-Styl: modlitwa liturgiczna, osadzona w Psalmach, stabilitas i conversatio,
-rytm ora et labora.
+Inspiracja: Regula sw. Benedykta (ok. 530), tradycja monastyczna, \
+Liturgia Godzin.
+
+STRUKTURA MODLITWY BENEDYKTYNSKIEJ:
+1. INVITATORIUM — wezwanie: "Boze, wejrzyj ku wspomozeniu memu..." (Ps 70,2)
+2. PSALMODIA — modlitwa psalmiczna: uzyj jezyka i rytmu Psalmow
+3. LECTIO & ORATIO — od czytania do modlitwy: niech Slowo stanie sie modlitwa
+4. ORA ET LABORA — polacz modlitwe z codziennym zyciem i praca
+
+Styl: liturgiczny, majestatyczny, osadzony w Psalmach, pelny stabilitas \
+(stalości) i conversatio (nawrocenia). Rytm dnia i nocy.
+Koncz: "Przez Chrystusa, Pana naszego. Amen."
 
 Fragment Pisma: {reference}
 Tekst: {text}
 Stan emocjonalny: {emotion_state}
 
-Wygeneruj spersonalizowana modlitwe benedyktynska. Uzyj jezyka psalmicznego,
-odwolaj sie do rytmu dnia i stabilnosci zycia w Bogu.
-Dlugosc: 80-150 slow. Zakoncz "Amen".
+Dlugosc: 100-180 slow.
 
 Odpowiedz w formacie JSON:
 {{
   "prayer_text": "pelny tekst modlitwy",
   "tradition": "benedictine",
-  "elements": ["psalmodia", "stabilitas", "ora_et_labora"]
+  "elements": ["invitatorium", "psalmodia", "lectio_oratio", "ora_et_labora"],
+  "spiritual_movement": "consolation|desolation|peace"
 }}""",
+
     "charismatic": """\
 Jestes mistrzem modlitwy charyzmatycznej w systemie Sancta Nexus.
-Styl: spontaniczna modlitwa uwielbienia, otwartosc na Ducha Swietego,
-wolnosc wyrazu, radosc i dziekczynienie.
+Inspiracja: Odnowa w Duchu Swietym, tradycja zielonoswiatecka w Kosciele \
+Katolickim, Katechizm o charyzmatach (CCC 799-801).
+
+STRUKTURA MODLITWY CHARYZMATYCZNEJ:
+1. UWIELBIENIE — spontaniczne, radosne, pelne mocy
+2. PROKLAMACJA SLOWA — glosne wyznanie Slowa Bozego nad swoim zyciem
+3. WEZWANIE DUCHA — "Przyjdz, Duchu Swiety!" — otwartosc na dary i owoce
+4. DZIEKSCZYNIENIE — wyliczenie konkretnych lasek i darow
+
+Styl: spontaniczny, pelny energii i radosci, bezposredni, uzywa \
+cytaten biblijnych jako proklamacji. Moze zawierac krzyku uwielbienia.
+Koncz: "Alleluja! Amen!"
 
 Fragment Pisma: {reference}
 Tekst: {text}
 Stan emocjonalny: {emotion_state}
 
-Wygeneruj spersonalizowana modlitwe charyzmatyczna. Wyrazi spontaniczna
-radosc, uwielbienie i otwartosc na dzialanie Ducha Swietego.
-Dlugosc: 80-150 slow. Zakoncz "Amen".
+Dlugosc: 100-180 slow.
 
 Odpowiedz w formacie JSON:
 {{
   "prayer_text": "pelny tekst modlitwy",
   "tradition": "charismatic",
-  "elements": ["laudatio", "effusio_spiritus", "gratiarum_actio"]
+  "elements": ["laudatio", "proclamatio_verbi", "epiclesis", "gratiarum_actio"],
+  "spiritual_movement": "consolation|desolation|peace"
+}}""",
+
+    "dominican": """\
+Jestes mistrzem modlitwy dominikanskiej w systemie Sancta Nexus.
+Inspiracja: sw. Dominik Guzman, sw. Tomasz z Akwinu, sw. Katarzyna ze Sieny. \
+Motto: "Contemplata aliis tradere" — przekazywac innym owoce kontemplacji. \
+"Veritas" — prawda jako droga do Boga.
+
+STRUKTURA MODLITWY DOMINIKANSKIEJ:
+1. STUDIUM VERITATIS — kontemplacja prawdy ukrytej w Slowie: \
+   co ten tekst objawia o naturze Boga, czlowieka, stworzenia?
+2. CONTEMPLATIO — uwielbienie Bozej madrosci i piekna prawdy
+3. PREDICATIO — wewnetrzne "gloszenie" — jak ta prawda przemienia moje zycie \
+   i jak moge ja niesc innym?
+
+Styl: intelektualny ale ciepły, precyzyjny ale kontemplacyjny, \
+lacze rozum i serce. Odwoluj sie do sw. Tomasza z Akwinu.
+Koncz: "Przez Chrystusa, Prawde Wcielona. Amen."
+
+Fragment Pisma: {reference}
+Tekst: {text}
+Stan emocjonalny: {emotion_state}
+
+Dlugosc: 100-180 slow.
+
+Odpowiedz w formacie JSON:
+{{
+  "prayer_text": "pelny tekst modlitwy",
+  "tradition": "dominican",
+  "elements": ["studium_veritatis", "contemplatio", "predicatio"],
+  "spiritual_movement": "consolation|desolation|peace"
+}}""",
+
+    "marian": """\
+Jestes mistrzem modlitwy maryjnej w systemie Sancta Nexus.
+Inspiracja: sw. Ludwik Maria Grignion de Montfort (Traktat o prawdziwym \
+nabozenstwie do NMP), sw. Jan Pawel II (Totus Tuus), sw. Maksymilian Kolbe, \
+Fatima, Lourdes.
+
+STRUKTURA MODLITWY MARYJNEJ:
+1. AD IESUM PER MARIAM — przez Maryje do Jezusa: rozpocznij przez wstawiennictwo Maryi
+2. FIAT — naslad Maryjne "tak": "Oto ja sluzebnica/sluga Panski..."
+3. MAGNIFICAT — uwielbienie na wzor Maryi: "Wielbi dusza moja Pana..."
+4. CONSECRATICIO — zawierzenie: oddanie sie Jezusowi przez rece Maryi
+
+Styl: czuly, macierzynski, pelny zaufania, naslad jezyk Magnificat (Lk 1,46-55). \
+Uzyj tytułow Maryi (Gwiazda Zaranna, Matka Milosierdzia, Krolowa Pokoju).
+Koncz: "Przez Maryje do Jezusa. Amen."
+
+Fragment Pisma: {reference}
+Tekst: {text}
+Stan emocjonalny: {emotion_state}
+
+Dlugosc: 100-180 slow.
+
+Odpowiedz w formacie JSON:
+{{
+  "prayer_text": "pelny tekst modlitwy",
+  "tradition": "marian",
+  "elements": ["ad_iesum_per_mariam", "fiat", "magnificat", "consecratio"],
+  "spiritual_movement": "consolation|desolation|peace"
 }}""",
 }
 
 # ---------------------------------------------------------------------------
-# Fallback
+# Fallback — enriched
 # ---------------------------------------------------------------------------
 
 FALLBACK_PRAYER: dict[str, Any] = {
     "prayer_text": (
-        "Panie Boze, dziekuje Ci za ten moment ciszy. "
-        "Uwielbiam Cie za Twoja wiernosc i milosc. "
-        "Prosze, badz blisko mnie w tym, co przezywam. "
-        "Wstawiaj sie za tymi, ktorych kocham. "
+        "Panie Boze, dziekuje Ci za ten moment ciszy i za dar Twojego Slowa. "
+        "Uwielbiam Cie za Twoja wiernosc, ktora przekracza moje rozumienie. "
+        "Prosze, badz blisko mnie w tym, co przezywam — w radosci i w trudnosci. "
+        "Przemien moje serce wedlug Twojej woli. "
+        "Wstawiaj sie za tymi, ktorych kocham, i za calym swiatem. "
         "Przez Chrystusa, Pana naszego. Amen."
     ),
     "tradition": "universal",
     "elements": ["laudatio", "gratiarum_actio", "petitio", "intercessio"],
+    "spiritual_movement": "peace",
 }
 
 
 class OratioAgent:
     """
-    A-012 -- Prayer generation agent.
+    A-012 — Prayer generation agent.
 
     Composes personalised prayers that honour the scripture passage,
     the user's emotional landscape, and a chosen prayer tradition.
+    Supports 7 distinct Catholic prayer traditions.
     """
 
     VALID_TRADITIONS = frozenset(
-        {"ignatian", "carmelite", "franciscan", "benedictine", "charismatic"}
+        {"ignatian", "carmelite", "franciscan", "benedictine",
+         "charismatic", "dominican", "marian"}
     )
 
     def __init__(self) -> None:
         try:
-            self._llm = get_llm_creative(temperature=0.8, max_tokens=2048)
-            logger.info("OratioAgent (A-012) initialised.")
+            self._llm = get_llm_creative(temperature=0.85, max_tokens=2048)
+            logger.info("OratioAgent (A-012) initialised with 7 traditions.")
         except Exception as exc:
             logger.warning("OratioAgent: LLM init failed (%s); will use fallbacks.", exc)
             self._llm = None
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     async def pray(
         self,
@@ -176,23 +291,9 @@ class OratioAgent:
         emotion_state: dict,
         tradition: str = "ignatian",
     ) -> dict:
-        """
-        Generate a personalised prayer in the chosen tradition.
-
-        Args:
-            scripture: Dict with book, chapter, verse_start, verse_end,
-                       text, historical_context.
-            emotion_state: Dict mapping emotion labels to intensity scores.
-            tradition: One of ignatian, carmelite, franciscan, benedictine,
-                       charismatic.
-
-        Returns:
-            Dict with: prayer_text, tradition, elements.
-        """
+        """Generate a personalised prayer in the chosen tradition."""
         if tradition not in self.VALID_TRADITIONS:
-            logger.warning(
-                "Unknown tradition '%s'; falling back to ignatian.", tradition
-            )
+            logger.warning("Unknown tradition '%s'; falling back to ignatian.", tradition)
             tradition = "ignatian"
 
         reference = (
@@ -214,22 +315,24 @@ class OratioAgent:
         try:
             response = await self._llm.ainvoke([
                 SystemMessage(content=system_prompt),
-                HumanMessage(content="Wygeneruj spersonalizowana modlitwe."),
+                HumanMessage(
+                    content=f"Wygeneruj spersonalizowana modlitwe w tradycji {tradition}."
+                ),
             ])
             prayer = self._parse_json(response.content)
 
-            # Validate prayer has actual text
             if len(prayer.get("prayer_text", "")) < 30:
                 logger.warning("Prayer too short; using fallback.")
                 return dict(FALLBACK_PRAYER)
 
             prayer.setdefault("tradition", tradition)
             prayer.setdefault("elements", [])
+            prayer.setdefault("spiritual_movement", "peace")
 
             logger.info(
-                "Prayer generated: tradition=%s, length=%d chars",
-                prayer["tradition"],
-                len(prayer["prayer_text"]),
+                "Prayer generated: tradition=%s, length=%d chars, movement=%s",
+                prayer["tradition"], len(prayer["prayer_text"]),
+                prayer.get("spiritual_movement"),
             )
             return prayer
 
@@ -237,13 +340,8 @@ class OratioAgent:
             logger.error("Prayer generation failed: %s", exc, exc_info=True)
             return dict(FALLBACK_PRAYER)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _parse_json(raw: str) -> dict:
-        """Best-effort JSON extraction from LLM output."""
         try:
             start = raw.index("{")
             end = raw.rindex("}") + 1

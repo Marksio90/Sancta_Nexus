@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 /*
- * Sancta Nexus — Sacred Design Tokens
- * A spiritual aesthetic with warm, reverent colors
+ * Sancta Nexus — Sacred Design System
+ * Liturgically-aware aesthetic with reverent, warm colours
+ * that shift with the liturgical season.
  */
 
 :root {
+  /* Core sacred palette */
   --color-gold: #D4AF37;
   --color-gold-light: #e8cc6e;
   --color-gold-dark: #b8941e;
@@ -26,6 +28,28 @@
   --color-sacred-border: #2a2450;
   --color-sacred-text: #e8e0d0;
   --color-sacred-text-muted: #9a8e7e;
+
+  /* Liturgical accent colour (changes with season) */
+  --color-liturgical-accent: #4caf50; /* Ordinary Time: green */
+  --color-liturgical-glow: rgba(76, 175, 80, 0.15);
+}
+
+/* Liturgical season colour overrides */
+[data-season="advent"] {
+  --color-liturgical-accent: #7b1fa2;
+  --color-liturgical-glow: rgba(123, 31, 162, 0.15);
+}
+[data-season="christmas"] {
+  --color-liturgical-accent: #ffffff;
+  --color-liturgical-glow: rgba(255, 255, 255, 0.1);
+}
+[data-season="lent"] {
+  --color-liturgical-accent: #6a1b9a;
+  --color-liturgical-glow: rgba(106, 27, 154, 0.15);
+}
+[data-season="easter"] {
+  --color-liturgical-accent: #ffffff;
+  --color-liturgical-glow: rgba(255, 215, 0, 0.15);
 }
 
 @theme {
@@ -83,6 +107,19 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* Illuminated drop cap — for scripture first letters */
+.drop-cap::first-letter {
+  font-family: var(--font-serif);
+  font-size: 3.5em;
+  float: left;
+  line-height: 0.8;
+  padding-right: 0.12em;
+  padding-top: 0.08em;
+  color: var(--color-gold);
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  font-weight: 700;
+}
+
 /* Sacred glow effects */
 .glow-gold {
   box-shadow: 0 0 20px rgba(212, 175, 55, 0.3),
@@ -99,6 +136,16 @@ body {
               0 0 60px rgba(255, 215, 0, 0.1),
               0 0 90px rgba(255, 107, 53, 0.05);
 }
+
+/* Liturgical accent glow */
+.glow-liturgical {
+  box-shadow: 0 0 20px var(--color-liturgical-glow),
+              0 0 40px var(--color-liturgical-glow);
+}
+
+/* ══════════════════════════════════════════════
+   Animations — sacred, reverent, purposeful
+   ══════════════════════════════════════════════ */
 
 /* Breathing animation for Contemplatio */
 @keyframes breathe {
@@ -118,22 +165,10 @@ body {
 
 /* Candle flicker animation */
 @keyframes flicker {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  25% {
-    opacity: 0.85;
-    transform: scale(0.98);
-  }
-  50% {
-    opacity: 0.95;
-    transform: scale(1.01);
-  }
-  75% {
-    opacity: 0.9;
-    transform: scale(0.99);
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  25% { opacity: 0.85; transform: scale(0.98); }
+  50% { opacity: 0.95; transform: scale(1.01); }
+  75% { opacity: 0.9; transform: scale(0.99); }
 }
 
 .animate-flicker {
@@ -142,32 +177,83 @@ body {
 
 /* Gentle fade-in animation */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.6s ease-out forwards;
 }
 
+/* Staggered fade-in for lists */
+.animate-fade-in-stagger > * {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+.animate-fade-in-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+.animate-fade-in-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+.animate-fade-in-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+.animate-fade-in-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+.animate-fade-in-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+
 /* Slow pulse for sacred elements */
 @keyframes sacredPulse {
-  0%, 100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
 .animate-sacred-pulse {
   animation: sacredPulse 4s ease-in-out infinite;
+}
+
+/* Cross shimmer — subtle golden cross that appears in backgrounds */
+@keyframes crossShimmer {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.15; }
+}
+
+.cross-shimmer::before {
+  content: "✝";
+  position: absolute;
+  font-size: 12rem;
+  color: var(--color-gold);
+  opacity: 0;
+  animation: crossShimmer 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Incense rise — floating particles */
+@keyframes incenseRise {
+  0% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { transform: translateY(-100px) scale(0.3); opacity: 0; }
+}
+
+.animate-incense {
+  animation: incenseRise 6s ease-out infinite;
+}
+
+/* Sacred word pulse — for the contemplatio focus word */
+@keyframes wordPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); letter-spacing: 0.1em; }
+  50% { opacity: 1; transform: scale(1.02); letter-spacing: 0.15em; }
+}
+
+.animate-word-pulse {
+  animation: wordPulse 4s ease-in-out infinite;
+}
+
+/* Verse highlight — for scripture reading */
+@keyframes verseGlow {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(212, 175, 55, 0.08); }
+}
+
+.verse-highlight:hover {
+  animation: verseGlow 2s ease-in-out;
+  border-radius: 4px;
+  cursor: default;
 }
 
 /* Sacred divider */
@@ -183,7 +269,35 @@ body {
   opacity: 0.4;
 }
 
-/* Scrollbar styling */
+/* Ornamental divider with cross */
+.sacred-divider-cross {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  opacity: 0.3;
+}
+.sacred-divider-cross::before,
+.sacred-divider-cross::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold));
+}
+.sacred-divider-cross::after {
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+}
+
+/* Glass morphism for cards */
+.glass-sacred {
+  background: rgba(26, 22, 48, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+/* ══════════════════════════════════════════════
+   Scrollbar styling
+   ══════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -211,4 +325,14 @@ body {
 ::selection {
   background: rgba(212, 175, 55, 0.3);
   color: var(--color-parchment);
+}
+
+/* ══════════════════════════════════════════════
+   Responsive typography
+   ══════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .drop-cap::first-letter {
+    font-size: 2.5em;
+  }
 }

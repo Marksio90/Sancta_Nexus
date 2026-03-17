@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ArrowLeft, ArrowRight, Heart } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, BookOpen, Flame, Eye, Footprints } from "lucide-react";
 import Link from "next/link";
 import { StageIndicator } from "@/components/ui/stage-indicator";
 import { BreathingTimer } from "@/components/ui/breathing-timer";
 import { ScriptureDisplay } from "@/components/ui/scripture-display";
+import { useLectioStore } from "@/stores/lectio";
 import type { LectioDivinaStage } from "@/types";
 
 const STAGES: LectioDivinaStage[] = [
@@ -26,39 +27,74 @@ const STAGE_LABELS: Record<LectioDivinaStage, string> = {
   actio: "Actio",
 };
 
-/* ── Mock data (to be replaced by API calls) ── */
+const STAGE_ICONS: Record<LectioDivinaStage, typeof Heart> = {
+  welcome: Heart,
+  lectio: BookOpen,
+  meditatio: Eye,
+  oratio: Flame,
+  contemplatio: Heart,
+  actio: Footprints,
+};
+
+/* ── Mock data (used when API is unavailable) ── */
 const MOCK_SCRIPTURE = {
-  book: "Ewangelia wg św. Jana",
+  book: "Ewangelia wg sw. Jana",
   chapter: 15,
   startVerse: 4,
   endVerse: 5,
-  text: "Trwajcie we Mnie, a Ja w was trwać będę. Podobnie jak latorośl nie może przynosić owocu sama z siebie — o ile nie trwa w winnym krzewie — tak samo i wy, jeżeli we Mnie trwać nie będziecie. Ja jestem krzewem winnym, wy — latoroślami. Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity, ponieważ beze Mnie nic nie możecie uczynić.",
-  translation: "Biblia Tysiąclecia",
+  text: "Trwajcie we Mnie, a Ja w was trwac bede. Podobnie jak latorosl nie moze przynosic owocu sama z siebie — o ile nie trwa w winnym krzewie — tak samo i wy, jezeli we Mnie trwac nie bedziecie. Ja jestem krzewem winnym, wy — latoroslami. Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity, poniewaz beze Mnie nic nie mozecie uczynic.",
+  translation: "Biblia Tysiaclecia V",
+  historicalContext: "Fragment ten pochodzi z Mowy Pozegnalnej Jezusa podczas Ostatniej Wieczerzy. Metafora winnego krzewu (gr. ampelos) byla dobrze znana w kulturze zydowskiej — Izrael byl czesto porownywany do winnicy Pana (Iz 5:1-7). Jezus nadaje tej metaforze nowe, glebsze znaczenie, wskazujac na osobista relacje z Nim jako zrodlo duchowego zycia.",
+  patristicNote: "Sw. Augustyn: 'Latorosl nie daje zycia korzeniowi, lecz korzen latorosli. Tak i uczniowie nie daja Chrystusowi tego, czego potrzebuja, lecz od Chrystusa otrzymuja to, co jest im potrzebne do zycia.'",
+  originalLanguageKey: "meno (gr.) — trwac, pozostawac, zamieszkiwac. Wskazuje na gleboka, osobista, trwala relacje.",
+  catechismRef: "CCC 787 — 'Od poczatku Jezus wlaczyl swoich uczniow do swego zycia.'",
 };
 
-const MOCK_CONTEXT =
-  "Fragment ten pochodzi z Mowy Pożegnalnej Jezusa podczas Ostatniej Wieczerzy. Metafora winnego krzewu była dobrze znana w kulturze żydowskiej — Izrael był często porównywany do winnicy Pana (Iz 5:1-7). Jezus nadaje tej metaforze nowe, głębsze znaczenie, wskazując na osobistą relację z Nim jako źródło duchowego życia.";
-
 const MOCK_QUESTIONS = [
-  "Które słowo lub fraza najbardziej przyciąga Twoją uwagę?",
-  "Co Jezus mówi Ci osobiście przez ten fragment?",
-  "W jaki sposób 'trwasz' w Chrystusie w swoim codziennym życiu?",
-  "Co przeszkadza Ci w przynoszeniu 'owocu obfitego'?",
+  { text: "Ktore slowo z tego fragmentu najbardziej przyciaga Twoja uwage i dlaczego?", layer: "literalis", scripture_echo: "trwajcie we Mnie" },
+  { text: "W jaki sposob Jezus jest 'krzewem winnym' w Twoim codziennym zyciu?", layer: "allegoricus", scripture_echo: "Ja jestem krzewem winnym" },
+  { text: "Co konkretnie przeszkadza Ci w 'przynoszeniu owocu obfitego'?", layer: "moralis", scripture_echo: "przynosi owoc obfity" },
+  { text: "Gdybys mogl/a usiasc w ciszy z jednym slowem z tego fragmentu, ktore by to bylo?", layer: "anagogicus", scripture_echo: "" },
 ];
 
-const MOCK_PRAYER =
-  "Panie Jezu, Ty jesteś prawdziwym Krzewem Winnym, a ja pragnę być Twoją latoroślą. Pomóż mi trwać w Tobie każdego dnia — w modlitwie, w sakramentach, w miłości do bliźnich. Wiem, że beze Ciebie nic nie mogę uczynić. Oczyść mnie ze wszystkiego, co przeszkadza mi w przynoszeniu owocu. Napełnij mnie Twoim Duchem, abym żył tak, jak Ty tego pragniesz. Amen.";
+const MOCK_REFLECTION_LAYERS = {
+  literalis: "Greckie 'meno' (trwac) pojawia sie w Ewangelii Jana az 40 razy. Dla sw. Jana 'trwanie' to nie statyczne 'bycie', lecz dynamiczna, zywa relacja z Chrystusem. Sw. Jan Chryzostom pisal: 'Trwac w Chrystusie to nie kwestia miejsca, lecz woli i milosci.'",
+  allegoricus: "Krzew winny jest typem Chrystusa — tak jak Izrael byl winna latorosla Boga (Iz 5), tak Jezus jest prawdziwym krzewem, z ktorego czerpiemy zycie. Kazdy owoc — milosc, radosc, pokoj — jest owocem Ducha (Ga 5,22), nie naszej ludzkiej sily.",
+  moralis: "Pytanie 'beze Mnie nic nie mozecie uczynic' jest zaproszeniem do pokory. Nie chodzi o ludzka bezradnosc, lecz o prawde, ze najglebsze dobro rodzi sie z relacji z Bogiem. Jakie 'owoce' w Twoim zyciu sa owocem wlasnego wysilku, a jakie sa darem Bozej laski?",
+  anagogicus: "Obraz krzewu winnego otwiera przestrzen mistyczna: zjednoczenie z Chrystusem jest juz tutaj, na ziemi, zapowiedzia pelnego zjednoczenia w wiecznosci. Sw. Jan od Krzyza pisal: 'Dusza, ktora trwa w Bogu, jest jak latorosl w ogniu — plonie, ale nie spala sie, bo jej ogniem jest Milosc.'",
+};
 
-const MOCK_CHALLENGE =
-  "Dzisiejsze wyzwanie: Przez cały dzień, w każdej chwili wyboru, zatrzymaj się na moment i zapytaj: 'Panie, co Ty byś wybrał?' Pozwól, aby świadomość Jego obecności kierowała Twoimi decyzjami.";
+const MOCK_PRAYER = "Panie Jezu, Ty jestes prawdziwym Krzewem Winnym, a ja pragne byc Twoja latorosla. Pomoz mi trwac w Tobie kazdego dnia — w modlitwie, w sakramentach, w milosci do bliznich. Wiem, ze beze Ciebie nic nie moge uczynic. Oczysz mnie ze wszystkiego, co przeszkadza mi w przynoszeniu owocu. Napelnij mnie Twoim Duchem, abym zyl tak, jak Ty tego pragniesz. Przez Chrystusa, Pana naszego. Amen.";
+
+const MOCK_CONTEMPLATION = {
+  sacredWord: "Trwaj",
+  sacredWordMeaning: "meno (gr.) — pozostawac w zywa, osobistej relacji z Bogiem",
+  jesusPrayerRhythm: "Wdech: 'Panie Jezu Chryste...' Wydech: '...pozwol mi trwac w Tobie.'",
+  closingPrayer: "Dziekuje Ci, Panie, za te chwile ciszy w Twoim winnym ogrodzie. Amen.",
+};
+
+const MOCK_CHALLENGE = {
+  text: "Dzis poswiec 5 minut na cicha modlitwe ze slowem 'trwaj'. W kazdej chwili wyboru zatrzymaj sie i zapytaj: 'Panie, jak moge teraz trwac w Tobie?' Wieczorem zapisz jeden moment, w ktorym poczules/as Jego obecnosc.",
+  category: "prayer",
+  difficulty: "easy",
+  virteFocus: "stalość",
+  scriptureAnchor: "Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity",
+  eveningExamen: {
+    retrospection: "Czy udalo ci sie dzis zatrzymac ze slowem 'trwaj'? W jakim momencie?",
+    divinePresence: "Gdzie w tym dniu poczules/as najbardziej Boza obecnosc?",
+    resolution: "Jaka mala praktyke 'trwania' chcesz kontynuowac jutro?",
+  },
+};
 
 export default function LectioDivinaPage() {
   const [currentStage, setCurrentStage] = useState<number>(0);
   const [emotion, setEmotion] = useState("");
   const [meditationResponse, setMeditationResponse] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const { isLoading } = useLectioStore();
 
   const stage = STAGES[currentStage];
+  const StageIcon = STAGE_ICONS[stage];
 
   const goToStage = useCallback(
     (direction: 1 | -1) => {
@@ -84,10 +120,10 @@ export default function LectioDivinaPage() {
         {/* Back link */}
         <Link
           href="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-sacred-text-muted transition-colors hover:text-gold"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-[--color-sacred-text-muted] transition-colors hover:text-[--color-gold]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Powrót
+          Powrot
         </Link>
 
         {/* Stage indicator */}
@@ -107,34 +143,37 @@ export default function LectioDivinaPage() {
           {/* ── Welcome / Emotion ── */}
           {stage === "welcome" && (
             <div className="animate-fade-in text-center">
-              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-gold/30 bg-sacred-surface">
-                <Heart className="h-8 w-8 text-gold" />
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-[--color-gold]/30 bg-[--color-sacred-surface]">
+                <Heart className="h-8 w-8 text-[--color-gold]" />
               </div>
-              <h1 className="font-heading mb-4 text-3xl text-gold">
-                Jak się dziś czujesz?
+              <h1 className="font-heading mb-4 text-3xl text-[--color-gold]">
+                Jak sie dzis czujesz?
               </h1>
-              <p className="mx-auto mb-8 max-w-md text-sacred-text-muted">
-                Podziel się swoim stanem ducha. Pomoże to dobrać odpowiedni
-                fragment Pisma Świętego i poprowadzić Twoją modlitwę.
+              <p className="mx-auto mb-8 max-w-md text-[--color-sacred-text-muted]">
+                Podziel sie swoim stanem ducha. Pomoze to dobrac odpowiedni
+                fragment Pisma Swietego i poprowadzic Twoja modlitwe.
               </p>
               <textarea
                 value={emotion}
                 onChange={(e) => setEmotion(e.target.value)}
-                placeholder="Np. Czuję spokój, ale też lekki niepokój o przyszłość..."
-                className="mx-auto block w-full max-w-lg resize-none rounded-xl border border-sacred-border bg-sacred-surface p-4 text-sacred-text placeholder-sacred-text-muted/50 transition-colors focus:border-gold/50 focus:outline-none"
+                placeholder="Np. Czuje spokoj, ale tez lekki niepokoj o przyszlosc..."
+                className="mx-auto block w-full max-w-lg resize-none rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4 text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/50 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
                 rows={4}
               />
+              <p className="mx-auto mt-4 max-w-md text-xs text-[--color-sacred-text-muted]/50">
+                Twoje slowa sa bezpieczne. System nigdy nie osadza — tylko towarzyszy.
+              </p>
             </div>
           )}
 
           {/* ── Lectio ── */}
           {stage === "lectio" && (
             <div className="animate-fade-in">
-              <h2 className="font-heading mb-2 text-center text-2xl text-gold">
+              <h2 className="font-heading mb-2 text-center text-2xl text-[--color-gold]">
                 Lectio
               </h2>
-              <p className="mb-8 text-center text-sacred-text-muted">
-                Czytaj uważnie. Pozwól, aby słowa dotarły do Twojego serca.
+              <p className="mb-8 text-center text-[--color-sacred-text-muted]">
+                Czytaj uwazanie. Pozwol, aby slowa dotarly do Twojego serca.
               </p>
 
               <ScriptureDisplay
@@ -144,49 +183,75 @@ export default function LectioDivinaPage() {
                 endVerse={MOCK_SCRIPTURE.endVerse}
                 text={MOCK_SCRIPTURE.text}
                 translation={MOCK_SCRIPTURE.translation}
+                historicalContext={MOCK_SCRIPTURE.historicalContext}
+                patristicNote={MOCK_SCRIPTURE.patristicNote}
+                originalLanguageKey={MOCK_SCRIPTURE.originalLanguageKey}
+                catechismRef={MOCK_SCRIPTURE.catechismRef}
               />
-
-              <div className="mt-8 rounded-xl border border-sacred-border bg-sacred-surface p-6">
-                <h3 className="font-heading mb-3 text-lg text-parchment">
-                  Kontekst historyczny
-                </h3>
-                <p className="leading-relaxed text-sacred-text-muted">
-                  {MOCK_CONTEXT}
-                </p>
-              </div>
             </div>
           )}
 
           {/* ── Meditatio ── */}
           {stage === "meditatio" && (
             <div className="animate-fade-in">
-              <h2 className="font-heading mb-2 text-center text-2xl text-gold">
+              <h2 className="font-heading mb-2 text-center text-2xl text-[--color-gold]">
                 Meditatio
               </h2>
-              <p className="mb-8 text-center text-sacred-text-muted">
-                Rozważaj Słowo. Co Bóg mówi do Ciebie przez ten fragment?
+              <p className="mb-8 text-center text-[--color-sacred-text-muted]">
+                Rozwazaj Slowo. Co Bog mowi do Ciebie przez ten fragment?
               </p>
 
-              <div className="mb-8 space-y-4">
+              {/* Reflection layers (Quadriga) */}
+              <div className="mb-8 space-y-4 animate-fade-in-stagger">
+                {Object.entries(MOCK_REFLECTION_LAYERS).map(([layer, text]) => (
+                  <div
+                    key={layer}
+                    className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-5"
+                  >
+                    <h4 className="font-heading mb-2 text-xs uppercase tracking-wider text-[--color-gold]/60">
+                      {layer === "literalis" && "Sensus Literalis — co tekst mowi"}
+                      {layer === "allegoricus" && "Sensus Allegoricus — Chrystus w tekscie"}
+                      {layer === "moralis" && "Sensus Moralis — co to znaczy dla mnie"}
+                      {layer === "anagogicus" && "Sensus Anagogicus — ku wiecznosci"}
+                    </h4>
+                    <p className="text-sm leading-relaxed text-[--color-sacred-text-muted]">
+                      {text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reflective questions */}
+              <div className="mb-8 space-y-3">
+                <h3 className="font-heading text-lg text-[--color-parchment]">
+                  Pytania do refleksji
+                </h3>
                 {MOCK_QUESTIONS.map((question, i) => (
                   <div
                     key={i}
-                    className="rounded-lg border border-sacred-border bg-sacred-surface p-4"
+                    className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4"
                   >
-                    <p className="font-scripture text-gold-light">{question}</p>
+                    <p className="font-scripture text-[--color-gold-light]">
+                      {question.text}
+                    </p>
+                    {question.scripture_echo && (
+                      <p className="mt-1 text-xs text-[--color-sacred-text-muted]/50">
+                        &ldquo;{question.scripture_echo}&rdquo;
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-sacred-text-muted">
+                <label className="mb-2 block text-sm text-[--color-sacred-text-muted]">
                   Twoja refleksja
                 </label>
                 <textarea
                   value={meditationResponse}
                   onChange={(e) => setMeditationResponse(e.target.value)}
-                  placeholder="Zapisz swoje przemyślenia..."
-                  className="w-full resize-none rounded-xl border border-sacred-border bg-sacred-surface p-4 text-sacred-text placeholder-sacred-text-muted/50 transition-colors focus:border-gold/50 focus:outline-none"
+                  placeholder="Zapisz swoje przemyslenia..."
+                  className="w-full resize-none rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4 text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/50 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
                   rows={6}
                 />
               </div>
@@ -196,22 +261,25 @@ export default function LectioDivinaPage() {
           {/* ── Oratio ── */}
           {stage === "oratio" && (
             <div className="animate-fade-in">
-              <h2 className="font-heading mb-2 text-center text-2xl text-gold">
+              <h2 className="font-heading mb-2 text-center text-2xl text-[--color-gold]">
                 Oratio
               </h2>
-              <p className="mb-8 text-center text-sacred-text-muted">
-                Odpowiedz Bogu modlitwą. Oto modlitwa zainspirowana Twoją
-                refleksją.
+              <p className="mb-8 text-center text-[--color-sacred-text-muted]">
+                Odpowiedz Bogu modlitwa. Oto modlitwa zainspirowana Twoja
+                refleksja.
               </p>
 
-              <div className="glow-candle rounded-xl border border-gold/20 bg-sacred-surface p-8">
-                <p className="font-scripture text-center text-lg leading-loose text-parchment">
+              <div className="glow-candle relative overflow-hidden rounded-xl border border-[--color-gold]/20 bg-[--color-sacred-surface] p-8">
+                <div className="pointer-events-none absolute right-4 top-4 text-4xl text-[--color-gold]/5">
+                  ✝
+                </div>
+                <p className="font-scripture text-center text-lg leading-loose text-[--color-parchment]">
                   {MOCK_PRAYER}
                 </p>
               </div>
 
-              <p className="mt-6 text-center text-sm text-sacred-text-muted">
-                Możesz odmówić tę modlitwę własnymi słowami lub w ciszy serca.
+              <p className="mt-6 text-center text-sm text-[--color-sacred-text-muted]">
+                Mozesz odmowic te modlitwe wlasnymi slowami lub w ciszy serca.
               </p>
             </div>
           )}
@@ -219,48 +287,81 @@ export default function LectioDivinaPage() {
           {/* ── Contemplatio ── */}
           {stage === "contemplatio" && (
             <div className="animate-fade-in">
-              <h2 className="font-heading mb-2 text-center text-2xl text-gold">
+              <h2 className="font-heading mb-2 text-center text-2xl text-[--color-gold]">
                 Contemplatio
               </h2>
-              <p className="mb-12 text-center text-sacred-text-muted">
-                Bądź w ciszy przed Bogiem. Pozwól Mu działać.
+              <p className="mb-12 text-center text-[--color-sacred-text-muted]">
+                Badz w ciszy przed Bogiem. Pozwol Mu dzialac.
               </p>
 
-              <BreathingTimer durationMinutes={3} />
+              <BreathingTimer
+                durationMinutes={3}
+                sacredWord={MOCK_CONTEMPLATION.sacredWord}
+                sacredWordMeaning={MOCK_CONTEMPLATION.sacredWordMeaning}
+                jesusPrayerRhythm={MOCK_CONTEMPLATION.jesusPrayerRhythm}
+                closingPrayer={MOCK_CONTEMPLATION.closingPrayer}
+              />
             </div>
           )}
 
           {/* ── Actio ── */}
           {stage === "actio" && (
             <div className="animate-fade-in text-center">
-              <h2 className="font-heading mb-2 text-3xl text-gold">Actio</h2>
-              <p className="mb-8 text-sacred-text-muted">
-                Idź i żyj tym, co otrzymałeś.
+              <h2 className="font-heading mb-2 text-3xl text-[--color-gold]">Actio</h2>
+              <p className="mb-8 text-[--color-sacred-text-muted]">
+                Idz i zyj tym, co otrzymales/as.
               </p>
 
-              <div className="mx-auto max-w-lg rounded-xl border border-gold/20 bg-sacred-surface p-8">
-                <h3 className="font-heading mb-4 text-lg text-candlelight">
+              <div className="mx-auto max-w-lg rounded-xl border border-[--color-gold]/20 bg-[--color-sacred-surface] p-8">
+                <h3 className="font-heading mb-4 text-lg text-[--color-candlelight]">
                   Twoje dzisiejsze wyzwanie
                 </h3>
-                <p className="font-scripture leading-relaxed text-parchment">
-                  {MOCK_CHALLENGE}
+                <p className="font-scripture leading-relaxed text-[--color-parchment]">
+                  {MOCK_CHALLENGE.text}
                 </p>
+
+                {MOCK_CHALLENGE.scriptureAnchor && (
+                  <p className="mt-4 text-xs text-[--color-gold]/50">
+                    Zakotwiczenie: &ldquo;{MOCK_CHALLENGE.scriptureAnchor}&rdquo;
+                  </p>
+                )}
+
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <span className="rounded-full bg-[--color-gold]/10 px-3 py-1 text-xs text-[--color-gold]/70">
+                    {MOCK_CHALLENGE.category}
+                  </span>
+                  <span className="rounded-full bg-[--color-sacred-surface-light] px-3 py-1 text-xs text-[--color-sacred-text-muted]">
+                    {MOCK_CHALLENGE.difficulty}
+                  </span>
+                </div>
+              </div>
+
+              {/* Evening Examen */}
+              <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-6 text-left">
+                <h4 className="font-heading mb-3 text-sm uppercase tracking-wider text-[--color-gold]/60">
+                  Rachunek sumienia wieczorny
+                </h4>
+                <div className="space-y-2 text-sm text-[--color-sacred-text-muted]">
+                  <p>1. {MOCK_CHALLENGE.eveningExamen.retrospection}</p>
+                  <p>2. {MOCK_CHALLENGE.eveningExamen.divinePresence}</p>
+                  <p>3. {MOCK_CHALLENGE.eveningExamen.resolution}</p>
+                </div>
               </div>
 
               <div className="sacred-divider mx-auto my-10 w-48" />
 
-              <p className="font-scripture text-sacred-text-muted">
-                &ldquo;Bądźcie wykonawcami słowa, a nie tylko
-                słuchaczami&rdquo;
+              <p className="font-scripture text-[--color-sacred-text-muted]">
+                &ldquo;Badzcie wykonawcami slowa, a nie tylko
+                sluchaczami&rdquo;
                 <br />
                 <span className="text-sm not-italic">— Jk 1:22</span>
               </p>
 
               <Link
                 href="/dashboard"
-                className="mt-8 inline-flex items-center gap-2 rounded-lg border border-gold/30 bg-gold/10 px-6 py-3 text-gold transition-all hover:bg-gold/20"
+                className="mt-8 inline-flex items-center gap-2 rounded-lg border border-[--color-gold]/30 bg-[--color-gold]/10 px-6 py-3 text-[--color-gold] transition-all hover:bg-[--color-gold]/20"
               >
-                Zobacz swój Panel Duchowy
+                Zobacz swoj Panel Duchowy
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -272,7 +373,7 @@ export default function LectioDivinaPage() {
           <button
             onClick={() => goToStage(-1)}
             disabled={currentStage === 0}
-            className="flex items-center gap-2 rounded-lg border border-sacred-border px-5 py-2.5 text-sacred-text-muted transition-all hover:border-gold/30 hover:text-gold disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-sacred-border disabled:hover:text-sacred-text-muted"
+            className="flex items-center gap-2 rounded-lg border border-[--color-sacred-border] px-5 py-2.5 text-[--color-sacred-text-muted] transition-all hover:border-[--color-gold]/30 hover:text-[--color-gold] disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ArrowLeft className="h-4 w-4" />
             Wstecz
@@ -281,10 +382,10 @@ export default function LectioDivinaPage() {
           {currentStage < STAGES.length - 1 && (
             <button
               onClick={() => goToStage(1)}
-              disabled={!canGoNext()}
-              className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-5 py-2.5 text-gold transition-all hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-gold/10"
+              disabled={!canGoNext() || isLoading}
+              className="flex items-center gap-2 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-5 py-2.5 text-[--color-gold] transition-all hover:bg-[--color-gold]/20 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Dalej
+              {isLoading ? "Modlitwa..." : "Dalej"}
               <ArrowRight className="h-4 w-4" />
             </button>
           )}

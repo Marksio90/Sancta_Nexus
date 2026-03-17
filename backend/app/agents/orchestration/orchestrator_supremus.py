@@ -13,8 +13,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal, TypedDict
 
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
+
+from app.core.llm import get_llm_fast
 
 logger = logging.getLogger("sancta_nexus.orchestrator")
 
@@ -82,12 +83,12 @@ class OrchestratorSupremus:
     session to the appropriate sub-graph based on detected intent.
     """
 
-    def __init__(
-        self,
-        model_name: str = "gpt-4o",
-        temperature: float = 0.3,
-    ) -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=temperature)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_fast(temperature=0.3, max_tokens=256)
+        except Exception as exc:
+            logger.warning("OrchestratorSupremus: LLM init failed (%s)", exc)
+            self._llm = None
         self._graph = self._build_graph()
         logger.info("OrchestratorSupremus (A-001) initialised.")
 
@@ -107,13 +108,16 @@ class OrchestratorSupremus:
             spiritual_state=state.get("spiritual_state", {}),
         )
 
-        try:
-            response = await self._llm.ainvoke(prompt)
-            raw_intent = response.content.strip().lower()
-            intent = raw_intent if raw_intent in VALID_INTENTS else "lectio_divina"
-        except Exception as exc:
-            logger.error("Intent routing failed: %s", exc)
+        if self._llm is None:
             intent = "lectio_divina"
+        else:
+            try:
+                response = await self._llm.ainvoke(prompt)
+                raw_intent = response.content.strip().lower()
+                intent = raw_intent if raw_intent in VALID_INTENTS else "lectio_divina"
+            except Exception as exc:
+                logger.error("Intent routing failed: %s", exc)
+                intent = "lectio_divina"
 
         logger.info("Resolved intent: %s (user=%s)", intent, state.get("user_id"))
         return {**state, "intent": intent}
