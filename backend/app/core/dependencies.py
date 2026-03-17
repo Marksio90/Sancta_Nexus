@@ -125,6 +125,15 @@ RedisDep = Annotated[aioredis.Redis, Depends(get_redis_client)]
 # ── Lifecycle helpers (called from main.py lifespan) ─────────────────────────
 
 
+async def create_tables() -> None:
+    """Create all ORM tables if they do not exist yet (dev convenience)."""
+    from app.models.database import Base  # noqa: F401 — ensure all models loaded
+
+    engine = _get_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
 async def close_all_connections() -> None:
     """Gracefully shut down all infrastructure connections."""
     global _async_engine, _neo4j_driver, _redis_pool

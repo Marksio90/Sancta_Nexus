@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.dependencies import close_all_connections
+from app.core.dependencies import close_all_connections, create_tables
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         settings.APP_NAME,
         settings.VERSION,
     )
+    # Create database tables if they don't exist yet
+    try:
+        await create_tables()
+        logger.info("Database tables verified / created")
+    except Exception as exc:
+        logger.warning("Could not create tables (will retry on first request): %s", exc)
     yield
     logger.info("Shutting down -- releasing infrastructure connections")
     await close_all_connections()
