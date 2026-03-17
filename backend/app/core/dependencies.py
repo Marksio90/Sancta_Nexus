@@ -126,12 +126,25 @@ RedisDep = Annotated[aioredis.Redis, Depends(get_redis_client)]
 
 
 async def create_tables() -> None:
-    """Create all ORM tables if they do not exist yet (dev convenience)."""
+    """Create all ORM tables if they do not exist yet (dev convenience).
+
+    On a fresh DB the enum types + tables are created.  If enum types
+    already exist with stale values (e.g. from a failed prior attempt)
+    we drop everything and recreate cleanly.
+    """
+    from sqlalchemy import text
     from app.models.database import Base  # noqa: F401 — ensure all models loaded
 
     engine = _get_engine()
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception:
+            # Likely stale enum types — drop all and retry
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.execute(text("DROP TYPE IF EXISTS subscription_tier CASCADE"))
+            await conn.execute(text("DROP TYPE IF EXISTS session_type CASCADE"))
+            await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_all_connections() -> None:
