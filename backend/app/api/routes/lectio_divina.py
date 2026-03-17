@@ -15,6 +15,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.core.dependencies import RedisDep
+from app.services.cache.session_store import SessionStore
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -104,12 +107,6 @@ class SessionHistoryItem(BaseModel):
     stages_completed: list[str] = Field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
-# In-memory session store (production: use Redis / DB)
-# ---------------------------------------------------------------------------
-
-_sessions: dict[str, dict[str, Any]] = {}
-
 _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 
 
@@ -119,7 +116,7 @@ _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 
 
 @router.post("/session", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
-async def start_session(request: StartSessionRequest) -> SessionResponse:
+async def start_session(request: StartSessionRequest, redis: RedisDep) -> SessionResponse:
     """Start a new Lectio Divina session.
 
     Creates a session, determines liturgical context and selects an
@@ -150,7 +147,9 @@ async def start_session(request: StartSessionRequest) -> SessionResponse:
         "reflections": {},
         "emotions": [],
     }
-    _sessions[session_id] = session_data
+
+    store = SessionStore(redis, namespace="lectio")
+    await store.create(session_id, session_data)
 
     logger.info("Started Lectio Divina session %s for user %s", session_id, request.user_id)
 
@@ -165,7 +164,7 @@ async def start_session(request: StartSessionRequest) -> SessionResponse:
 
 
 @router.post("/emotion", response_model=EmotionResponse)
-async def analyze_emotion(request: EmotionInputRequest) -> EmotionResponse:
+async def analyze_emotion(request: EmotionInputRequest, redis: RedisDep) -> EmotionResponse:
     """Analyse emotion input (text or audio) within a session.
 
     Returns the detected emotion vector, spiritual state and
@@ -174,7 +173,8 @@ async def analyze_emotion(request: EmotionInputRequest) -> EmotionResponse:
     from app.services.emotion.emotion_service import EmotionService
     from app.services.scripture.scripture_matcher import MatchContext, ScriptureMatcher
 
-    session = _sessions.get(request.session_id)
+    store = SessionStore(redis, namespace="lectio")
+    session = await store.get(request.session_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -199,6 +199,7 @@ async def analyze_emotion(request: EmotionInputRequest) -> EmotionResponse:
         "primary": analysis.primary_emotion,
         "vector": analysis.vector,
     })
+    await store.update(request.session_id, session)
 
     # Get suggested scripture
     matcher = ScriptureMatcher()
@@ -262,9 +263,10 @@ async def get_scripture_for_date(date: str) -> ScriptureForDateResponse:
 
 
 @router.post("/reflection", response_model=ReflectionResponse)
-async def submit_reflection(request: ReflectionRequest) -> ReflectionResponse:
+async def submit_reflection(request: ReflectionRequest, redis: RedisDep) -> ReflectionResponse:
     """Submit a reflection for the current Lectio Divina stage."""
-    session = _sessions.get(request.session_id)
+    store = SessionStore(redis, namespace="lectio")
+    session = await store.get(request.session_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -289,6 +291,8 @@ async def submit_reflection(request: ReflectionRequest) -> ReflectionResponse:
     if next_stage:
         session["stage"] = next_stage
 
+    await store.update(request.session_id, session)
+
     guidance_map = {
         "lectio": "Przeczytaj tekst ponownie. Co slowo lub fraza przyciaga Twoja uwage?",
         "meditatio": "Rozważ, co Bog mówi do Ciebie przez ten tekst. Jakie mysli sie rodza?",
@@ -307,11 +311,10 @@ async def submit_reflection(request: ReflectionRequest) -> ReflectionResponse:
 
 
 @router.get("/history/{user_id}", response_model=list[SessionHistoryItem])
-async def get_session_history(user_id: str) -> list[SessionHistoryItem]:
+async def get_session_history(user_id: str, redis: RedisDep) -> list[SessionHistoryItem]:
     """Get session history for a user."""
-    user_sessions = [
-        s for s in _sessions.values() if s.get("user_id") == user_id
-    ]
+    store = SessionStore(redis, namespace="lectio")
+    user_sessions = await store.list_by_user(user_id)
 
     return [
         SessionHistoryItem(
