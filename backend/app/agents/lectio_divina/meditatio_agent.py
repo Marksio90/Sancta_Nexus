@@ -2,15 +2,15 @@
 Meditatio Agent (A-011)
 =======================
 Generates personalised reflective questions and multi-layered meditation
-from the selected scripture passage.
+from the selected scripture passage, enriched with:
 
-Analysis layers:
-  1. Exegetical  -- what does the text say in its original context?
-  2. Existential -- what does it mean for my life right now?
-  3. Mystical    -- what does God whisper through this text?
-  4. Practical   -- what concrete change does it invite?
+  - Full Quadriga (4 senses of Scripture per Catholic tradition)
+  - Patristic cross-references (Fathers of the Church)
+  - Kerygmatic lens (salvation history context)
+  - Personal existential application
+  - Original language insights (Hebrew/Greek key words)
 
-"Maria autem conservabat omnia verba haec, conferens in corde suo." -- Lk 2:19
+"Maria autem conservabat omnia verba haec, conferens in corde suo." — Lk 2:19
 """
 
 from __future__ import annotations
@@ -26,131 +26,179 @@ from app.core.llm import get_llm_primary
 logger = logging.getLogger("sancta_nexus.meditatio_agent")
 
 # ---------------------------------------------------------------------------
-# System prompt
+# System prompt — enriched with patristic and kerygmatic depth
 # ---------------------------------------------------------------------------
 
 MEDITATIO_SYSTEM_PROMPT = """\
 Jestes mistrzem medytacji chrzescijanskiej w tradycji Lectio Divina, \
-uformowanym w katolickiej tradycji egzegetycznej i kontemplacyjnej.
+uformowanym w pelnej katolickiej tradycji egzegetycznej, patrystycznej \
+i kontemplacyjnej. Twoja refleksja czerpie z 2000 lat madrosci Kosciola.
 
-Na podstawie podanego fragmentu Pisma Swietego wygeneruj gleboka, \
-spersonalizowana refleksje wielowarstwowa.
+═══════════════════════════════════════════════════════════
+FRAGMENT PISMA SWIETEGO
+═══════════════════════════════════════════════════════════
 
-Fragment: {book} {chapter}:{verse_start}-{verse_end}
+Ksiega: {book} {chapter}:{verse_start}-{verse_end}
 Tekst: {text}
 Kontekst historyczny: {historical_context}
+{patristic_context}
+{original_language_context}
 
-Kontekst uzytkownika: {user_context}
+═══════════════════════════════════════════════════════════
+KONTEKST UZYTKOWNIKA
+═══════════════════════════════════════════════════════════
 
-Zastosuj analize czterowarstwowa (Quadriga):
+Stan emocjonalny: {user_context}
+Temat kerygmatyczny sesji: {kerygmatic_theme}
 
-WARSTWA EGZEGETYCZNA (sensus literalis) -- Co tekst mowi w swoim oryginalnym \
-kontekscie? Jakie sa kluczowe slowa w oryginale (hebr./gr.)? Jaki gatunek \
-literacki? Jaki Sitz im Leben?
+═══════════════════════════════════════════════════════════
+PELNA ANALIZA QUADRIGA (4 sensy Pisma Swietego)
+═══════════════════════════════════════════════════════════
 
-WARSTWA EGZYSTENCJALNA (sensus moralis) -- Co to znaczy dla mojego obecnego \
-zycia? Jakie cnoty lub wady tekst odsłania? Jak odnosza sie te slowa do \
-mojego codziennego doswiadczenia?
+Zastosuj kompletna analize wedlug tradycji katolickiej (CCC 115-119):
 
-WARSTWA MISTYCZNA (sensus anagogicus) -- Co Bog szepcze przez ten tekst do \
-mojego serca? Jak ten tekst prowadzi ku kontemplacji i zjednoczeniu z Bogiem? \
-Jakie otwiera przestrzenie modlitwy?
+"Littera gesta docet, quid credas allegoria,
+ moralis quid agas, quo tendas anagogia."
 
-WARSTWA PRAKTYCZNA (sensus allegoricus ad vitam) -- Do jakiej konkretnej \
-zmiany zaprasza mnie ten fragment? Jakie postanowienie moge podjac dzisiaj?
+SENSUS LITERALIS (warstwa historyczno-literalna):
+- Co tekst MOWI w swoim oryginalnym kontekscie historycznym?
+- Jakie sa kluczowe slowa w oryginale (hebr./gr.) i ich znaczenie?
+- Jaki gatunek literacki (narracja, poezja, proroctwo, madrosciowy, epistola)?
+- Jaki jest Sitz im Leben — kontekst zyciowy autora i odbiorcow?
+- Odwolaj sie do konkretnego Ojca Kosciola, ktory kommentowal ten fragment.
 
-Zasady:
-- Pytania powinny byc osobiste (w drugiej osobie)
-- Unikaj pytan zamknietych (tak/nie)
-- Dopasuj glebokosc do kontekstu uzytkownika
-- Kazde pytanie powinno pochodzic z innej warstwy analizy
-- Wygeneruj 2-3 pytan refleksyjnych
+SENSUS ALLEGORICUS (warstwa typologiczno-chrystologiczna):
+- Jak ten tekst wskazuje na Chrystusa i misterium zbawienia?
+- Jakie typy i figury (typologia biblijna) sa tu obecne?
+- Jak ten fragment laczy sie z Nowym Testamentem (lub odwrotnie)?
+- Jak odnosza sie do niego Ojcowie Kosciola (patrystyka)?
 
-Odpowiedz WYLACZNIE w formacie JSON (bez komentarzy, bez markdown):
+SENSUS MORALIS (warstwa egzystencjalno-etyczna):
+- Co to znaczy dla MOJEGO obecnego zycia?
+- Jakie cnoty lub wady tekst odsłania?
+- Do jakiej przemiany serca (metanoia) zaprasza?
+- Jak ten fragment kształtuje moje sumienie?
+
+SENSUS ANAGOGICUS (warstwa mistyczno-eschatologiczna):
+- Jak ten tekst prowadzi ku kontemplacji i zjednoczeniu z Bogiem?
+- Jakie otwiera przestrzenie modlitwy i mistyki?
+- Jak wskazuje na rzeczywistosc eschatologiczna (niebo, pelnia)?
+- Jakie echo tego tekstu slychac w liturgii?
+
+═══════════════════════════════════════════════════════════
+PYTANIA REFLEKSYJNE
+═══════════════════════════════════════════════════════════
+
+Wygeneruj 3-4 pytania refleksyjne, kazde z innej warstwy:
+- Pytania osobiste (w drugiej osobie — "ty")
+- Pytania otwarte (nie "tak/nie")
+- Pytania prowokujace gleboka refleksje, nie powierzchowne
+- Przynajmniej jedno pytanie odwolujace sie do konkretnej frazy z tekstu
+- Przynajmniej jedno pytanie lacze fragment z codziennym doswiadczeniem
+
+Odpowiedz WYLACZNIE w formacie JSON:
 {{
   "questions": [
-    "pytanie refleksyjne 1",
-    "pytanie refleksyjne 2",
-    "pytanie refleksyjne 3"
+    {{
+      "text": "Pytanie refleksyjne",
+      "layer": "literalis|allegoricus|moralis|anagogicus",
+      "scripture_echo": "Fraza z tekstu, do ktorej pytanie sie odnosi"
+    }}
   ],
   "reflection_layers": {{
-    "exegetical": "Refleksja egzegetyczna",
-    "existential": "Refleksja egzystencjalna",
-    "mystical": "Refleksja mistyczna",
-    "practical": "Refleksja praktyczna"
-  }}
+    "literalis": "Refleksja historyczno-literalna z odwolaniem patrystycznym",
+    "allegoricus": "Refleksja typologiczno-chrystologiczna",
+    "moralis": "Refleksja egzystencjalno-etyczna",
+    "anagogicus": "Refleksja mistyczno-eschatologiczna"
+  }},
+  "patristic_insight": "Krotki cytat lub mysl jednego z Ojcow Kosciola",
+  "key_word": "Jedno kluczowe slowo z tekstu, ktore jest bramą do medytacji"
 }}
 """
 
 # ---------------------------------------------------------------------------
-# Fallback
+# Fallback — enriched with patristic depth
 # ---------------------------------------------------------------------------
 
 FALLBACK_MEDITATION: dict[str, Any] = {
     "questions": [
-        "Ktore slowo z tego fragmentu najbardziej przyciaga twoja uwage?",
-        "Gdybys mogl/mogla usiasc obok autora tych slow, co chcialbys/chcialabys mu powiedziec?",
-        "Co Bog chce ci dzis przez ten tekst powiedziec?",
+        {
+            "text": "Ktore slowo z tego fragmentu najbardziej przyciaga twoja uwage i dlaczego?",
+            "layer": "literalis",
+            "scripture_echo": "",
+        },
+        {
+            "text": "W jaki sposob ten tekst ukazuje Boza milosc do ciebie osobiscie?",
+            "layer": "allegoricus",
+            "scripture_echo": "",
+        },
+        {
+            "text": "Do jakiej konkretnej zmiany w twoim zyciu zaprasza cie dziś ten fragment?",
+            "layer": "moralis",
+            "scripture_echo": "",
+        },
+        {
+            "text": "Gdybys mogl/mogla usiasc w ciszy z tym jednym slowem, co uslyszalbys/uslyszalabys?",
+            "layer": "anagogicus",
+            "scripture_echo": "",
+        },
     ],
     "reflection_layers": {
-        "exegetical": (
+        "literalis": (
             "Ten fragment zostal napisany w konkretnym kontekscie historycznym. "
-            "Zastanow sie, jakie znaczenie mialy te slowa dla pierwszych odbiorcow."
+            "Sw. Hieronim uczy nas, ze 'nieznajomość Pisma Swietego jest nieznajomoscia "
+            "Chrystusa'. Zatrzymaj sie nad oryginalnym znaczeniem tych slow — co autor "
+            "natchniony chcial przekazac swoim pierwszym czytelnikom?"
         ),
-        "existential": (
-            "Pomysl, w jaki sposob te slowa odnosza sie do tego, "
-            "co teraz przezywasz w swoim zyciu."
+        "allegoricus": (
+            "Tradycja Kosciola odczytuje kazdy fragment Pisma w swietle Chrystusa. "
+            "Sw. Augustyn pisal: 'Nowy Testament jest ukryty w Starym, a Stary jest "
+            "objawiony w Nowym.' Jak ten tekst prowadzi cie ku spotkaniu z Chrystusem?"
         ),
-        "mystical": (
-            "Pozwol, by cisza wypelnila twoje serce. "
-            "Bog moze mowic przez jedno slowo, ktore cie poruszylo."
+        "moralis": (
+            "Pomysl, w jaki sposob te slowa odnosza sie do tego, co teraz przezywasz. "
+            "Sw. Grzegorz Wielki mawiał: 'Pismo Swiete rosnie z tym, kto je czyta.' "
+            "Jakie wezwanie slyszysz w tych slowach dzis?"
         ),
-        "practical": (
-            "Czy jest cos konkretnego, do czego zaprasza cie ten fragment dzisiaj?"
+        "anagogicus": (
+            "Pozwol, by cisza wypelnila twoje serce. Bog moze mowic przez jedno slowo, "
+            "ktore cie poruszylo. Sw. Jan od Krzyza uczy: 'Jedno slowo wyrzekl Ojciec, "
+            "ktorym jest Jego Syn, i to Slowo wypowiada nieustannie w wiecznym milczeniu; "
+            "w milczeniu tez dusza powinna je sluchac.'"
         ),
     },
+    "patristic_insight": (
+        "Sw. Grzegorz Wielki: 'Pismo Swiete jest listem Boga Wszechmogacego "
+        "do swego stworzenia. Czytaj je jak list milosny.'"
+    ),
+    "key_word": "slowo",
 }
 
 
 class MeditatioAgent:
     """
-    A-011 -- Meditation / reflection agent.
+    A-011 — Meditation / reflection agent.
 
     Produces personalised reflective questions and multi-layered scriptural
-    analysis (exegetical, existential, mystical, practical).
+    analysis using the full Quadriga, enriched with patristic wisdom,
+    original language insights, and kerygmatic context.
     """
 
     def __init__(self) -> None:
         try:
-            self._llm = get_llm_primary(temperature=0.7, max_tokens=2048)
+            self._llm = get_llm_primary(temperature=0.7, max_tokens=3072)
             logger.info("MeditatioAgent (A-011) initialised.")
         except Exception as exc:
             logger.warning("MeditatioAgent: LLM init failed (%s); will use fallbacks.", exc)
             self._llm = None
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     async def meditate(
         self,
         scripture: dict,
         user_context: dict | None = None,
+        kerygmatic_theme: str = "",
     ) -> dict:
-        """
-        Generate reflective questions and multi-layered meditation.
-
-        Args:
-            scripture: Dict with book, chapter, verse_start, verse_end,
-                       text, translation, historical_context.
-            user_context: Optional dict with user emotional/spiritual state.
-
-        Returns:
-            Dict with:
-              - questions: list of 2-3 reflective question strings
-              - reflection_layers: dict with exegetical, existential,
-                mystical, practical reflections
-        """
+        """Generate reflective questions and multi-layered meditation."""
         if self._llm is None:
             return dict(FALLBACK_MEDITATION)
 
@@ -161,13 +209,22 @@ class MeditatioAgent:
             verse_end=scripture.get("verse_end", ""),
             text=scripture.get("text", ""),
             historical_context=scripture.get("historical_context", "brak kontekstu"),
+            patristic_context=(
+                f"Refleksja patrystyczna: {scripture['patristic_note']}"
+                if scripture.get("patristic_note") else ""
+            ),
+            original_language_context=(
+                f"Slowo kluczowe: {scripture['original_language_key']}"
+                if scripture.get("original_language_key") else ""
+            ),
             user_context=json.dumps(user_context or {}, ensure_ascii=False),
+            kerygmatic_theme=kerygmatic_theme or "mysterium_paschale",
         )
 
         try:
             response = await self._llm.ainvoke([
                 SystemMessage(content=system_prompt),
-                HumanMessage(content="Wygeneruj medytacje wielowarstwowa."),
+                HumanMessage(content="Wygeneruj gleboka medytacje wielowarstwowa w tradycji Quadriga."),
             ])
             meditation = self._parse_json(response.content)
 
@@ -177,19 +234,47 @@ class MeditatioAgent:
                 logger.warning("Too few questions generated; using fallback.")
                 return dict(FALLBACK_MEDITATION)
 
-            # Validate reflection_layers
+            # Normalize questions format
+            normalized_questions = []
+            for q in questions:
+                if isinstance(q, str):
+                    normalized_questions.append({
+                        "text": q, "layer": "moralis", "scripture_echo": ""
+                    })
+                elif isinstance(q, dict) and q.get("text"):
+                    normalized_questions.append(q)
+            meditation["questions"] = normalized_questions or FALLBACK_MEDITATION["questions"]
+
+            # Validate reflection_layers with both naming conventions
             layers = meditation.get("reflection_layers", {})
-            required_layers = ("exegetical", "existential", "mystical", "practical")
-            if not all(layers.get(layer) for layer in required_layers):
-                logger.warning("Reflection layers incomplete; filling from fallback.")
-                fallback_layers = FALLBACK_MEDITATION["reflection_layers"]
-                for layer in required_layers:
-                    layers.setdefault(layer, fallback_layers[layer])
-                meditation["reflection_layers"] = layers
+            required_layers = ("literalis", "allegoricus", "moralis", "anagogicus")
+            # Also accept old naming
+            layer_aliases = {
+                "exegetical": "literalis", "existential": "moralis",
+                "mystical": "anagogicus", "practical": "allegoricus",
+            }
+            for old_key, new_key in layer_aliases.items():
+                if old_key in layers and new_key not in layers:
+                    layers[new_key] = layers.pop(old_key)
+
+            fallback_layers = FALLBACK_MEDITATION["reflection_layers"]
+            for layer in required_layers:
+                layers.setdefault(layer, fallback_layers[layer])
+            meditation["reflection_layers"] = layers
+
+            # Ensure patristic insight
+            meditation.setdefault("patristic_insight", FALLBACK_MEDITATION["patristic_insight"])
+            meditation.setdefault("key_word", FALLBACK_MEDITATION["key_word"])
+
+            # Backward compatibility: also provide old keys
+            meditation["exegetical"] = layers.get("literalis", "")
+            meditation["existential"] = layers.get("moralis", "")
+            meditation["mystical"] = layers.get("anagogicus", "")
+            meditation["practical"] = layers.get("allegoricus", "")
 
             logger.info(
-                "Meditation generated: %d questions, all layers present.",
-                len(questions),
+                "Meditation generated: %d questions, all 4 layers present, patristic enriched.",
+                len(meditation["questions"]),
             )
             return meditation
 
@@ -197,13 +282,8 @@ class MeditatioAgent:
             logger.error("Meditation generation failed: %s", exc, exc_info=True)
             return dict(FALLBACK_MEDITATION)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _parse_json(raw: str) -> dict:
-        """Best-effort JSON extraction from LLM output."""
         try:
             start = raw.index("{")
             end = raw.rindex("}") + 1

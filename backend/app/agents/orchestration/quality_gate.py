@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from app.core.llm import get_llm_fast
 
 logger = logging.getLogger("sancta_nexus.quality_gate")
 
@@ -176,10 +176,14 @@ class QualityGateAgent:
         get_fallback_content     -- retrieve safe fallback for any stage
     """
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.1)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_fast(temperature=0.1, max_tokens=512)
+        except Exception as exc:
+            logger.warning("QualityGateAgent: LLM init failed (%s)", exc)
+            self._llm = None
         self._circuit = _CircuitState()
-        logger.info("QualityGateAgent (A-009) initialised with model=%s.", model_name)
+        logger.info("QualityGateAgent (A-009) initialised.")
 
     # ------------------------------------------------------------------
     # Public API
@@ -352,6 +356,29 @@ class QualityGateAgent:
             )
             return dict(FALLBACK_CONTENT["scripture"])
         return dict(FALLBACK_CONTENT[stage])
+
+    async def validate(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Validate an entire pipeline state (all stages).
+
+        Called by the OrchestratorSupremus as the final quality gate
+        before returning results to the user. Validates each populated
+        stage and replaces failed content with fallback.
+        """
+        emotion_vector = state.get("emotion_vector", {})
+        stages_to_check = ["scripture", "meditation", "prayer", "contemplation", "action"]
+
+        for stage in stages_to_check:
+            content = state.get(stage)
+            if not content:
+                continue
+
+            result = await self.validate_output(stage, content, emotion_vector)
+            if result.get("used_fallback"):
+                state = {**state, stage: result["content"]}
+                logger.info("Quality gate replaced %s with fallback.", stage)
+
+        state.setdefault("theological_validation", {"status": "passed"})
+        return state
 
     def check_circuit_breaker(self, stage: str) -> bool:
         """Return True if the circuit breaker is open (tripped) for *stage*."""

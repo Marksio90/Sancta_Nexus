@@ -85,65 +85,161 @@ def _advent_start(year: int) -> date:
 # ---------------------------------------------------------------------------
 
 _FIXED_SOLEMNITIES: dict[tuple[int, int], dict[str, Any]] = {
+    # January
     (1, 1): {
         "feast": "Uroczystosc Swietej Bozej Rodzicielki Maryi",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Lb 6,22-27", "Ga 4,4-7", "Lk 2,16-21"],
     },
     (1, 6): {
         "feast": "Objawienie Panskie (Trzech Kroli)",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Iz 60,1-6", "Ef 3,2-3a.5-6", "Mt 2,1-12"],
     },
+    # February
     (2, 2): {
-        "feast": "Ofiarowanie Panskie",
+        "feast": "Ofiarowanie Panskie (Swieto Matki Bozej Gromnicznej)",
         "rank": "feast",
         "color": "white",
+        "readings": ["Ml 3,1-4", "Hbr 2,14-18", "Lk 2,22-40"],
     },
+    (2, 11): {
+        "feast": "NMP z Lourdes (Swiatowy Dzien Chorego)",
+        "rank": "memorial",
+        "color": "white",
+    },
+    # March
     (3, 19): {
-        "feast": "Uroczystosc sw. Jozefa",
+        "feast": "Uroczystosc sw. Jozefa, Oblubienka NMP",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["2 Sm 7,4-5a.12-14a.16", "Rz 4,13.16-18.22", "Mt 1,16.18-21.24a"],
     },
     (3, 25): {
         "feast": "Zwiastowanie Panskie",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Iz 7,10-14", "Hbr 10,4-10", "Lk 1,26-38"],
     },
+    # May
+    (5, 3): {
+        "feast": "NMP Krolowa Polski",
+        "rank": "solemnity",
+        "color": "white",
+    },
+    (5, 13): {
+        "feast": "NMP Fatimska",
+        "rank": "memorial",
+        "color": "white",
+    },
+    (5, 31): {
+        "feast": "Nawiedzenie NMP",
+        "rank": "feast",
+        "color": "white",
+        "readings": ["So 3,14-18", "Rz 12,9-16", "Lk 1,39-56"],
+    },
+    # June
     (6, 24): {
         "feast": "Narodzenie sw. Jana Chrzciciela",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Iz 49,1-6", "Dz 13,22-26", "Lk 1,57-66.80"],
     },
     (6, 29): {
         "feast": "Uroczystosc sw. Piotra i Pawla",
         "rank": "solemnity",
         "color": "red",
+        "readings": ["Dz 12,1-11", "2 Tm 4,6-8.17-18", "Mt 16,13-19"],
     },
+    # July
+    (7, 16): {
+        "feast": "NMP z Gory Karmel (Szkaplerzna)",
+        "rank": "memorial",
+        "color": "white",
+    },
+    # August
     (8, 6): {
         "feast": "Przemienienie Panskie",
         "rank": "feast",
         "color": "white",
+        "readings": ["Dn 7,9-10.13-14", "2 P 1,16-19", "Mt 17,1-9"],
     },
     (8, 15): {
         "feast": "Wniebowziecie NMP",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Ap 11,19a;12,1-6a.10ab", "1 Kor 15,20-27a", "Lk 1,39-56"],
     },
+    (8, 22): {
+        "feast": "NMP Krolowa",
+        "rank": "memorial",
+        "color": "white",
+    },
+    # September
+    (9, 8): {
+        "feast": "Narodzenie NMP",
+        "rank": "feast",
+        "color": "white",
+        "readings": ["Mi 5,1-4a", "Rz 8,28-30", "Mt 1,1-16.18-23"],
+    },
+    (9, 12): {
+        "feast": "Najswietszego Imienia Maryi",
+        "rank": "memorial",
+        "color": "white",
+    },
+    (9, 15): {
+        "feast": "NMP Bolesnej",
+        "rank": "memorial",
+        "color": "white",
+        "readings": ["Hbr 5,7-9", "J 19,25-27"],
+    },
+    (9, 29): {
+        "feast": "Swietych Archaniolow Michala, Gabriela i Rafala",
+        "rank": "feast",
+        "color": "white",
+    },
+    # October
+    (10, 7): {
+        "feast": "NMP Rozancowej",
+        "rank": "memorial",
+        "color": "white",
+    },
+    # November
     (11, 1): {
         "feast": "Uroczystosc Wszystkich Swietych",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Ap 7,2-4.9-14", "1 J 3,1-3", "Mt 5,1-12a"],
     },
+    (11, 2): {
+        "feast": "Wspomnienie Wszystkich Wiernych Zmarlych",
+        "rank": "feast",
+        "color": "violet",
+    },
+    (11, 21): {
+        "feast": "Ofiarowanie NMP",
+        "rank": "memorial",
+        "color": "white",
+    },
+    # December
     (12, 8): {
         "feast": "Niepokalane Poczecie NMP",
         "rank": "solemnity",
+        "color": "white",
+        "readings": ["Rdz 3,9-15.20", "Ef 1,3-6.11-12", "Lk 1,26-38"],
+    },
+    (12, 12): {
+        "feast": "NMP z Guadalupe",
+        "rank": "memorial",
         "color": "white",
     },
     (12, 25): {
         "feast": "Boze Narodzenie",
         "rank": "solemnity",
         "color": "white",
+        "readings": ["Iz 9,1-6", "Tt 2,11-14", "Lk 2,1-14"],
     },
 }
 

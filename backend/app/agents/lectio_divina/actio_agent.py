@@ -4,13 +4,15 @@ Actio Agent (A-014)
 Generates a concrete daily challenge / micro-quest that connects
 the scripture reflection to the user's everyday life.
 
-The challenge should be:
-  - Specific and achievable within 24 hours
-  - Rooted in the scripture passage just meditated upon
-  - Practical, not abstract
-  - Accompanied by an evening check-in prompt
+Now enriched with:
+  - Corporal & Spiritual Works of Mercy (CCC 2447)
+  - Cardinal & Theological Virtues framework
+  - Evening Examen (rachunek sumienia) integration
+  - Scripture-grounded challenges (not abstract)
+  - Difficulty calibrated to user's spiritual journey stage
 
-"Estote factores verbi et non auditores tantum." -- Jas 1:22
+"Estote factores verbi et non auditores tantum." — Jas 1:22
+"Fides sine operibus mortua est." — Jas 2:26
 """
 
 from __future__ import annotations
@@ -26,65 +28,138 @@ from app.core.llm import get_llm_fast
 logger = logging.getLogger("sancta_nexus.actio_agent")
 
 # ---------------------------------------------------------------------------
-# System prompt
+# System prompt — enriched with Works of Mercy and virtues
 # ---------------------------------------------------------------------------
 
 ACTIO_SYSTEM_PROMPT = """\
 Jestes przewodnikiem duchowym w systemie Sancta Nexus, specjalizujacym sie
-w przekladaniu rozwaznan biblijnych na konkretne dzialania.
+w przekladaniu rozwaznan biblijnych na konkretne, codzienne dzialania.
 
-Fragment Pisma: {book} {chapter}:{verse_start}-{verse_end}
+Twoje wyzwania sa zakorzenione w:
+- Uczynkach milosierdzia (CCC 2447)
+- Cnotach kardynalnych (roztropnosc, sprawiedliwosc, mestwo, umiarkowoanie)
+- Cnotach teologalnych (wiara, nadzieja, milosc)
+- Owocach Ducha Swietego (Ga 5,22-23)
+
+═══════════════════════════════════════════════════════════
+FRAGMENT PISMA
+═══════════════════════════════════════════════════════════
+
+{book} {chapter}:{verse_start}-{verse_end}
 Tekst: {text}
 
-Refleksja medytacyjna:
+═══════════════════════════════════════════════════════════
+REFLEKSJA MEDYTACYJNA
+═══════════════════════════════════════════════════════════
+
 {reflection}
 
-Wygeneruj JEDNO konkretne wyzwanie dnia (micro-quest), ktore:
-1. Jest wykonalne w ciagu najblizszych 24 godzin
-2. Bezposrednio laczy sie z przeslaniem fragmentu Pisma
-3. Zawiera konkretny, mierzalny element (np. "porozmawiaj z jedna osoba",
-   "poswiec 5 minut na...", "zapisz trzy rzeczy...")
+═══════════════════════════════════════════════════════════
+KONTEKST UNIKALNOSCIOWY
+═══════════════════════════════════════════════════════════
 
-Dodaj tez:
-- Poziom trudnosci (easy / medium / hard)
-- Kategorie dzialania
-- Pytanie na wieczorny rachunek sumienia
+Sugerowana kategoria dzialania (na podstawie rotacji): {suggested_category}
+Unikaj powtarzania kategorii z ostatnich sesji.
+
+═══════════════════════════════════════════════════════════
+ZASADY TWORZENIA WYZWANIA
+═══════════════════════════════════════════════════════════
+
+1. KONKRETNOSC: Wyzwanie musi byc KONKRETNE i MIERZALNE:
+   ✓ "Porozmawiaj z jedna osoba, ktora jest samotna"
+   ✓ "Napisz list/wiadomosc do osoby, za ktora jestes wdzieczny/a"
+   ✓ "Poswiec 10 minut na cicha modlitwe za osobe, ktora cie zranila"
+   ✗ "Badz dobry" (zbyt ogolne)
+   ✗ "Pomysl o Bogu" (zbyt abstrakcyjne)
+
+2. ZAKORZENIENIE: Wyzwanie MUSI bezposrednio wynikac z przeslania fragmentu.
+
+3. WYKONALNOSC: Mozliwe do realizacji w ciagu 24 godzin.
+
+4. KATEGORIE DZIALANIA (oparte na Uczynkach Milosierdzia):
+   Uczynki milosierdzia co do ciala:
+   - "feed_hungry" — karmienie glodnych, dzielenie sie jedzeniem
+   - "shelter" — goscina, troska o bezdomnych
+   - "clothe" — pomaganie potrzebujacym materialnie
+   - "visit_sick" — odwiedzanie chorych
+   - "visit_imprisoned" — pamiec o wiezionych, wykluczonych
+   - "bury_dead" — pamiec o zmarlych, modlitwa za nich
+
+   Uczynki milosierdzia co do duszy:
+   - "teach" — nauczanie, dzielenie sie wiedza o wierze
+   - "counsel" — doradzanie wątpiacym
+   - "admonish" — upomnienie braterskie (z miloscia)
+   - "comfort" — pocieszanie strapionych
+   - "forgive" — przebaczenie uraz
+   - "bear_wrongs" — cierpliwe znoszenie
+
+   Cnoty i modlitwa:
+   - "prayer" — modlitwa osobista lub wstawiennicza
+   - "gratitude" — wdziecznosc i uwielbienie
+   - "self_care" — troska o cialo jako swiatynie Ducha (1 Kor 6,19)
+   - "silence" — cisza i sluchanie Boga
+
+5. RACHUNEK SUMIENIA WIECZORNY:
+   Pytanie wieczorne powinno prowadzic przez 3 kroki:
+   a) Spojrzenie wstecz: co sie wydarzylo?
+   b) Rozpoznanie Bozej obecnosci: gdzie Bog byl w tym dzialaniu?
+   c) Postanowienie na jutro: co chce kontynuowac?
 
 Odpowiedz w formacie JSON:
 {{
-  "challenge_text": "Tresc wyzwania (max 50 slow)",
+  "challenge_text": "Tresc wyzwania (max 60 slow, konkretne i mierzalne)",
+  "scripture_anchor": "Konkretna fraza z fragmentu, z ktorej wynika wyzwanie",
   "difficulty": "easy|medium|hard",
-  "category": "prayer|charity|relationship|self_care|service|gratitude|forgiveness",
-  "evening_checkin_prompt": "Pytanie do wieczornej refleksji nad wyzwaniem"
+  "category": "<jedna z powyzszych kategorii>",
+  "virtue_focus": "Cnota, ktora wyzwanie rozwija (np. cierpliwosc, milosc, roztropnosc)",
+  "evening_examen": {{
+    "retrospection": "Pytanie: co sie wydarzylo w zwiazku z wyzwaniem?",
+    "divine_presence": "Pytanie: gdzie Bog byl w tym doswiadczeniu?",
+    "resolution": "Pytanie: co chce kontynuowac jutro?"
+  }}
 }}
 """
 
 # ---------------------------------------------------------------------------
-# Fallback
+# Fallback — enriched
 # ---------------------------------------------------------------------------
 
 FALLBACK_ACTION: dict[str, Any] = {
     "challenge_text": (
-        "Dzis poswiec 5 minut na cisze i zapisz jedna rzecz, "
-        "za ktora jestes wdzieczny/wdzieczna Bogu."
+        "Dzis poswiec 5 minut na cisze — zamknij oczy, oddychaj spokojnie, "
+        "i zapisz jedna rzecz, za ktora jestes wdzieczny/wdzieczna Bogu. "
+        "Nastepnie wyslij wiadomosc do jednej osoby, by powiedziec jej, "
+        "ze o niej pamiętasz."
     ),
+    "scripture_anchor": "Wdziecznosc jest brama do modlitwy",
     "difficulty": "easy",
     "category": "gratitude",
-    "evening_checkin_prompt": (
-        "Czy udalo ci sie dzis zatrzymac na chwile ciszy? "
-        "Co zapisales/zapisalas jako powod do wdziecznosci?"
-    ),
+    "virtue_focus": "wdziecznosc",
+    "evening_examen": {
+        "retrospection": "Czy udalo ci sie dzis zatrzymac na chwile ciszy? Co zapisales/as?",
+        "divine_presence": "Gdzie w tej chwili ciszy poczules/as Boza obecnosc?",
+        "resolution": "Jaka mala praktyke wdziecznosci chcesz kontynuowac jutro?",
+    },
 }
 
 
 class ActioAgent:
     """
-    A-014 -- Action / micro-quest generation agent.
+    A-014 — Action / micro-quest generation agent.
 
     Bridges contemplation and daily life by proposing a single,
-    achievable spiritual challenge rooted in the day's scripture,
-    along with an evening check-in prompt.
+    achievable spiritual challenge rooted in Scripture and aligned
+    with the Works of Mercy, cardinal virtues, and the user's
+    unique rotation through action categories.
     """
+
+    VALID_CATEGORIES = frozenset({
+        "prayer", "gratitude", "self_care", "silence",
+        "feed_hungry", "shelter", "clothe", "visit_sick",
+        "visit_imprisoned", "bury_dead",
+        "teach", "counsel", "admonish", "comfort",
+        "forgive", "bear_wrongs",
+    })
 
     def __init__(self) -> None:
         try:
@@ -94,28 +169,13 @@ class ActioAgent:
             logger.warning("ActioAgent: LLM init failed (%s); will use fallbacks.", exc)
             self._llm = None
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     async def challenge(
         self,
         scripture: dict,
         reflection: dict,
+        suggested_category: str = "gratitude",
     ) -> dict:
-        """
-        Generate a daily micro-quest linked to the scripture reflection.
-
-        Args:
-            scripture: Dict with book, chapter, verse_start, verse_end, text.
-            reflection: Dict with questions and reflection_layers from
-                        MeditatioAgent.
-
-        Returns:
-            Dict with: challenge_text, difficulty (easy/medium/hard),
-            category, evening_checkin_prompt.
-        """
-        # Flatten reflection into a readable string for the prompt
+        """Generate a daily micro-quest linked to the scripture reflection."""
         reflection_text = self._format_reflection(reflection)
 
         if self._llm is None:
@@ -128,16 +188,16 @@ class ActioAgent:
             verse_end=scripture.get("verse_end", ""),
             text=scripture.get("text", ""),
             reflection=reflection_text,
+            suggested_category=suggested_category,
         )
 
         try:
             response = await self._llm.ainvoke([
                 SystemMessage(content=system_prompt),
-                HumanMessage(content="Wygeneruj wyzwanie dnia."),
+                HumanMessage(content="Wygeneruj wyzwanie dnia oparte na Uczynkach Milosierdzia."),
             ])
             action = self._parse_json(response.content)
 
-            # Validate required fields
             if not action.get("challenge_text"):
                 logger.warning("Challenge text missing; using fallback.")
                 return dict(FALLBACK_ACTION)
@@ -147,16 +207,27 @@ class ActioAgent:
             if action.get("difficulty") not in valid_difficulties:
                 action["difficulty"] = "easy"
 
-            # Ensure evening check-in prompt exists
+            # Ensure evening examen structure
+            examen = action.get("evening_examen", {})
+            if not isinstance(examen, dict) or not examen.get("retrospection"):
+                action["evening_examen"] = FALLBACK_ACTION["evening_examen"]
+
+            # Backward compatibility
             if not action.get("evening_checkin_prompt"):
+                e = action["evening_examen"]
                 action["evening_checkin_prompt"] = (
-                    "Jak uplynql twoj dzien w swietle dzisiejszego wyzwania?"
+                    f"{e.get('retrospection', '')} "
+                    f"{e.get('divine_presence', '')}"
                 )
 
+            action.setdefault("scripture_anchor", "")
+            action.setdefault("virtue_focus", "")
+            action.setdefault("category", suggested_category)
+
             logger.info(
-                "Action generated: category=%s, difficulty=%s",
-                action.get("category"),
-                action.get("difficulty"),
+                "Action generated: category=%s, difficulty=%s, virtue=%s",
+                action.get("category"), action.get("difficulty"),
+                action.get("virtue_focus"),
             )
             return action
 
@@ -164,21 +235,19 @@ class ActioAgent:
             logger.error("Action generation failed: %s", exc, exc_info=True)
             return dict(FALLBACK_ACTION)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _format_reflection(reflection: dict) -> str:
-        """Convert reflection dict into a readable string for the prompt."""
         parts: list[str] = []
-
         questions = reflection.get("questions", [])
         if questions:
             parts.append("Pytania refleksyjne:")
             for i, q in enumerate(questions, 1):
-                q_text = q if isinstance(q, str) else q.get("text", str(q))
-                parts.append(f"  {i}. {q_text}")
+                if isinstance(q, str):
+                    parts.append(f"  {i}. {q}")
+                elif isinstance(q, dict):
+                    parts.append(f"  {i}. {q.get('text', str(q))}")
+                else:
+                    parts.append(f"  {i}. {q}")
 
         layers = reflection.get("reflection_layers", {})
         if layers:
@@ -190,7 +259,6 @@ class ActioAgent:
 
     @staticmethod
     def _parse_json(raw: str) -> dict:
-        """Best-effort JSON extraction from LLM output."""
         try:
             start = raw.index("{")
             end = raw.rindex("}") + 1

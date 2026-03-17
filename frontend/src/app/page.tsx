@@ -8,6 +8,7 @@ import {
   BarChart3,
   ArrowRight,
   Sparkles,
+  Cross,
 } from "lucide-react";
 
 const features = [
@@ -15,33 +16,62 @@ const features = [
     icon: BookOpen,
     title: "Lectio Divina",
     description:
-      "Przeżyj starożytną praktykę czytania Pisma Świętego prowadzoną przez AI, dostosowaną do Twojego stanu duchowego.",
+      "Przezywaj starozytna praktyke czytania Pisma Swietego prowadzona przez AI, dostosowana do Twojego stanu duchowego. Pelna Quadriga — 4 sensy Pisma, madrość Ojcow Kosciola, unikalny fragment kazdego dnia.",
     href: "/lectio-divina",
+    accent: "Ora et Lege",
   },
   {
     icon: Search,
     title: "Interaktywna Biblia",
     description:
-      "Zadaj pytanie i otrzymaj odpowiedź w czterech wymiarach: teologicznym, historycznym, psychologicznym i duchowym.",
+      "Zadaj pytanie i otrzymaj odpowiedz w czterech wymiarach: teologicznym, historycznym, psychologicznym i duchowym. 73 ksiegi katolickiego kanonu z kontekstem patrystycznym.",
     href: "/bible",
+    accent: "Quaere et Invenies",
   },
   {
     icon: MessageCircle,
     title: "Kierownik Duchowy",
     description:
-      "Rozmowa z AI kierownikiem duchowym w tradycji ignacjańskiej, karmelitańskiej, benedyktyńskiej lub franciszkańskiej.",
+      "Rozmowa z AI kierownikiem duchowym w 7 tradycjach: ignacjanskiej, karmelitanskiej, benedyktynskiej, franciszkanskiej, charyzmatycznej, dominikanskiej i maryjnej.",
     href: "/spiritual-director",
+    accent: "Contemplata Aliis Tradere",
   },
   {
     icon: BarChart3,
     title: "Panel Duchowy",
     description:
-      "Śledź swoją podróż duchową, odkrywaj powtarzające się tematy i obserwuj swój wzrost w wierze.",
+      "Sledz swoja podroż duchowa przez 8 filarow kerygmatycznych. Odkrywaj powtarzajace sie tematy i obserwuj swoj wzrost w wierze.",
     href: "/dashboard",
+    accent: "Crescit cum Legente",
   },
 ];
 
+/* Daily Scripture verses — rotated by day of year */
+const DAILY_VERSES = [
+  { text: "Bog jest miloscia", ref: "1 J 4,8" },
+  { text: "Nie lekaj sie, bo Ja jestem z toba", ref: "Iz 41,10" },
+  { text: "Pokoj zostawiam wam, pokoj moj daje wam", ref: "J 14,27" },
+  { text: "Pan jest moim pasterzem, nie brak mi niczego", ref: "Ps 23,1" },
+  { text: "Szukajcie, a znajdziecie", ref: "Mt 7,7" },
+  { text: "Ja jestem droga, prawda i zyciem", ref: "J 14,6" },
+  { text: "Ufaj Panu z calego serca", ref: "Prz 3,5" },
+  { text: "Wieksze jest Swiatlo w was niz ciemnosc na swiecie", ref: "1 J 4,4" },
+  { text: "Z miloscia wieczna umilowalam cie", ref: "Jr 31,3" },
+  { text: "Jesli Bog z nami, ktoz przeciwko nam?", ref: "Rz 8,31" },
+  { text: "Blogoslawieni czystego serca, albowiem oni Boga ogladac beda", ref: "Mt 5,8" },
+  { text: "Moje jarzmo jest slodkie, a moje brzemie lekkie", ref: "Mt 11,30" },
+];
+
+function getDailyVerse() {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
+}
+
 export default function HomePage() {
+  const dailyVerse = getDailyVerse();
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -64,19 +94,19 @@ export default function HomePage() {
           </h1>
 
           <p className="font-scripture mx-auto mb-6 max-w-2xl text-xl text-[--color-sacred-text-muted] md:text-2xl">
-            &ldquo;Twoje Słowo jest lampą dla moich stóp i światłem na mojej
-            ścieżce&rdquo;
+            &ldquo;{dailyVerse.text}&rdquo;
           </p>
 
           <p className="mb-2 text-sm tracking-widest uppercase text-[--color-sacred-text-muted]/70">
-            Psalm 119:105
+            {dailyVerse.ref}
           </p>
 
           <div className="sacred-divider mx-auto my-8 w-48" />
 
           <p className="mx-auto mb-10 max-w-lg text-lg text-[--color-sacred-text-muted]">
-            Platforma duchowego wzrostu łącząca starożytną tradycję Lectio
-            Divina z nowoczesną sztuczną inteligencją
+            Platforma duchowego wzrostu laczaca starozytna tradycje Lectio
+            Divina z 47 agentami AI — w sluzbie wiary, zakorzeniona w Pismie
+            Swietym i nauczaniu Kosciola
           </p>
 
           <Link
@@ -89,16 +119,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Kerygmatic pillars section */}
+      <section className="relative px-4 py-16">
+        <div className="mx-auto max-w-4xl text-center">
+          <div className="sacred-divider-cross mx-auto mb-10 w-64">
+            <Cross className="h-4 w-4 text-[--color-gold]" />
+          </div>
+          <p className="font-scripture text-[--color-sacred-text-muted]">
+            &ldquo;Pismo Swiete rosnie z tym, kto je czyta&rdquo;
+          </p>
+          <p className="mt-1 text-xs tracking-widest uppercase text-[--color-sacred-text-muted]/50">
+            Sw. Grzegorz Wielki
+          </p>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="relative px-4 py-24">
         <div className="sacred-divider mx-auto mb-16 w-64" />
 
         <h2 className="font-heading mb-4 text-center text-3xl text-[--color-gold] md:text-4xl">
-          Odkryj Głębię Wiary
+          Odkryj Glebie Wiary
         </h2>
         <p className="mx-auto mb-16 max-w-xl text-center text-[--color-sacred-text-muted]">
-          Cztery filary Twojej duchowej podróży, wspierane przez sztuczną
-          inteligencję w służbie wiary
+          Cztery filary Twojej duchowej podrozy, wspierane przez sztuczna
+          inteligencje w sluzbie wiary
         </p>
 
         <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
@@ -110,8 +155,13 @@ export default function HomePage() {
                 href={feature.href}
                 className="group rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-8 transition-all hover:border-[--color-gold]/30 hover:bg-[--color-sacred-surface-light]"
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-[--color-gold]/20 bg-[--color-gold]/5">
-                  <Icon className="h-6 w-6 text-[--color-gold]" />
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[--color-gold]/20 bg-[--color-gold]/5">
+                    <Icon className="h-6 w-6 text-[--color-gold]" />
+                  </div>
+                  <span className="font-scripture text-xs text-[--color-gold]/30">
+                    {feature.accent}
+                  </span>
                 </div>
                 <h3 className="font-heading mb-2 text-xl text-[--color-parchment]">
                   {feature.title}
@@ -137,6 +187,9 @@ export default function HomePage() {
         <p className="mt-4 text-sm text-[--color-sacred-text-muted]/50">
           Sancta Nexus &copy; {new Date().getFullYear()} &middot; Ad Maiorem
           Dei Gloriam
+        </p>
+        <p className="mt-2 text-xs text-[--color-sacred-text-muted]/30">
+          73 ksiegi &middot; 47 agentow &middot; 7 tradycji &middot; 8 filarow kerygmatycznych
         </p>
       </footer>
     </div>
