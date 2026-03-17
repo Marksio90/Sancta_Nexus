@@ -6,8 +6,7 @@ Selects a scripture passage for the Lectio Divina session based on:
   - the liturgical calendar
   - past session history (to avoid repetition)
 
-Uses LangChain ChatOpenAI with a Polish-language system prompt for
-biblical scholarship and exegesis.
+Uses the shared LLM factory with fallback to template responses.
 
 "Lampada pedibus meis verbum tuum." -- Ps 119:105
 """
@@ -19,7 +18,9 @@ import logging
 from datetime import date
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core.llm import get_llm_primary
 
 logger = logging.getLogger("sancta_nexus.lectio_agent")
 
@@ -28,17 +29,22 @@ logger = logging.getLogger("sancta_nexus.lectio_agent")
 # ---------------------------------------------------------------------------
 
 LECTIO_SYSTEM_PROMPT = """\
-Jestes biblista i egzegeta w systemie Sancta Nexus.
-Twoim zadaniem jest dobranie fragmentu Pisma Swietego, ktory bedzie
-najlepiej odpowiadal aktualnemu stanowi duchowemu i emocjonalnemu uzytkownika.
+Jestes biblista i egzegeta w systemie Sancta Nexus -- katolickiej platformie \
+towarzyszenia duchowego. Twoim zadaniem jest dobranie fragmentu Pisma Swietego, \
+ktory bedzie najlepiej odpowiadal aktualnemu stanowi duchowemu i emocjonalnemu \
+uzytkownika.
 
 Zasady:
-1. Wybieraj fragmenty z calego kanonu Pisma Swietego (ST i NT).
+1. Wybieraj fragmenty z calego kanonu Pisma Swietego (46 ksiag ST + 27 NT).
 2. Uwzglednij okres liturgiczny: {liturgical_season}.
 3. Unikaj powtorzen -- oto fragmenty z ostatnich sesji: {recent_passages}.
 4. Dopasuj dlugosc fragmentu (3-8 wersetow) do stanu emocjonalnego.
-5. Dla stanow kryzysowych preferuj Psalmy pocieszenia i teksty nadziei.
-6. Uwzglednij kontekst historyczny i kulturowy fragmentu.
+5. Dla stanow kryzysowych preferuj Psalmy pocieszenia (Ps 23, 34, 46, 91, 121) \
+   i teksty nadziei (Rz 8, Iz 41, 2 Kor 4).
+6. Dla stanow radosci i wdziecznosci: Ps 100, 103, 148, Flp 4, Kol 3.
+7. Dla stanow smutku i zaloby: Ps 42, 88, Lm 3, Mt 5,4.
+8. Uwzglednij kontekst historyczny i kulturowy fragmentu.
+9. Podaj pelny tekst w tlumaczeniu Biblii Tysiaclecia V (BT5).
 
 Wektor emocji uzytkownika:
 {emotion_vector}
@@ -46,7 +52,7 @@ Wektor emocji uzytkownika:
 Kontekst liturgiczny:
 {liturgical_context}
 
-Odpowiedz w formacie JSON:
+Odpowiedz WYLACZNIE w formacie JSON (bez komentarzy, bez markdown):
 {{
   "book": "Nazwa ksiegi",
   "chapter": <numer rozdzialu>,
@@ -129,9 +135,13 @@ class LectioAgent:
     liturgical awareness, and historical context enrichment.
     """
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.5)
-        logger.info("LectioAgent (A-010) initialised with model=%s.", model_name)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_primary(temperature=0.5, max_tokens=2048)
+            logger.info("LectioAgent (A-010) initialised.")
+        except Exception as exc:
+            logger.warning("LectioAgent: LLM init failed (%s); will use fallbacks.", exc)
+            self._llm = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -155,10 +165,13 @@ class LectioAgent:
             Dict with keys: book, chapter, verse_start, verse_end, text,
             translation, historical_context.
         """
+        if self._llm is None:
+            return self._get_fallback(emotion_vector)
+
         recent_passages = self._extract_recent_passages(user_history or [])
         liturgical_season = self._resolve_liturgical_season(liturgical_context)
 
-        prompt = LECTIO_SYSTEM_PROMPT.format(
+        system_prompt = LECTIO_SYSTEM_PROMPT.format(
             liturgical_season=liturgical_season,
             recent_passages=recent_passages or "(brak)",
             emotion_vector=json.dumps(emotion_vector, ensure_ascii=False),
@@ -168,7 +181,10 @@ class LectioAgent:
         )
 
         try:
-            response = await self._llm.ainvoke(prompt)
+            response = await self._llm.ainvoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content="Dobierz fragment Pisma Swietego."),
+            ])
             scripture = self._parse_json(response.content)
 
             # Validate required fields
@@ -208,9 +224,9 @@ class LectioAgent:
     def _get_fallback(emotion_vector: dict) -> dict:
         """Choose the best fallback passage based on the dominant emotion."""
         dominant = max(emotion_vector, key=emotion_vector.get, default="neutral")
-        if dominant in ("sadness", "fear", "smutek", "lek", "anxiety"):
+        if dominant in ("sadness", "fear", "smutek", "lek", "anxiety", "grief", "dread"):
             return dict(FALLBACK_PASSAGES[1])
-        if dominant in ("hope", "joy", "nadzieja", "radosc"):
+        if dominant in ("hope", "joy", "nadzieja", "radosc", "gratitude", "serenity"):
             return dict(FALLBACK_PASSAGES[2])
         return dict(FALLBACK_PASSAGES[0])
 

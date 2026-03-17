@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, LogIn, LogOut, User } from "lucide-react";
+import { useAuthStore } from "@/stores/auth";
 
 const NAV_LINKS = [
   { href: "/lectio-divina", label: "Lectio Divina" },
@@ -15,6 +16,11 @@ const NAV_LINKS = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, isAuthenticated, logout, loadFromStorage } = useAuthStore();
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
 
   return (
     <header className="fixed top-0 z-50 w-full border-b border-[--color-sacred-border] bg-[--color-sacred-bg]/90 backdrop-blur-md">
@@ -48,6 +54,45 @@ export function Header() {
               </Link>
             );
           })}
+
+          {/* Auth section */}
+          <div className="ml-2 flex items-center gap-2 border-l border-[--color-sacred-border] pl-3">
+            {isAuthenticated && user ? (
+              <>
+                <span className="flex items-center gap-1.5 text-sm text-[--color-parchment]">
+                  <User className="h-4 w-4 text-[--color-gold]" />
+                  {user.displayName}
+                </span>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-[--color-sacred-text-muted] transition-all hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Wyloguj
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    pathname === "/auth/login"
+                      ? "bg-[--color-gold]/10 text-[--color-gold]"
+                      : "text-[--color-sacred-text-muted] hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
+                  }`}
+                >
+                  <LogIn className="h-4 w-4" />
+                  Zaloguj
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="rounded-lg bg-[--color-gold] px-3 py-2 text-sm font-medium text-[--color-ink] transition-all hover:bg-[--color-gold-light]"
+                >
+                  Rejestracja
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Mobile menu button */}
@@ -85,6 +130,46 @@ export function Header() {
                 </Link>
               );
             })}
+
+            {/* Mobile auth section */}
+            <div className="mt-2 border-t border-[--color-sacred-border] pt-3">
+              {isAuthenticated && user ? (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2 text-sm text-[--color-parchment]">
+                    <User className="h-4 w-4 text-[--color-gold]" />
+                    {user.displayName}
+                  </div>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm text-[--color-sacred-text-muted] transition-all hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Wyloguj
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm text-[--color-sacred-text-muted] transition-all hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Zaloguj
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="mt-1 flex items-center justify-center rounded-lg bg-[--color-gold] px-4 py-3 text-sm font-medium text-[--color-ink] transition-all hover:bg-[--color-gold-light]"
+                  >
+                    Rejestracja
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

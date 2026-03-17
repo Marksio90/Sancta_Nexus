@@ -20,7 +20,9 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core.llm import get_llm_creative
 
 logger = logging.getLogger("sancta_nexus.oratio_agent")
 
@@ -156,9 +158,13 @@ class OratioAgent:
         {"ignatian", "carmelite", "franciscan", "benedictine", "charismatic"}
     )
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=0.8)
-        logger.info("OratioAgent (A-012) initialised with model=%s.", model_name)
+    def __init__(self) -> None:
+        try:
+            self._llm = get_llm_creative(temperature=0.8, max_tokens=2048)
+            logger.info("OratioAgent (A-012) initialised.")
+        except Exception as exc:
+            logger.warning("OratioAgent: LLM init failed (%s); will use fallbacks.", exc)
+            self._llm = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -195,15 +201,21 @@ class OratioAgent:
             f"{scripture.get('verse_start', '')}-{scripture.get('verse_end', '')}"
         )
 
+        if self._llm is None:
+            return dict(FALLBACK_PRAYER)
+
         prompt_template = TRADITION_PROMPTS[tradition]
-        prompt = prompt_template.format(
+        system_prompt = prompt_template.format(
             reference=reference,
             text=scripture.get("text", ""),
             emotion_state=json.dumps(emotion_state, ensure_ascii=False),
         )
 
         try:
-            response = await self._llm.ainvoke(prompt)
+            response = await self._llm.ainvoke([
+                SystemMessage(content=system_prompt),
+                HumanMessage(content="Wygeneruj spersonalizowana modlitwe."),
+            ])
             prayer = self._parse_json(response.content)
 
             # Validate prayer has actual text

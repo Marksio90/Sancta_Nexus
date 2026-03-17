@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
+import { ToastContainer } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "Sancta Nexus — AI Lectio Divina",
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-sacred-bg text-sacred-text antialiased">
         <Header />
         <main className="pt-16">{children}</main>
+        <ToastContainer />
       </body>
     </html>
   );
