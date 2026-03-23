@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -16,7 +17,7 @@ const features = [
     icon: BookOpen,
     title: "Lectio Divina",
     description:
-      "Przezywaj starozytna praktyke czytania Pisma Swietego prowadzona przez AI, dostosowana do Twojego stanu duchowego. Pelna Quadriga — 4 sensy Pisma, madrość Ojcow Kosciola, unikalny fragment kazdego dnia.",
+      "Przezywaj starozytna praktyke czytania Pisma Swietego prowadzona przez AI, dostosowana do Twojego stanu duchowego. Pelna Quadriga — 4 sensy Pisma, madrosc Ojcow Kosciola, unikalny fragment kazdego dnia.",
     href: "/lectio-divina",
     accent: "Ora et Lege",
   },
@@ -24,7 +25,7 @@ const features = [
     icon: Search,
     title: "Interaktywna Biblia",
     description:
-      "Zadaj pytanie i otrzymaj odpowiedz w czterech wymiarach: teologicznym, historycznym, psychologicznym i duchowym. 73 ksiegi katolickiego kanonu z kontekstem patrystycznym.",
+      "Wyszukaj dowolne slowo, frase lub werset i otrzymaj wszystkie pasujace fragmenty z calego Pisma Swietego. Analizuj je w czterech wymiarach: teologicznym, historycznym, psychologicznym i duchowym.",
     href: "/bible",
     accent: "Quaere et Invenies",
   },
@@ -40,37 +41,72 @@ const features = [
     icon: BarChart3,
     title: "Panel Duchowy",
     description:
-      "Sledz swoja podroż duchowa przez 8 filarow kerygmatycznych. Odkrywaj powtarzajace sie tematy i obserwuj swoj wzrost w wierze.",
+      "Sledz swoja podroz duchowa przez 8 filarow kerygmatycznych. Odkrywaj powtarzajace sie tematy i obserwuj swoj wzrost w wierze.",
     href: "/dashboard",
     accent: "Crescit cum Legente",
   },
 ];
 
-/* Daily Scripture verses — rotated by day of year */
-const DAILY_VERSES = [
-  { text: "Bog jest miloscia", ref: "1 J 4,8" },
-  { text: "Nie lekaj sie, bo Ja jestem z toba", ref: "Iz 41,10" },
-  { text: "Pokoj zostawiam wam, pokoj moj daje wam", ref: "J 14,27" },
+const VERSES = [
+  { text: "Bóg jest miłością", ref: "1 J 4,8" },
+  { text: "Nie lękaj się, bo Ja jestem z tobą", ref: "Iz 41,10" },
+  { text: "Pokój zostawiam wam, pokój mój daję wam", ref: "J 14,27" },
   { text: "Pan jest moim pasterzem, nie brak mi niczego", ref: "Ps 23,1" },
   { text: "Szukajcie, a znajdziecie", ref: "Mt 7,7" },
-  { text: "Ja jestem droga, prawda i zyciem", ref: "J 14,6" },
-  { text: "Ufaj Panu z calego serca", ref: "Prz 3,5" },
-  { text: "Wieksze jest Swiatlo w was niz ciemnosc na swiecie", ref: "1 J 4,4" },
-  { text: "Z miloscia wieczna umilowalam cie", ref: "Jr 31,3" },
-  { text: "Jesli Bog z nami, ktoz przeciwko nam?", ref: "Rz 8,31" },
-  { text: "Blogoslawieni czystego serca, albowiem oni Boga ogladac beda", ref: "Mt 5,8" },
-  { text: "Moje jarzmo jest slodkie, a moje brzemie lekkie", ref: "Mt 11,30" },
+  { text: "Ufaj Panu z całego serca", ref: "Prz 3,5" },
+  { text: "Miłujcie się wzajemnie, tak jak Ja was umiłowałem", ref: "J 15,12" },
+  { text: "Z miłością wieczną umiłowałem cię", ref: "Jr 31,3" },
+  { text: "Jeśli Bóg z nami, któż przeciwko nam?", ref: "Rz 8,31" },
+  { text: "Błogosławieni czystego serca, albowiem oni Boga oglądać będą", ref: "Mt 5,8" },
+  { text: "Moje jarzmo jest słodkie, a moje brzemię lekkie", ref: "Mt 11,30" },
+  { text: "Wszystko mogę w Tym, który mnie umacnia", ref: "Flp 4,13" },
+  { text: "Proście, a będzie wam dane", ref: "Mt 7,7" },
+  { text: "Pan jest moją mocą i zbawieniem", ref: "Ps 118,14" },
+  { text: "Przyjdźcie do Mnie wszyscy, którzy utrudzeni i obciążeni jesteście", ref: "Mt 11,28" },
+  { text: "Łaska Pańska nade mną nie była daremna", ref: "1 Kor 15,10" },
+  { text: "W miłości nie ma lęku", ref: "1 J 4,18" },
+  { text: "Radujcie się zawsze w Panu", ref: "Flp 4,4" },
+  { text: "Kto we Mnie wierzy, ma życie wieczne", ref: "J 6,47" },
+  { text: "Niech miłość wasza będzie bez obłudy", ref: "Rz 12,9" },
+  { text: "Słowo Twoje jest lampą dla moich kroków", ref: "Ps 119,105" },
+  { text: "Miłosierdzie Jego jest wieczne", ref: "Ps 136,1" },
+  { text: "Bóg jest dla nas ucieczką i mocą", ref: "Ps 46,2" },
+  { text: "Choć chodzę ciemną doliną, zła się nie ulęknę", ref: "Ps 23,4" },
+  { text: "Stworzył nas Bóg dla siebie i niespokojne jest serce nasze", ref: "Wyznania I,1" },
+  { text: "Trwajcie w miłości mojej", ref: "J 15,9" },
+  { text: "Pan jest blisko wszystkich, którzy Go wzywają", ref: "Ps 145,18" },
+  { text: "Nawróćcie się do Mnie całym swym sercem", ref: "Jl 2,12" },
+  { text: "Jam jest zmartwychwstanie i życie", ref: "J 11,25" },
+  { text: "Czuwajcie i módlcie się", ref: "Mt 26,41" },
+  { text: "Przybliżcie się do Boga, a On zbliży się do was", ref: "Jk 4,8" },
+  { text: "Nikt nie może dwom panom służyć", ref: "Mt 6,24" },
+  { text: "Módlcie się nieustannie", ref: "1 Tes 5,17" },
+  { text: "Gdzie jest skarb twój, tam będzie i serce twoje", ref: "Mt 6,21" },
+  { text: "Bądźcie doskonali, jak doskonały jest Ojciec wasz niebieski", ref: "Mt 5,48" },
+  { text: "Kto nie kocha, nie zna Boga, bo Bóg jest miłością", ref: "1 J 4,8" },
+  { text: "Oto stoję u drzwi i kołaczę", ref: "Ap 3,20" },
+  { text: "Ja jestem chlebem życia", ref: "J 6,35" },
+  { text: "Ty jesteś Piotr — Skała, i na tej Skale zbuduję mój Kościół", ref: "Mt 16,18" },
+  { text: "Idźcie więc i nauczajcie wszystkie narody", ref: "Mt 28,19" },
+  { text: "Pan jest sprawiedliwy we wszystkich swoich drogach", ref: "Ps 145,17" },
+  { text: "Miłość nigdy nie ustaje", ref: "1 Kor 13,8" },
+  { text: "Szczęśliwy człowiek, który pokłada nadzieję w Panu", ref: "Ps 84,13" },
+  { text: "Uwielbiaj Pana, duszo moja", ref: "Ps 146,1" },
+  { text: "Twarz swoją ukryłem przed tobą przez chwilę, lecz wieczną miłością zlituję się nad tobą", ref: "Iz 54,8" },
+  { text: "Nieustannie śpiewam o łaskach Pana", ref: "Ps 89,2" },
+  { text: "Kiedy pragnę, do Ciebie się garnie dusza moja", ref: "Ps 63,2" },
+  { text: "Pana, Boga twego, będziesz miłował całym swoim sercem", ref: "Mt 22,37" },
+  { text: "Miłujcie waszych nieprzyjaciół i módlcie się za tych, którzy was prześladują", ref: "Mt 5,44" },
+  { text: "On sam nas ukochał i posłał Syna swojego jako ofiarę przebłagalną", ref: "1 J 4,10" },
 ];
 
-function getDailyVerse() {
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-  );
-  return DAILY_VERSES[dayOfYear % DAILY_VERSES.length];
-}
-
 export default function HomePage() {
-  const dailyVerse = getDailyVerse();
+  const [verse, setVerse] = useState<{ text: string; ref: string } | null>(null);
+
+  useEffect(() => {
+    const idx = Math.floor(Math.random() * VERSES.length);
+    setVerse(VERSES[idx]);
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -93,20 +129,28 @@ export default function HomePage() {
             Sancta Nexus
           </h1>
 
-          <p className="font-scripture mx-auto mb-6 max-w-2xl text-xl text-[--color-sacred-text-muted] md:text-2xl">
-            &ldquo;{dailyVerse.text}&rdquo;
-          </p>
-
-          <p className="mb-2 text-sm tracking-widest uppercase text-[--color-sacred-text-muted]/70">
-            {dailyVerse.ref}
-          </p>
+          {verse ? (
+            <>
+              <p className="font-scripture mx-auto mb-6 max-w-2xl text-xl text-[--color-sacred-text-muted] md:text-2xl">
+                &ldquo;{verse.text}&rdquo;
+              </p>
+              <p className="mb-2 text-sm tracking-widest uppercase text-[--color-sacred-text-muted]/70">
+                {verse.ref}
+              </p>
+            </>
+          ) : (
+            <div className="mb-8 animate-pulse">
+              <div className="mx-auto mb-4 h-6 w-80 rounded-full bg-[--color-sacred-surface-light]" />
+              <div className="mx-auto h-4 w-24 rounded-full bg-[--color-sacred-surface-light]" />
+            </div>
+          )}
 
           <div className="sacred-divider mx-auto my-8 w-48" />
 
           <p className="mx-auto mb-10 max-w-lg text-lg text-[--color-sacred-text-muted]">
-            Platforma duchowego wzrostu laczaca starozytna tradycje Lectio
-            Divina z 47 agentami AI — w sluzbie wiary, zakorzeniona w Pismie
-            Swietym i nauczaniu Kosciola
+            Platforma duchowego wzrostu łącząca starożytną tradycję Lectio
+            Divina z mocą sztucznej inteligencji — w służbie wiary, zakorzeniona
+            w Piśmie Świętym i nauczaniu Kościoła
           </p>
 
           <Link
@@ -126,10 +170,10 @@ export default function HomePage() {
             <Cross className="h-4 w-4 text-[--color-gold]" />
           </div>
           <p className="font-scripture text-[--color-sacred-text-muted]">
-            &ldquo;Pismo Swiete rosnie z tym, kto je czyta&rdquo;
+            &ldquo;Pismo Święte rośnie z tym, kto je czyta&rdquo;
           </p>
           <p className="mt-1 text-xs tracking-widest uppercase text-[--color-sacred-text-muted]/50">
-            Sw. Grzegorz Wielki
+            Św. Grzegorz Wielki
           </p>
         </div>
       </section>
@@ -139,11 +183,11 @@ export default function HomePage() {
         <div className="sacred-divider mx-auto mb-16 w-64" />
 
         <h2 className="font-heading mb-4 text-center text-3xl text-[--color-gold] md:text-4xl">
-          Odkryj Glebie Wiary
+          Odkryj Głębię Wiary
         </h2>
         <p className="mx-auto mb-16 max-w-xl text-center text-[--color-sacred-text-muted]">
-          Cztery filary Twojej duchowej podrozy, wspierane przez sztuczna
-          inteligencje w sluzbie wiary
+          Cztery filary Twojej duchowej podróży, wspierane przez sztuczną
+          inteligencję w służbie wiary
         </p>
 
         <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
@@ -189,7 +233,7 @@ export default function HomePage() {
           Dei Gloriam
         </p>
         <p className="mt-2 text-xs text-[--color-sacred-text-muted]/30">
-          73 ksiegi &middot; 47 agentow &middot; 7 tradycji &middot; 8 filarow kerygmatycznych
+          73 księgi &middot; 7 tradycji &middot; 8 filarów kerygmatycznych
         </p>
       </footer>
     </div>
