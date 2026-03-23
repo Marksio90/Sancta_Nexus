@@ -242,6 +242,78 @@ async def search_scripture(
     )
 
 
+@router.get("/random-verse")
+async def get_random_verse() -> dict:
+    """Return a random verse from the full 31 102-verse Polish Bible corpus.
+
+    Picks a random spiritual theme, runs a semantic vector search, then
+    returns one randomly-selected verse from the top results.  Falls back to
+    a curated list when Qdrant is unavailable.
+    """
+    import random
+
+    SPIRITUAL_QUERIES = [
+        "miłość Boga do człowieka", "zbawienie i odkupienie", "nadzieja wieczna",
+        "modlitwa i adoracja", "łaska Boża", "nawrócenie serca",
+        "wiara i zaufanie", "pokój serca Boży", "przebaczenie win",
+        "radość w Panu", "miłosierdzie Boże", "stworzenie świata",
+        "zmartwychwstanie i życie", "Duch Święty", "prawda i mądrość",
+        "sprawiedliwość Boża", "pokuta i pojednanie", "chwała Pańska",
+        "przymierze z Bogiem", "misja i ewangelizacja",
+        "cierpienie i krzyż", "uzdrowienie i zbawienie", "wierność Boga",
+        "błogosławieństwo", "królestwo Boże", "Mesjasz i wybawiciel",
+        "Słowo Boże jako pokarm", "światłość i ciemność", "droga oczyszczenia",
+        "opatrzność Boża", "proroctwo i nadzieja", "ofiarowanie się Bogu",
+        "miłość bliźniego", "pokora i służba", "wytrwałość w wierze",
+        "modlitwa wstawiennicza", "chwała Trójcy Świętej", "łamanie chleba",
+        "powołanie i wybranie", "świętość i uświęcenie", "zaufanie w próbie",
+        "bojaźń Boża i mądrość", "szukanie Boga", "obecność Boga",
+        "pielgrzymka duszy", "nowe stworzenie", "zmartwychwstanie ciała",
+        "miłość jako fundament", "modlitwa psalmów", "Słowo stało się ciałem",
+        "naśladowanie Chrystusa", "misericordia Dei", "ogień Ducha",
+        "pokój który świat dać nie może", "tajemnica Kościoła", "Eucharystia",
+        "woda żywa", "chleb życia", "dobry pasterz", "droga do ojca",
+        "syn marnotrawny", "kobieta z krwotokiem", "uzdrowienie niewidomego",
+        "kazanie na górze", "błogosławieństwa ewangeliczne", "modlitwa Ojcze Nasz",
+        "Magnificat Maryi", "zwiastowanie", "narodzenie Pańskie", "Getsemani",
+        "droga krzyżowa", "zesłanie Ducha", "Apokalipsa nadzieja",
+        "trwałość miłości Bożej", "wierność przymierza", "serce contrite",
+    ]
+
+    FALLBACK_VERSES = [
+        {"text": "Bóg jest miłością", "ref": "1 J 4,8"},
+        {"text": "Nie lękaj się, bo Ja jestem z tobą", "ref": "Iz 41,10"},
+        {"text": "Pokój zostawiam wam, pokój mój daję wam", "ref": "J 14,27"},
+        {"text": "Pan jest moim pasterzem, nie brak mi niczego", "ref": "Ps 23,1"},
+        {"text": "Wszystko mogę w Tym, który mnie umacnia", "ref": "Flp 4,13"},
+        {"text": "Miłujcie się wzajemnie, tak jak Ja was umiłowałem", "ref": "J 15,12"},
+        {"text": "Kto we Mnie wierzy, ma życie wieczne", "ref": "J 6,47"},
+        {"text": "W miłości nie ma lęku", "ref": "1 J 4,18"},
+        {"text": "Słowo Twoje jest lampą dla moich kroków", "ref": "Ps 119,105"},
+        {"text": "Jam jest zmartwychwstanie i życie", "ref": "J 11,25"},
+        {"text": "Miłość nigdy nie ustaje", "ref": "1 Kor 13,8"},
+        {"text": "Trwajcie w miłości mojej", "ref": "J 15,9"},
+    ]
+
+    from app.services.rag.rag_service import RAGService
+
+    query = random.choice(SPIRITUAL_QUERIES)
+    rag = RAGService()
+    results = rag.search_scripture(query, limit=10)
+
+    if results:
+        pick = random.choice(results[:5])
+        ref = pick.book
+        if pick.chapter:
+            ref += f" {pick.chapter}"
+            if pick.verse:
+                ref += f",{pick.verse}"
+        return {"text": pick.content, "ref": ref, "source": "qdrant"}
+
+    fallback = random.choice(FALLBACK_VERSES)
+    return {**fallback, "source": "fallback"}
+
+
 # ---------------------------------------------------------------------------
 # Helpers for 4-dimensional response generation
 # ---------------------------------------------------------------------------
