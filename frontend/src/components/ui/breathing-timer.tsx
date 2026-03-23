@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { playPrayerBell, playSilenceBell, playTick } from "@/lib/audio";
+import { Bell, BellOff } from "lucide-react";
 
 interface BreathingTimerProps {
   durationMinutes?: number;
@@ -42,7 +44,9 @@ export function BreathingTimer({
   const [timeRemaining, setTimeRemaining] = useState(durationMinutes * 60);
   const [isComplete, setIsComplete] = useState(false);
   const [showJesusPrayer, setShowJesusPrayer] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const phaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPhaseRef = useRef<BreathPhase | null>(null);
 
   const totalSeconds = durationMinutes * 60;
 
@@ -59,11 +63,16 @@ export function BreathingTimer({
 
   useEffect(() => {
     if (!isRunning || isComplete) return;
+    // Play tick when phase changes
+    if (soundEnabled && prevPhaseRef.current !== phase) {
+      playTick();
+      prevPhaseRef.current = phase;
+    }
     phaseTimeoutRef.current = setTimeout(cyclePhase, PHASE_DURATION_MS[phase]);
     return () => {
       if (phaseTimeoutRef.current) clearTimeout(phaseTimeoutRef.current);
     };
-  }, [isRunning, isComplete, phase, cyclePhase]);
+  }, [isRunning, isComplete, phase, cyclePhase, soundEnabled]);
 
   useEffect(() => {
     if (!isRunning || isComplete) return;
@@ -72,6 +81,7 @@ export function BreathingTimer({
         if (prev <= 1) {
           setIsComplete(true);
           setIsRunning(false);
+          if (soundEnabled) playSilenceBell();
           return 0;
         }
         return prev - 1;
@@ -81,6 +91,8 @@ export function BreathingTimer({
   }, [isRunning, isComplete]);
 
   const handleStart = () => {
+    if (soundEnabled) playPrayerBell();
+    prevPhaseRef.current = null;
     setIsRunning(true);
     setPhase("inhale");
     setTimeRemaining(totalSeconds);
@@ -241,6 +253,16 @@ export function BreathingTimer({
           </button>
         )}
       </div>
+
+      {/* Sound toggle */}
+      <button
+        onClick={() => setSoundEnabled((v) => !v)}
+        className="mt-4 flex items-center gap-1.5 text-xs text-[--color-sacred-text-muted]/40 transition-colors hover:text-[--color-gold]/60"
+        title={soundEnabled ? "Wycisz dźwięki" : "Włącz dźwięki"}
+      >
+        {soundEnabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+        {soundEnabled ? "Dźwięk: włączony" : "Dźwięk: wyciszony"}
+      </button>
 
       {/* Instructions */}
       {!isRunning && !isComplete && (

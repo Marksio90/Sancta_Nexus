@@ -78,6 +78,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.spiritual_director", "/api/v1/spiritual-director", ["spiritual-director"]),
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
+    ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
