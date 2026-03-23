@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Heart, BookOpen, Flame, Eye, Footprints } from "lucide-react";
 import Link from "next/link";
 import { StageIndicator } from "@/components/ui/stage-indicator";
 import { BreathingTimer } from "@/components/ui/breathing-timer";
 import { ScriptureDisplay } from "@/components/ui/scripture-display";
 import { useLectioStore } from "@/stores/lectio";
+import { useProgressStore } from "@/stores/progress";
 import type { LectioDivinaStage } from "@/types";
 
 const STAGES: LectioDivinaStage[] = [
@@ -92,9 +93,28 @@ export default function LectioDivinaPage() {
   const [meditationResponse, setMeditationResponse] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { isLoading } = useLectioStore();
+  const { recordSession } = useProgressStore();
+  const sessionStartRef = useRef<Date>(new Date());
+  const sessionRecordedRef = useRef(false);
 
   const stage = STAGES[currentStage];
   const StageIcon = STAGE_ICONS[stage];
+
+  // Record session when the user reaches Actio (final stage)
+  useEffect(() => {
+    if (stage === "actio" && !sessionRecordedRef.current) {
+      sessionRecordedRef.current = true;
+      const durationMinutes = Math.round(
+        (Date.now() - sessionStartRef.current.getTime()) / 60000
+      );
+      recordSession({
+        date: new Date().toISOString(),
+        passageRef: `${MOCK_SCRIPTURE.book} ${MOCK_SCRIPTURE.chapter},${MOCK_SCRIPTURE.startVerse}-${MOCK_SCRIPTURE.endVerse}`,
+        emotion: emotion || "nieznany",
+        durationMinutes: Math.max(1, durationMinutes),
+      });
+    }
+  }, [stage, emotion, recordSession]);
 
   const goToStage = useCallback(
     (direction: 1 | -1) => {
