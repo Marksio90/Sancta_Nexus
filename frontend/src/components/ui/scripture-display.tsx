@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Share2, Copy, Check, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Share2, Check, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { useNotesStore } from "@/stores/notes";
 
 export interface OriginalLanguageEntry {
@@ -49,9 +49,15 @@ export function ScriptureDisplay({
   const [showOriginal, setShowOriginal] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
-  const { getNote, saveNote } = useNotesStore();
-  const [noteText, setNoteText] = useState(() => getNote(reference));
+  const { getNote, saveNote, loadFromStorage } = useNotesStore();
+  const [noteText, setNoteText] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
+
+  // Load persisted notes on mount
+  useEffect(() => {
+    loadFromStorage();
+    setNoteText(getNote(reference));
+  }, [reference, loadFromStorage, getNote]);
 
   const shareText = `„${text}" — ${reference}`;
 
