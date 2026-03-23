@@ -105,6 +105,28 @@ const MOCK_CHALLENGE = {
   },
 };
 
+const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: "łatwe",
+  medium: "średnie",
+  hard: "trudne",
+  divine: "✦ Boski",
+};
+
+function DifficultBadge({ difficulty }: { difficulty: string }) {
+  if (difficulty === "divine") {
+    return (
+      <span className="rounded-full border border-[--color-gold] bg-[--color-gold]/20 px-3 py-1 text-xs font-semibold text-[--color-gold] shadow-[0_0_8px_var(--color-gold,#d4af37)/40]">
+        {DIFFICULTY_LABELS.divine}
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-[--color-sacred-surface-light] px-3 py-1 text-xs text-[--color-sacred-text-muted]">
+      {DIFFICULTY_LABELS[difficulty] ?? difficulty}
+    </span>
+  );
+}
+
 export default function LectioDivinaPage() {
   const [currentStage, setCurrentStage] = useState<number>(0);
   const [emotion, setEmotion] = useState("");
@@ -394,9 +416,7 @@ export default function LectioDivinaPage() {
                   <span className="rounded-full bg-[--color-gold]/10 px-3 py-1 text-xs text-[--color-gold]/70">
                     {MOCK_CHALLENGE.category}
                   </span>
-                  <span className="rounded-full bg-[--color-sacred-surface-light] px-3 py-1 text-xs text-[--color-sacred-text-muted]">
-                    {MOCK_CHALLENGE.difficulty}
-                  </span>
+                  <DifficultBadge difficulty={MOCK_CHALLENGE.difficulty} />
                 </div>
               </div>
 
