@@ -1,71 +1,86 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Send, ArrowLeft, AlertTriangle, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { api, ApiError } from "@/lib/api";
 
-type Tradition =
-  | "ignacjanska"
-  | "karmelitanska"
-  | "benedyktynska"
-  | "franciszkanska";
+/* ── Tradition mapping ────────────────────────────────────────────────── */
+const TRADITIONS = [
+  {
+    id: "ignatian",
+    label: "Ignacjańska",
+    description: "Rozeznawanie duchowe, Ćwiczenia Duchowe św. Ignacego",
+  },
+  {
+    id: "carmelite",
+    label: "Karmelitańska",
+    description: "Modlitwa kontemplacyjna, św. Teresa z Ávili, św. Jan od Krzyża",
+  },
+  {
+    id: "benedictine",
+    label: "Benedyktyńska",
+    description: "Ora et labora, Reguła św. Benedykta, Liturgia Godzin",
+  },
+  {
+    id: "franciscan",
+    label: "Franciszkańska",
+    description: "Ubóstwo duchowe, radość, bliskość ze stworzeniem",
+  },
+  {
+    id: "dominican",
+    label: "Dominikańska",
+    description: "Contemplata aliis tradere — kontemplacja przekazywana innym",
+  },
+];
 
+/* ── Types ────────────────────────────────────────────────────────────── */
 interface Message {
   id: string;
   role: "user" | "director";
   content: string;
   timestamp: Date;
+  scriptures?: { reference: string; passage: string; explanation: string }[];
+  followUps?: string[];
+  prayerSuggestion?: string;
+  spiritualState?: string;
 }
 
-const TRADITIONS: { key: Tradition; label: string; description: string }[] = [
-  {
-    key: "ignacjanska",
-    label: "Ignacjańska",
-    description: "Rozeznawanie duchowe, Ćwiczenia Duchowe św. Ignacego",
-  },
-  {
-    key: "karmelitanska",
-    label: "Karmelitańska",
-    description: "Modlitwa kontemplacyjna, św. Teresa z Ávili, św. Jan od Krzyża",
-  },
-  {
-    key: "benedyktynska",
-    label: "Benedyktyńska",
-    description: "Ora et labora, Reguła św. Benedykta, Lectio Divina",
-  },
-  {
-    key: "franciszkanska",
-    label: "Franciszkańska",
-    description: "Ubóstwo duchowe, radość, bliskość z naturą i stworzeniem",
-  },
-];
+interface StartSessionResponse {
+  session_id: string;
+  opening_message: string;
+}
 
-const MOCK_RESPONSES: Record<Tradition, string[]> = {
-  ignacjanska: [
-    "Dziękuję za podzielenie się tym ze mną. W tradycji ignacjańskiej, zwracamy szczególną uwagę na 'poruszenia duszy' — te wewnętrzne uczucia pocieszenia i strapienia. Opowiedz mi więcej: kiedy myślisz o tej sytuacji, czy czujesz pokój i radość (pocieszenie), czy raczej niepokój i smutek (strapienie)?",
-    "To bardzo ważne spostrzeżenie. Św. Ignacy uczył, że Bóg przemawia do nas przez nasze pragnienia. Spróbujmy rozeznać razem: jakie jest Twoje najgłębsze pragnienie w tej chwili? Nie to powierzchowne, ale to, które pochodzi z głębi serca.",
-  ],
-  karmelitanska: [
-    "W tradycji karmelitańskiej, św. Teresa z Ávili mówiła o modlitwie jako o 'rozmowie przyjaciół'. Zachęcam Cię, abyś po prostu stanął przed Bogiem taki, jaki jesteś, bez masek. Nie musisz szukać pięknych słów — wystarczy obecność.",
-    "Św. Jan od Krzyża pisał o 'ciemnej nocy duszy' — okresach, gdy Bóg wydaje się odległy. Ale to nie jest Jego nieobecność — to zaproszenie do głębszej wiary, która wykracza poza uczucia. Czy doświadczasz teraz takiej ciemności?",
-  ],
-  benedyktynska: [
-    "W duchu benedyktyńskim, zachęcam Cię do szukania Boga w zwyczajności dnia. Reguła św. Benedykta mówi: 'Ora et labora' — módl się i pracuj. Każda chwila może stać się modlitwą. Jak wygląda Twój codzienny rytm duchowy?",
-    "Lectio Divina jest sercem duchowości benedyktyńskiej. Proponuję, abyś codziennie poświęcił choćby 15 minut na uważne czytanie Pisma Świętego. Nie chodzi o ilość przeczytanego tekstu, ale o głębię spotkania ze Słowem.",
-  ],
-  franciszkanska: [
-    "Św. Franciszek widział Boga we wszystkim — w słońcu, w wodzie, w każdym stworzeniu. Zachęcam Cię: wyjdź dziś na zewnątrz i spójrz na świat oczami wiary. Gdzie dostrzegasz ślady Bożej obecności wokół siebie?",
-    "Franciszek mówił: 'Głoście Ewangelię, a jeśli trzeba, użyjcie słów.' Twoje życie jest najpiękniejszym kazaniem. Jak możesz dziś być świadkiem radości Ewangelii w swoim otoczeniu?",
-  ],
-};
+interface MessageApiResponse {
+  director_response: string;
+  suggested_scriptures: { reference: string; passage: string; explanation: string }[];
+  follow_up_questions: string[];
+  prayer_suggestion?: string;
+  spiritual_state?: string;
+}
 
+/* ── Anonymous user ID (persistent across sessions) ────────────────────── */
+function getAnonId(): string {
+  if (typeof window === "undefined") return "anon";
+  let id = localStorage.getItem("sancta_nexus_anon_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("sancta_nexus_anon_id", id);
+  }
+  return id;
+}
+
+/* ── Component ────────────────────────────────────────────────────────── */
 export default function SpiritualDirectorPage() {
-  const [selectedTradition, setSelectedTradition] =
-    useState<Tradition>("ignacjanska");
+  const [selectedTradition, setSelectedTradition] = useState("ignatian");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const userId = useRef(getAnonId());
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,36 +90,102 @@ export default function SpiritualDirectorPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isTyping) return;
+  /* ── Start new session when tradition changes ──────────────────────── */
+  const startSession = useCallback(
+    async (tradition: string) => {
+      setMessages([]);
+      setSessionId(null);
+      setError(null);
+      setIsTyping(true);
+      try {
+        const res = await api.post<StartSessionResponse>(
+          "/api/v1/spiritual-director/session",
+          { user_id: userId.current, tradition }
+        );
+        setSessionId(res.session_id);
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: "director",
+            content: res.opening_message,
+            timestamp: new Date(),
+          },
+        ]);
+      } catch (err) {
+        const msg =
+          err instanceof ApiError
+            ? "Nie można połączyć się z kierownikiem duchowym. Spróbuj ponownie."
+            : "Wystąpił błąd. Sprawdź połączenie.";
+        setError(msg);
+      } finally {
+        setIsTyping(false);
+      }
+    },
+    []
+  );
 
-    const userMessage: Message = {
+  /* ── Auto-start on mount ───────────────────────────────────────────── */
+  useEffect(() => {
+    startSession(selectedTradition);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── Tradition change ──────────────────────────────────────────────── */
+  const handleTraditionChange = (id: string) => {
+    setSelectedTradition(id);
+    startSession(id);
+  };
+
+  /* ── Send message ──────────────────────────────────────────────────── */
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isTyping || !sessionId) return;
+
+    const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: input.trim(),
       timestamp: new Date(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);
+    setError(null);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = MOCK_RESPONSES[selectedTradition];
-      const response = responses[messages.length % responses.length];
+    try {
+      const res = await api.post<MessageApiResponse>(
+        "/api/v1/spiritual-director/message",
+        { session_id: sessionId, user_id: userId.current, content: userMsg.content }
+      );
 
-      const directorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "director",
-        content: response,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, directorMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "director",
+          content: res.director_response,
+          timestamp: new Date(),
+          scriptures: res.suggested_scriptures,
+          followUps: res.follow_up_questions,
+          prayerSuggestion: res.prayer_suggestion ?? undefined,
+          spiritualState: res.spiritual_state ?? undefined,
+        },
+      ]);
+    } catch {
+      setError("Nie udało się wysłać wiadomości. Spróbuj ponownie.");
+      setMessages((prev) => prev.slice(0, -1)); // remove user message on error
+      setInput(userMsg.content);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
+  };
+
+  /* ── Keyboard shortcut: Enter to send ─────────────────────────────── */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e as unknown as React.FormEvent);
+    }
   };
 
   return (
@@ -112,60 +193,68 @@ export default function SpiritualDirectorPage() {
       <div className="mx-auto w-full max-w-3xl flex-1">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-sacred-text-muted transition-colors hover:text-gold"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-[--color-sacred-text-muted] transition-colors hover:text-[--color-gold]"
         >
           <ArrowLeft className="h-4 w-4" />
           Powrót
         </Link>
 
         <div className="mb-6 text-center">
-          <h1 className="font-heading mb-3 text-3xl text-gold">
+          <p className="mb-1 text-xs tracking-[0.4em] uppercase text-[--color-gold]/40">
+            Towarzyszenie duchowe
+          </p>
+          <h1 className="font-heading mb-3 text-3xl text-[--color-gold]">
             Kierownik Duchowy AI
           </h1>
-          <p className="text-sacred-text-muted">
-            Rozmowa w duchu wybranej tradycji duchowej
+          <p className="text-sm text-[--color-sacred-text-muted]">
+            Rozmowa w duchu wybranej tradycji — prowadzona przez AI, zakorzeniona w Piśmie
           </p>
         </div>
 
         {/* Disclaimer */}
-        <div className="mb-6 flex items-start gap-3 rounded-xl border border-sacred-red/20 bg-sacred-red/5 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-sacred-red-light" />
-          <p className="text-sm leading-relaxed text-sacred-text-muted">
-            <strong className="text-parchment">Uwaga:</strong> AI nie zastępuje
-            ludzkiego kierownika duchowego. To narzędzie ma charakter pomocniczy
-            i edukacyjny. W poważnych kwestiach duchowych, zwróć się do kapłana
-            lub doświadczonego kierownika duchowego.
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-[--color-sacred-red]/20 bg-[--color-sacred-red]/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[--color-sacred-red-light]" />
+          <p className="text-sm leading-relaxed text-[--color-sacred-text-muted]">
+            <strong className="text-[--color-parchment]">Uwaga:</strong> AI nie zastępuje
+            ludzkiego kierownika duchowego. W poważnych kwestiach zwróć się do kapłana.
           </p>
         </div>
 
         {/* Tradition selector */}
-        <div className="mb-6 grid grid-cols-2 gap-2 md:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-2 md:grid-cols-5">
           {TRADITIONS.map((t) => (
             <button
-              key={t.key}
-              onClick={() => setSelectedTradition(t.key)}
+              key={t.id}
+              onClick={() => handleTraditionChange(t.id)}
               className={`rounded-lg border p-3 text-left transition-all ${
-                selectedTradition === t.key
-                  ? "border-gold/40 bg-gold/10 text-gold"
-                  : "border-sacred-border bg-sacred-surface text-sacred-text-muted hover:border-gold/20"
+                selectedTradition === t.id
+                  ? "border-[--color-gold]/40 bg-[--color-gold]/10 text-[--color-gold]"
+                  : "border-[--color-sacred-border] bg-[--color-sacred-surface] text-[--color-sacred-text-muted] hover:border-[--color-gold]/20"
               }`}
             >
               <p className="text-sm font-semibold">{t.label}</p>
-              <p className="mt-1 hidden text-xs opacity-70 md:block">
+              <p className="mt-1 hidden text-[10px] leading-tight opacity-60 md:block">
                 {t.description}
               </p>
             </button>
           ))}
         </div>
 
+        {/* Error banner */}
+        {error && (
+          <div className="mb-4 rounded-lg border border-[--color-sacred-red]/30 bg-[--color-sacred-red]/10 px-4 py-3 text-sm text-[--color-sacred-red-light]">
+            {error}
+          </div>
+        )}
+
         {/* Chat area */}
-        <div className="flex min-h-[400px] flex-col rounded-xl border border-sacred-border bg-sacred-surface">
+        <div className="flex min-h-[480px] flex-col rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface]">
           {/* Messages */}
           <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
-            {messages.length === 0 && (
+            {messages.length === 0 && !isTyping && (
               <div className="py-16 text-center">
-                <p className="font-scripture text-sacred-text-muted/50">
-                  Rozpocznij rozmowę. Podziel się tym, co leży Ci na sercu.
+                <p className="font-scripture text-[--color-sacred-text-muted]/50">
+                  Łączenie z kierownikiem duchowym…
                 </p>
               </div>
             )}
@@ -173,37 +262,96 @@ export default function SpiritualDirectorPage() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                  className={`max-w-[82%] rounded-xl px-4 py-3 ${
                     msg.role === "user"
-                      ? "bg-gold/10 text-parchment"
-                      : "border border-sacred-border bg-sacred-surface-light text-sacred-text"
+                      ? "bg-[--color-gold]/10 text-[--color-parchment]"
+                      : "border border-[--color-sacred-border] bg-[--color-sacred-surface-light] text-[--color-sacred-text]"
                   }`}
                 >
                   {msg.role === "director" && (
-                    <p className="mb-1 text-xs font-semibold text-gold">
-                      Kierownik Duchowy
+                    <p className="mb-1.5 text-xs font-semibold text-[--color-gold]">
+                      Kierownik Duchowy ·{" "}
+                      {TRADITIONS.find((t) => t.id === selectedTradition)?.label}
                     </p>
                   )}
                   <p className="leading-relaxed">{msg.content}</p>
+
+                  {/* Suggested scriptures + follow-ups */}
+                  {msg.role === "director" &&
+                    (msg.scriptures?.length || msg.followUps?.length || msg.prayerSuggestion) && (
+                      <div className="mt-3 border-t border-[--color-sacred-border] pt-3">
+                        <button
+                          onClick={() =>
+                            setExpandedMsg(expandedMsg === msg.id ? null : msg.id)
+                          }
+                          className="flex items-center gap-1.5 text-xs text-[--color-gold]/60 transition-colors hover:text-[--color-gold]"
+                        >
+                          <BookOpen className="h-3.5 w-3.5" />
+                          Pismo i pytania do refleksji
+                          {expandedMsg === msg.id ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+
+                        {expandedMsg === msg.id && (
+                          <div className="mt-3 animate-fade-in space-y-3">
+                            {msg.scriptures?.slice(0, 2).map((s, i) => (
+                              <div
+                                key={i}
+                                className="rounded-lg border border-[--color-gold]/15 bg-[--color-sacred-bg] p-3"
+                              >
+                                <p className="text-xs font-semibold text-[--color-gold]/70">
+                                  {s.reference}
+                                </p>
+                                <p className="font-scripture mt-1 text-sm italic text-[--color-parchment]/80">
+                                  {s.passage}
+                                </p>
+                                {s.explanation && (
+                                  <p className="mt-1 text-xs text-[--color-sacred-text-muted]/60">
+                                    {s.explanation}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+
+                            {msg.followUps?.slice(0, 2).map((q, i) => (
+                              <p
+                                key={i}
+                                className="cursor-pointer text-xs italic text-[--color-sacred-text-muted]/60 transition-colors hover:text-[--color-gold]/60"
+                                onClick={() => setInput(q)}
+                              >
+                                → {q}
+                              </p>
+                            ))}
+
+                            {msg.prayerSuggestion && (
+                              <p className="rounded bg-[--color-gold]/5 px-3 py-2 text-xs text-[--color-gold]/70">
+                                🕯 {msg.prayerSuggestion}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
             ))}
 
             {isTyping && (
               <div className="flex justify-start">
-                <div className="rounded-xl border border-sacred-border bg-sacred-surface-light px-4 py-3">
-                  <p className="text-xs font-semibold text-gold">
+                <div className="rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface-light] px-4 py-3">
+                  <p className="text-xs font-semibold text-[--color-gold]">
                     Kierownik Duchowy
                   </p>
                   <div className="mt-2 flex gap-1">
-                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-gold/50" />
-                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-gold/50 [animation-delay:0.5s]" />
-                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-gold/50 [animation-delay:1s]" />
+                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-[--color-gold]/50" />
+                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-[--color-gold]/50 [animation-delay:0.5s]" />
+                    <span className="animate-sacred-pulse h-2 w-2 rounded-full bg-[--color-gold]/50 [animation-delay:1s]" />
                   </div>
                 </div>
               </div>
@@ -213,28 +361,29 @@ export default function SpiritualDirectorPage() {
           </div>
 
           {/* Input */}
-          <form
-            onSubmit={handleSend}
-            className="border-t border-sacred-border p-4"
-          >
+          <form onSubmit={handleSend} className="border-t border-[--color-sacred-border] p-4">
             <div className="flex gap-3">
-              <input
-                type="text"
+              <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Napisz swoją myśl lub pytanie..."
-                className="flex-1 rounded-lg border border-sacred-border bg-sacred-bg px-4 py-3 text-sacred-text placeholder-sacred-text-muted/50 transition-colors focus:border-gold/50 focus:outline-none"
-                disabled={isTyping}
+                onKeyDown={handleKeyDown}
+                placeholder="Napisz swoją myśl lub pytanie… (Enter = wyślij)"
+                rows={2}
+                className="flex-1 resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
+                disabled={isTyping || !sessionId}
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isTyping}
-                className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-5 py-3 text-gold transition-all hover:bg-gold/20 disabled:cursor-not-allowed disabled:opacity-30"
+                disabled={!input.trim() || isTyping || !sessionId}
+                className="self-end flex items-center gap-2 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-5 py-3 text-[--color-gold] transition-all hover:bg-[--color-gold]/20 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <Send className="h-4 w-4" />
                 <span className="hidden sm:inline">Wyślij</span>
               </button>
             </div>
+            <p className="mt-2 text-right text-xs text-[--color-sacred-text-muted]/30">
+              Shift+Enter = nowa linia
+            </p>
           </form>
         </div>
       </div>

@@ -1,14 +1,32 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, Heart, BookOpen, Flame, Eye, Footprints } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, BookOpen, Flame, Eye, Footprints, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { StageIndicator } from "@/components/ui/stage-indicator";
 import { BreathingTimer } from "@/components/ui/breathing-timer";
 import { ScriptureDisplay } from "@/components/ui/scripture-display";
 import { useLectioStore } from "@/stores/lectio";
 import { useProgressStore } from "@/stores/progress";
+import { getLiturgicalInfo } from "@/lib/liturgical-season";
 import type { LectioDivinaStage } from "@/types";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+interface LiturgicalContext {
+  season: string;
+  feast: string | null;
+  readings: { label: string; reference: string; book: string; chapter: number }[];
+}
+
+async function fetchLiturgicalContext(): Promise<LiturgicalContext | null> {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const res = await fetch(`${API_BASE}/api/v1/lectio-divina/scripture/${today}`);
+    if (res.ok) return res.json();
+  } catch { /* backend offline */ }
+  return null;
+}
 
 const STAGES: LectioDivinaStage[] = [
   "welcome",
@@ -92,6 +110,7 @@ export default function LectioDivinaPage() {
   const [emotion, setEmotion] = useState("");
   const [meditationResponse, setMeditationResponse] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [liturgicalCtx, setLiturgicalCtx] = useState<LiturgicalContext | null>(null);
   const { isLoading } = useLectioStore();
   const { recordSession } = useProgressStore();
   const sessionStartRef = useRef<Date>(new Date());
@@ -99,6 +118,11 @@ export default function LectioDivinaPage() {
 
   const stage = STAGES[currentStage];
   const StageIcon = STAGE_ICONS[stage];
+
+  // Load liturgical context from backend on mount
+  useEffect(() => {
+    fetchLiturgicalContext().then(setLiturgicalCtx);
+  }, []);
 
   // Record session when the user reaches Actio (final stage)
   useEffect(() => {
@@ -163,6 +187,26 @@ export default function LectioDivinaPage() {
           {/* ── Welcome / Emotion ── */}
           {stage === "welcome" && (
             <div className="animate-fade-in text-center">
+              {/* Liturgical context banner */}
+              {liturgicalCtx && (
+                <div className="mb-6 rounded-xl border border-[--color-liturgical-accent]/20 bg-[--color-liturgical-glow] px-5 py-4 text-center">
+                  <p className="text-xs tracking-widest uppercase text-[--color-sacred-text-muted]/50">
+                    <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
+                    Dziś w Kościele
+                  </p>
+                  {liturgicalCtx.feast && (
+                    <p className="mt-1 text-sm font-medium text-[--color-parchment]">
+                      {liturgicalCtx.feast}
+                    </p>
+                  )}
+                  {liturgicalCtx.readings.length > 0 && (
+                    <p className="mt-1 text-xs text-[--color-sacred-text-muted]/60">
+                      Czytania: {liturgicalCtx.readings.map((r) => r.reference).join(" · ")}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-[--color-gold]/30 bg-[--color-sacred-surface]">
                 <Heart className="h-8 w-8 text-[--color-gold]" />
               </div>
