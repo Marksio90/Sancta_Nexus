@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, Heart, BookOpen, Flame, Eye, Footprints, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Heart, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { StageIndicator } from "@/components/ui/stage-indicator";
 import { BreathingTimer } from "@/components/ui/breathing-timer";
 import { ScriptureDisplay } from "@/components/ui/scripture-display";
 import { useLectioStore } from "@/stores/lectio";
 import { useProgressStore } from "@/stores/progress";
-import { getLiturgicalInfo } from "@/lib/liturgical-season";
 import type { LectioDivinaStage } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -46,16 +45,7 @@ const STAGE_LABELS: Record<LectioDivinaStage, string> = {
   actio: "Actio",
 };
 
-const STAGE_ICONS: Record<LectioDivinaStage, typeof Heart> = {
-  welcome: Heart,
-  lectio: BookOpen,
-  meditatio: Eye,
-  oratio: Flame,
-  contemplatio: Heart,
-  actio: Footprints,
-};
-
-/* ── Mock data (used when API is unavailable) ── */
+/* ── Fallback data (shown when backend is unavailable) ── */
 const MOCK_SCRIPTURE = {
   book: "Ewangelia wg sw. Jana",
   chapter: 15,
@@ -70,10 +60,10 @@ const MOCK_SCRIPTURE = {
 };
 
 const MOCK_QUESTIONS = [
-  { text: "Ktore slowo z tego fragmentu najbardziej przyciaga Twoja uwage i dlaczego?", layer: "literalis", scripture_echo: "trwajcie we Mnie" },
-  { text: "W jaki sposob Jezus jest 'krzewem winnym' w Twoim codziennym zyciu?", layer: "allegoricus", scripture_echo: "Ja jestem krzewem winnym" },
-  { text: "Co konkretnie przeszkadza Ci w 'przynoszeniu owocu obfitego'?", layer: "moralis", scripture_echo: "przynosi owoc obfity" },
-  { text: "Gdybys mogl/a usiasc w ciszy z jednym slowem z tego fragmentu, ktore by to bylo?", layer: "anagogicus", scripture_echo: "" },
+  { text: "Ktore slowo z tego fragmentu najbardziej przyciaga Twoja uwage i dlaczego?", layer: "literalis" as const, scriptureEcho: "trwajcie we Mnie" },
+  { text: "W jaki sposob Jezus jest 'krzewem winnym' w Twoim codziennym zyciu?", layer: "allegoricus" as const, scriptureEcho: "Ja jestem krzewem winnym" },
+  { text: "Co konkretnie przeszkadza Ci w 'przynoszeniu owocu obfitego'?", layer: "moralis" as const, scriptureEcho: "przynosi owoc obfity" },
+  { text: "Gdybys mogl/a usiasc w ciszy z jednym slowem z tego fragmentu, ktore by to bylo?", layer: "anagogicus" as const, scriptureEcho: "" },
 ];
 
 const MOCK_REFLECTION_LAYERS = {
@@ -133,13 +123,12 @@ export default function LectioDivinaPage() {
   const [meditationResponse, setMeditationResponse] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [liturgicalCtx, setLiturgicalCtx] = useState<LiturgicalContext | null>(null);
-  const { isLoading } = useLectioStore();
+  const { isLoading, currentSession, generateSession } = useLectioStore();
   const { recordSession } = useProgressStore();
   const sessionStartRef = useRef<Date>(new Date());
   const sessionRecordedRef = useRef(false);
 
   const stage = STAGES[currentStage];
-  const StageIcon = STAGE_ICONS[stage];
 
   // Load liturgical context from backend on mount
   useEffect(() => {
@@ -153,26 +142,31 @@ export default function LectioDivinaPage() {
       const durationMinutes = Math.round(
         (Date.now() - sessionStartRef.current.getTime()) / 60000
       );
+      const passage = currentSession?.passage ?? MOCK_SCRIPTURE;
       recordSession({
         date: new Date().toISOString(),
-        passageRef: `${MOCK_SCRIPTURE.book} ${MOCK_SCRIPTURE.chapter},${MOCK_SCRIPTURE.startVerse}-${MOCK_SCRIPTURE.endVerse}`,
+        passageRef: `${passage.book} ${passage.chapter},${passage.startVerse}-${passage.endVerse}`,
         emotion: emotion || "nieznany",
         durationMinutes: Math.max(1, durationMinutes),
       });
     }
-  }, [stage, emotion, recordSession]);
+  }, [stage, emotion, recordSession, currentSession]);
 
   const goToStage = useCallback(
-    (direction: 1 | -1) => {
+    async (direction: 1 | -1) => {
       const next = currentStage + direction;
       if (next < 0 || next >= STAGES.length) return;
+      // Trigger the AI pipeline when the user submits their emotion
+      if (direction === 1 && stage === "welcome") {
+        await generateSession(emotion);
+      }
       setIsTransitioning(true);
       setTimeout(() => {
         setCurrentStage(next);
         setIsTransitioning(false);
       }, 300);
     },
-    [currentStage],
+    [currentStage, stage, emotion, generateSession],
   );
 
   const canGoNext = () => {
@@ -262,18 +256,23 @@ export default function LectioDivinaPage() {
                 Czytaj uwazanie. Pozwol, aby slowa dotarly do Twojego serca.
               </p>
 
-              <ScriptureDisplay
-                book={MOCK_SCRIPTURE.book}
-                chapter={MOCK_SCRIPTURE.chapter}
-                startVerse={MOCK_SCRIPTURE.startVerse}
-                endVerse={MOCK_SCRIPTURE.endVerse}
-                text={MOCK_SCRIPTURE.text}
-                translation={MOCK_SCRIPTURE.translation}
-                historicalContext={MOCK_SCRIPTURE.historicalContext}
-                patristicNote={MOCK_SCRIPTURE.patristicNote}
-                originalLanguageKey={MOCK_SCRIPTURE.originalLanguageKey}
-                catechismRef={MOCK_SCRIPTURE.catechismRef}
-              />
+              {(() => {
+                const p = currentSession?.passage ?? MOCK_SCRIPTURE;
+                return (
+                  <ScriptureDisplay
+                    book={p.book}
+                    chapter={p.chapter}
+                    startVerse={p.startVerse}
+                    endVerse={p.endVerse}
+                    text={p.text}
+                    translation={p.translation}
+                    historicalContext={p.historicalContext}
+                    patristicNote={p.patristicNote}
+                    originalLanguageKey={p.originalLanguageKey}
+                    catechismRef={p.catechismRef}
+                  />
+                );
+              })()}
             </div>
           )}
 
@@ -288,46 +287,56 @@ export default function LectioDivinaPage() {
               </p>
 
               {/* Reflection layers (Quadriga) */}
-              <div className="mb-8 space-y-4 animate-fade-in-stagger">
-                {Object.entries(MOCK_REFLECTION_LAYERS).map(([layer, text]) => (
-                  <div
-                    key={layer}
-                    className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-5"
-                  >
-                    <h4 className="font-heading mb-2 text-xs uppercase tracking-wider text-[--color-gold]/60">
-                      {layer === "literalis" && "Sensus Literalis — co tekst mowi"}
-                      {layer === "allegoricus" && "Sensus Allegoricus — Chrystus w tekscie"}
-                      {layer === "moralis" && "Sensus Moralis — co to znaczy dla mnie"}
-                      {layer === "anagogicus" && "Sensus Anagogicus — ku wiecznosci"}
-                    </h4>
-                    <p className="text-sm leading-relaxed text-[--color-sacred-text-muted]">
-                      {text}
-                    </p>
+              {(() => {
+                const layers = currentSession?.meditation?.reflectionLayers ?? MOCK_REFLECTION_LAYERS;
+                return (
+                  <div className="mb-8 space-y-4 animate-fade-in-stagger">
+                    {(Object.entries(layers) as [string, string][]).map(([layer, text]) => (
+                      <div
+                        key={layer}
+                        className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-5"
+                      >
+                        <h4 className="font-heading mb-2 text-xs uppercase tracking-wider text-[--color-gold]/60">
+                          {layer === "literalis" && "Sensus Literalis — co tekst mowi"}
+                          {layer === "allegoricus" && "Sensus Allegoricus — Chrystus w tekscie"}
+                          {layer === "moralis" && "Sensus Moralis — co to znaczy dla mnie"}
+                          {layer === "anagogicus" && "Sensus Anagogicus — ku wiecznosci"}
+                        </h4>
+                        <p className="text-sm leading-relaxed text-[--color-sacred-text-muted]">
+                          {text}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
 
               {/* Reflective questions */}
-              <div className="mb-8 space-y-3">
-                <h3 className="font-heading text-lg text-[--color-parchment]">
-                  Pytania do refleksji
-                </h3>
-                {MOCK_QUESTIONS.map((question, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4"
-                  >
-                    <p className="font-scripture text-[--color-gold-light]">
-                      {question.text}
-                    </p>
-                    {question.scripture_echo && (
-                      <p className="mt-1 text-xs text-[--color-sacred-text-muted]/50">
-                        &ldquo;{question.scripture_echo}&rdquo;
-                      </p>
-                    )}
+              {(() => {
+                const questions = currentSession?.meditation?.questions ?? MOCK_QUESTIONS;
+                return (
+                  <div className="mb-8 space-y-3">
+                    <h3 className="font-heading text-lg text-[--color-parchment]">
+                      Pytania do refleksji
+                    </h3>
+                    {questions.map((question, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4"
+                      >
+                        <p className="font-scripture text-[--color-gold-light]">
+                          {question.text}
+                        </p>
+                        {question.scriptureEcho && (
+                          <p className="mt-1 text-xs text-[--color-sacred-text-muted]/50">
+                            &ldquo;{question.scriptureEcho}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
 
               <div>
                 <label className="mb-2 block text-sm text-[--color-sacred-text-muted]">
@@ -360,7 +369,7 @@ export default function LectioDivinaPage() {
                   ✝
                 </div>
                 <p className="font-scripture text-center text-lg leading-loose text-[--color-parchment]">
-                  {MOCK_PRAYER}
+                  {currentSession?.prayer?.prayerText ?? MOCK_PRAYER}
                 </p>
               </div>
 
@@ -380,13 +389,18 @@ export default function LectioDivinaPage() {
                 Badz w ciszy przed Bogiem. Pozwol Mu dzialac.
               </p>
 
-              <BreathingTimer
-                durationMinutes={3}
-                sacredWord={MOCK_CONTEMPLATION.sacredWord}
-                sacredWordMeaning={MOCK_CONTEMPLATION.sacredWordMeaning}
-                jesusPrayerRhythm={MOCK_CONTEMPLATION.jesusPrayerRhythm}
-                closingPrayer={MOCK_CONTEMPLATION.closingPrayer}
-              />
+              {(() => {
+                const c = currentSession?.contemplation ?? MOCK_CONTEMPLATION;
+                return (
+                  <BreathingTimer
+                    durationMinutes={"durationMinutes" in c ? (c as { durationMinutes: number }).durationMinutes : 3}
+                    sacredWord={c.sacredWord}
+                    sacredWordMeaning={c.sacredWordMeaning}
+                    jesusPrayerRhythm={c.jesusPrayerRhythm}
+                    closingPrayer={c.closingPrayer}
+                  />
+                );
+              })()}
             </div>
           )}
 
@@ -398,39 +412,54 @@ export default function LectioDivinaPage() {
                 Idz i zyj tym, co otrzymales/as.
               </p>
 
-              <div className="mx-auto max-w-lg rounded-xl border border-[--color-gold]/20 bg-[--color-sacred-surface] p-8">
-                <h3 className="font-heading mb-4 text-lg text-[--color-candlelight]">
-                  Twoje dzisiejsze wyzwanie
-                </h3>
-                <p className="font-scripture leading-relaxed text-[--color-parchment]">
-                  {MOCK_CHALLENGE.text}
-                </p>
+              {(() => {
+                const fallbackChallenge = {
+                  challengeText: MOCK_CHALLENGE.text,
+                  scriptureAnchor: MOCK_CHALLENGE.scriptureAnchor,
+                  category: MOCK_CHALLENGE.category,
+                  difficulty: MOCK_CHALLENGE.difficulty,
+                  eveningExamen: MOCK_CHALLENGE.eveningExamen,
+                };
+                const ch = currentSession?.action ?? fallbackChallenge;
+                const examen = ch.eveningExamen ?? fallbackChallenge.eveningExamen;
+                return (
+                  <>
+                    <div className="mx-auto max-w-lg rounded-xl border border-[--color-gold]/20 bg-[--color-sacred-surface] p-8">
+                      <h3 className="font-heading mb-4 text-lg text-[--color-candlelight]">
+                        Twoje dzisiejsze wyzwanie
+                      </h3>
+                      <p className="font-scripture leading-relaxed text-[--color-parchment]">
+                        {ch.challengeText}
+                      </p>
 
-                {MOCK_CHALLENGE.scriptureAnchor && (
-                  <p className="mt-4 text-xs text-[--color-gold]/50">
-                    Zakotwiczenie: &ldquo;{MOCK_CHALLENGE.scriptureAnchor}&rdquo;
-                  </p>
-                )}
+                      {ch.scriptureAnchor && (
+                        <p className="mt-4 text-xs text-[--color-gold]/50">
+                          Zakotwiczenie: &ldquo;{ch.scriptureAnchor}&rdquo;
+                        </p>
+                      )}
 
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <span className="rounded-full bg-[--color-gold]/10 px-3 py-1 text-xs text-[--color-gold]/70">
-                    {MOCK_CHALLENGE.category}
-                  </span>
-                  <DifficultBadge difficulty={MOCK_CHALLENGE.difficulty} />
-                </div>
-              </div>
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <span className="rounded-full bg-[--color-gold]/10 px-3 py-1 text-xs text-[--color-gold]/70">
+                          {ch.category}
+                        </span>
+                        <DifficultBadge difficulty={ch.difficulty} />
+                      </div>
+                    </div>
 
-              {/* Evening Examen */}
-              <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-6 text-left">
-                <h4 className="font-heading mb-3 text-sm uppercase tracking-wider text-[--color-gold]/60">
-                  Rachunek sumienia wieczorny
-                </h4>
-                <div className="space-y-2 text-sm text-[--color-sacred-text-muted]">
-                  <p>1. {MOCK_CHALLENGE.eveningExamen.retrospection}</p>
-                  <p>2. {MOCK_CHALLENGE.eveningExamen.divinePresence}</p>
-                  <p>3. {MOCK_CHALLENGE.eveningExamen.resolution}</p>
-                </div>
-              </div>
+                    {/* Evening Examen */}
+                    <div className="mx-auto mt-6 max-w-lg rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-6 text-left">
+                      <h4 className="font-heading mb-3 text-sm uppercase tracking-wider text-[--color-gold]/60">
+                        Rachunek sumienia wieczorny
+                      </h4>
+                      <div className="space-y-2 text-sm text-[--color-sacred-text-muted]">
+                        <p>1. {examen.retrospection}</p>
+                        <p>2. {examen.divinePresence}</p>
+                        <p>3. {examen.resolution}</p>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="sacred-divider mx-auto my-10 w-48" />
 

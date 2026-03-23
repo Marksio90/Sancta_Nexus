@@ -107,6 +107,27 @@ class SessionHistoryItem(BaseModel):
     stages_completed: list[str] = Field(default_factory=list)
 
 
+class RunPipelineRequest(BaseModel):
+    """Request body for running the full Lectio Divina AI pipeline."""
+
+    emotion_text: str
+    user_id: str = "anonymous"
+    tradition: str = ""
+
+
+class RunPipelineResponse(BaseModel):
+    """Full AI-generated session content returned by the pipeline."""
+
+    scripture: dict[str, Any] | None = None
+    meditation: dict[str, Any] | None = None
+    prayer: dict[str, Any] | None = None
+    contemplation: dict[str, Any] | None = None
+    action: dict[str, Any] | None = None
+    tradition: str = ""
+    kerygmatic_theme: str = ""
+    error: str | None = None
+
+
 _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 
 
@@ -328,3 +349,34 @@ async def get_session_history(user_id: str, redis: RedisDep) -> list[SessionHist
         )
         for s in sorted(user_sessions, key=lambda x: x["created_at"], reverse=True)
     ]
+
+
+@router.post("/run", response_model=RunPipelineResponse)
+async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineResponse:
+    """Run the full Lectio Divina AI pipeline for a given emotion text.
+
+    Executes the complete LangGraph flow:
+    emotion_analysis → scripture_selection → lectio → meditatio
+    → oratio → contemplatio → actio
+
+    Returns all AI-generated content (scripture, meditation questions,
+    prayer, contemplation guidance, and daily challenge).
+    """
+    from app.agents.lectio_divina.lectio_divina_graph import run_session
+
+    result = await run_session(
+        user_id=request.user_id,
+        raw_input=request.emotion_text,
+        tradition=request.tradition,
+    )
+
+    return RunPipelineResponse(
+        scripture=result.get("scripture"),
+        meditation=result.get("meditation"),
+        prayer=result.get("prayer"),
+        contemplation=result.get("contemplation"),
+        action=result.get("action"),
+        tradition=result.get("tradition", ""),
+        kerygmatic_theme=result.get("kerygmatic_theme", ""),
+        error=result.get("error"),
+    )
