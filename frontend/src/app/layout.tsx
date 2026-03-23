@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { ToastContainer } from "@/components/ui/toast";
 import { LiturgicalSeasonProvider } from "@/components/providers/LiturgicalSeasonProvider";
+import { ServiceWorkerProvider } from "@/components/providers/ServiceWorkerProvider";
 
 export const metadata: Metadata = {
   title: "Sancta Nexus — AI Lectio Divina",
@@ -53,6 +54,7 @@ export default function RootLayout({
       </head>
       <LiturgicalSeasonProvider>
         <body className="min-h-screen bg-sacred-bg text-sacred-text antialiased">
+          <ServiceWorkerProvider />
           <Header />
           <main className="pt-16">{children}</main>
           <ToastContainer />
