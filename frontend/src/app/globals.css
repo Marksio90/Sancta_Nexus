@@ -76,6 +76,7 @@
 
   --font-serif: "Crimson Text", Georgia, "Times New Roman", serif;
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-heading: "Cinzel", "Trajan Pro", Georgia, serif;
 }
 
 /* Base styles */
@@ -102,9 +103,10 @@ body {
 }
 
 .font-heading {
-  font-family: var(--font-serif);
+  font-family: var(--font-heading);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-variant: small-caps;
 }
 
 /* Illuminated drop cap — for scripture first letters */

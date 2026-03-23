@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#0d0b1a"/>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.3"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="175" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-opacity="0.15"/>
+  <!-- Cross vertical -->
+  <line x1="256" y1="80" x2="256" y2="430" stroke="#D4AF37" stroke-width="10" stroke-linecap="round"/>
+  <!-- Cross horizontal -->
+  <line x1="80" y1="210" x2="432" y2="210" stroke="#D4AF37" stroke-width="10" stroke-linecap="round"/>
+  <!-- Circle around cross intersection (nimbus) -->
+  <circle cx="256" cy="210" r="60" fill="none" stroke="#D4AF37" stroke-width="4" stroke-opacity="0.5"/>
+  <!-- Radiant light lines -->
+  <line x1="256" y1="80" x2="220" y2="130" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.2"/>
+  <line x1="256" y1="80" x2="292" y2="130" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.2"/>
+  <!-- SN monogram -->
+  <text x="256" y="350" font-family="Georgia, serif" font-size="48" font-weight="bold" fill="#D4AF37" fill-opacity="0.8" text-anchor="middle" letter-spacing="8">SN</text>
+</svg>

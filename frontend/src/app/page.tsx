@@ -1,6 +1,3 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -12,6 +9,7 @@ import {
   Cross,
   ChevronRight,
 } from "lucide-react";
+import { VerseShareButton } from "@/components/ui/verse-share-button";
 
 /* ── Fallback verses (used when backend is offline) ─────────────────────── */
 const FALLBACK_VERSES = [
@@ -38,7 +36,6 @@ const FALLBACK_VERSES = [
   { text: "Czuwajcie i módlcie się", ref: "Mt 26,41" },
   { text: "Przybliżcie się do Boga, a On zbliży się do was", ref: "Jk 4,8" },
   { text: "Módlcie się nieustannie", ref: "1 Tes 5,17" },
-  { text: "Kto nie kocha, nie zna Boga, bo Bóg jest miłością", ref: "1 J 4,8" },
   { text: "Oto stoję u drzwi i kołaczę", ref: "Ap 3,20" },
   { text: "Ja jestem chlebem życia", ref: "J 6,35" },
   { text: "Miłość nigdy nie ustaje", ref: "1 Kor 13,8" },
@@ -47,10 +44,31 @@ const FALLBACK_VERSES = [
   { text: "Gdzie jest skarb twój, tam będzie i serce twoje", ref: "Mt 6,21" },
 ];
 
-const API_BASE =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000")
-    : "http://localhost:8000";
+interface Verse {
+  text: string;
+  ref: string;
+}
+
+/** Fetch daily verse on the server — no client-side flash. */
+async function fetchDailyVerse(): Promise<Verse> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/bible/random-verse`, {
+      next: { revalidate: 3600 }, // refresh hourly
+    });
+    if (res.ok) {
+      const data: Verse = await res.json();
+      if (data.text && data.ref) return data;
+    }
+  } catch {
+    /* backend offline — use fallback */
+  }
+  // Deterministic fallback based on day of year so it's consistent per day
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return FALLBACK_VERSES[dayOfYear % FALLBACK_VERSES.length];
+}
 
 const features = [
   {
@@ -95,36 +113,8 @@ const features = [
   },
 ];
 
-interface Verse {
-  text: string;
-  ref: string;
-}
-
-export default function HomePage() {
-  const [verse, setVerse] = useState<Verse | null>(null);
-  const [verseLoaded, setVerseLoaded] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/bible/random-verse`);
-        if (res.ok) {
-          const data: Verse = await res.json();
-          if (data.text && data.ref) {
-            setVerse(data);
-            setVerseLoaded(true);
-            return;
-          }
-        }
-      } catch {
-        /* backend offline — use fallback */
-      }
-      const idx = Math.floor(Math.random() * FALLBACK_VERSES.length);
-      setVerse(FALLBACK_VERSES[idx]);
-      setVerseLoaded(true);
-    };
-    load();
-  }, []);
+export default async function HomePage() {
+  const verse = await fetchDailyVerse();
 
   return (
     <div className="min-h-screen">
@@ -137,7 +127,6 @@ export default function HomePage() {
           <div className="animate-sacred-pulse absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-[--color-gold]/4 blur-[120px]" />
           <div className="animate-sacred-pulse absolute bottom-1/3 left-1/4 h-80 w-80 rounded-full bg-[--color-sacred-blue]/8 blur-[80px] [animation-delay:2s]" />
           <div className="animate-sacred-pulse absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-[--color-candlelight]/6 blur-[60px] [animation-delay:4s]" />
-          {/* Fine cross pattern overlay */}
           <div
             className="absolute inset-0 opacity-[0.015]"
             style={{
@@ -166,25 +155,17 @@ export default function HomePage() {
           {/* Divider */}
           <div className="sacred-divider mx-auto mb-10 w-40" />
 
-          {/* Daily verse — from backend (31 102 wersetów) */}
-          <div className="mb-10 min-h-[96px]">
-            {verseLoaded && verse ? (
-              <div className="animate-fade-in">
-                <p className="font-scripture mx-auto mb-3 max-w-2xl text-2xl leading-relaxed text-[--color-sacred-text-muted] md:text-3xl">
-                  &ldquo;{verse.text}&rdquo;
-                </p>
-                <p className="text-sm tracking-[0.3em] uppercase text-[--color-gold]/50">
-                  — {verse.ref}
-                </p>
-              </div>
-            ) : (
-              /* Skeleton pulse while loading from API */
-              <div className="animate-pulse space-y-3">
-                <div className="mx-auto h-8 max-w-xl rounded-full bg-[--color-sacred-surface-light]" />
-                <div className="mx-auto h-8 max-w-2xl rounded-full bg-[--color-sacred-surface-light]" />
-                <div className="mx-auto mt-4 h-3 w-24 rounded-full bg-[--color-sacred-surface-light]" />
-              </div>
-            )}
+          {/* Daily verse — server-rendered, no flash */}
+          <div className="mb-10">
+            <p className="font-scripture mx-auto mb-3 max-w-2xl text-2xl leading-relaxed text-[--color-sacred-text-muted] md:text-3xl">
+              &ldquo;{verse.text}&rdquo;
+            </p>
+            <p className="text-sm tracking-[0.3em] uppercase text-[--color-gold]/50">
+              — {verse.ref}
+            </p>
+            <div className="mt-3 flex justify-center">
+              <VerseShareButton text={verse.text} ref_={verse.ref} />
+            </div>
           </div>
 
           {/* Subtitle */}
@@ -260,9 +241,7 @@ export default function HomePage() {
                   href={feature.href}
                   className={`group relative overflow-hidden rounded-2xl border border-[--color-sacred-border] bg-gradient-to-br ${feature.color} p-8 transition-all duration-300 ${feature.border} hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)]`}
                 >
-                  {/* Subtle inner glow on hover */}
                   <div className="absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[--color-gold]/[0.02]" />
-
                   <div className="relative z-10">
                     <div className="mb-5 flex items-start justify-between">
                       <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[--color-gold]/20 bg-[--color-gold]/8">
@@ -272,14 +251,12 @@ export default function HomePage() {
                         {feature.latin}
                       </span>
                     </div>
-
                     <h3 className="font-heading mb-3 text-2xl text-[--color-parchment]">
                       {feature.title}
                     </h3>
                     <p className="leading-relaxed text-[--color-sacred-text-muted]/80">
                       {feature.description}
                     </p>
-
                     <div className="mt-6 flex items-center gap-2 text-sm font-medium text-[--color-gold]/60 transition-all duration-300 group-hover:gap-3 group-hover:text-[--color-gold]">
                       Wejdź
                       <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -298,16 +275,12 @@ export default function HomePage() {
         <p className="font-scripture text-lg text-[--color-sacred-text-muted]/60">
           &ldquo;Szukajcie, a znajdziecie — kołaczcie, a otworzą wam&rdquo;
         </p>
-        <p className="mt-2 text-xs text-[--color-sacred-text-muted]/30">
-          Mt 7,7
-        </p>
+        <p className="mt-2 text-xs text-[--color-sacred-text-muted]/30">Mt 7,7</p>
         <p className="mt-8 text-sm text-[--color-sacred-text-muted]/40">
-          Sancta Nexus &copy; {new Date().getFullYear()} &middot; Ad Maiorem
-          Dei Gloriam
+          Sancta Nexus &copy; {new Date().getFullYear()} &middot; Ad Maiorem Dei Gloriam
         </p>
         <p className="mt-2 text-xs text-[--color-sacred-text-muted]/20">
-          73 księgi &middot; 7 tradycji duchowych &middot; 8 filarów
-          kerygmatycznych
+          73 księgi &middot; 7 tradycji duchowych &middot; 8 filarów kerygmatycznych
         </p>
       </footer>
     </div>
