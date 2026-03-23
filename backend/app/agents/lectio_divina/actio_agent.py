@@ -99,7 +99,20 @@ ZASADY TWORZENIA WYZWANIA
    - "self_care" — troska o cialo jako swiatynie Ducha (1 Kor 6,19)
    - "silence" — cisza i sluchanie Boga
 
-5. RACHUNEK SUMIENIA WIECZORNY:
+5. POZIOMY TRUDNOSCI:
+   - "easy"   — proste dzialanie, dostepne dla kazdego, zajmuje do 10 minut
+   - "medium" — wymaga refleksji lub pewnego wysilku, zajmuje 15-30 minut
+   - "hard"   — wymaga ofiary, odwagi lub wytrwalosci przez caly dzien
+   - "divine" — POZIOM BOSKI: tylko dla zaawansowanych na Drodze Zjednoczenia (Via Unitiva).
+                Wyzwanie transformacyjne, wymagajace calkowitego oddania sie Bogu przez minimum
+                3 dni. Zakorzenione w mistycznej jednosci z Chrystusem (np. kontemplacja,
+                modlitwa wstawiennicza za wrogow, heroiczny uczynek milosierdzia, post
+                i modlitwa, pelne przebaczenie).
+                Przyklad: "Przez 3 dni w ciszy serca modl sie za osobe, ktora cie najbardziej
+                zranila, ofiarujac kazdy bol jako dar dla Chrystusa Ukrzyzowanego."
+                UWAZ: uzywaj "divine" rzadko i tylko gdy kontekst duchowy na to pozwala.
+
+6. RACHUNEK SUMIENIA WIECZORNY:
    Pytanie wieczorne powinno prowadzic przez 3 kroki:
    a) Spojrzenie wstecz: co sie wydarzylo?
    b) Rozpoznanie Bozej obecnosci: gdzie Bog byl w tym dzialaniu?
@@ -109,7 +122,7 @@ Odpowiedz w formacie JSON:
 {{
   "challenge_text": "Tresc wyzwania (max 60 slow, konkretne i mierzalne)",
   "scripture_anchor": "Konkretna fraza z fragmentu, z ktorej wynika wyzwanie",
-  "difficulty": "easy|medium|hard",
+  "difficulty": "easy|medium|hard|divine",
   "category": "<jedna z powyzszych kategorii>",
   "virtue_focus": "Cnota, ktora wyzwanie rozwija (np. cierpliwosc, milosc, roztropnosc)",
   "evening_examen": {{
@@ -169,17 +182,47 @@ class ActioAgent:
             logger.warning("ActioAgent: LLM init failed (%s); will use fallbacks.", exc)
             self._llm = None
 
+    VALID_DIFFICULTIES = frozenset({"easy", "medium", "hard", "divine"})
+
+    @staticmethod
+    def _assess_difficulty(session_count: int) -> str:
+        """Return the appropriate difficulty cap based on the user's journey stage."""
+        if session_count >= 60:
+            return "divine"
+        if session_count >= 40:
+            return "hard"
+        if session_count >= 20:
+            return "medium"
+        return "easy"
+
     async def challenge(
         self,
         scripture: dict,
         reflection: dict,
         suggested_category: str = "gratitude",
+        session_count: int = 0,
     ) -> dict:
-        """Generate a daily micro-quest linked to the scripture reflection."""
+        """Generate a daily micro-quest linked to the scripture reflection.
+
+        Args:
+            session_count: Total completed sessions — used to calibrate the
+                difficulty ceiling.  ≥60 sessions unlocks the "divine" level.
+        """
         reflection_text = self._format_reflection(reflection)
 
         if self._llm is None:
             return dict(FALLBACK_ACTION)
+
+        difficulty_ceiling = self._assess_difficulty(session_count)
+        difficulty_hint = (
+            f"Uzytkownik ukonczyl {session_count} sesji. "
+            f"Maksymalny poziom trudnosci dla niego: '{difficulty_ceiling}'. "
+            + (
+                "Mozesz zaproponowac poziom 'divine' (Boski) — uzytkownik osiagnal Via Unitiva."
+                if difficulty_ceiling == "divine"
+                else f"Nie przekraczaj poziomu '{difficulty_ceiling}'."
+            )
+        )
 
         system_prompt = ACTIO_SYSTEM_PROMPT.format(
             book=scripture.get("book", ""),
@@ -189,7 +232,7 @@ class ActioAgent:
             text=scripture.get("text", ""),
             reflection=reflection_text,
             suggested_category=suggested_category,
-        )
+        ) + f"\n\n{difficulty_hint}"
 
         try:
             response = await self._llm.ainvoke([
@@ -202,10 +245,17 @@ class ActioAgent:
                 logger.warning("Challenge text missing; using fallback.")
                 return dict(FALLBACK_ACTION)
 
-            # Normalise difficulty
-            valid_difficulties = {"easy", "medium", "hard"}
-            if action.get("difficulty") not in valid_difficulties:
-                action["difficulty"] = "easy"
+            # Normalise difficulty — clamp to assessed ceiling
+            allowed = {"easy"}
+            if difficulty_ceiling in ("medium", "hard", "divine"):
+                allowed.add("medium")
+            if difficulty_ceiling in ("hard", "divine"):
+                allowed.add("hard")
+            if difficulty_ceiling == "divine":
+                allowed.add("divine")
+
+            if action.get("difficulty") not in allowed:
+                action["difficulty"] = difficulty_ceiling
 
             # Ensure evening examen structure
             examen = action.get("evening_examen", {})

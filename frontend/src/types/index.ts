@@ -81,7 +81,7 @@ export interface EveningExamen {
 export interface ActionResult {
   challengeText: string;
   scriptureAnchor?: string;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard" | "divine";
   category: string;
   virtueFocus?: string;
   eveningExamen: EveningExamen;
