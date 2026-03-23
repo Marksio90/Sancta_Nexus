@@ -1,65 +1,32 @@
 "use client";
 
-import { ArrowLeft, Flame, Calendar, TrendingUp, BookOpen, Heart } from "lucide-react";
+import {
+  ArrowLeft,
+  Flame,
+  Calendar,
+  TrendingUp,
+  BookOpen,
+  Heart,
+  Lock,
+  Sprout,
+} from "lucide-react";
 import Link from "next/link";
-
-/* ── Mock data ── */
-const MOCK_STREAK = 7;
-
-const MOCK_SESSIONS = [
-  {
-    id: "1",
-    date: "2026-03-16",
-    passage: "J 15:4-5",
-    emotion: "Spokój z lekkim niepokojem",
-    keyInsight: "Trwanie w Chrystusie wymaga codziennego wyboru",
-  },
-  {
-    id: "2",
-    date: "2026-03-15",
-    passage: "Ps 23:1-6",
-    emotion: "Wdzięczność",
-    keyInsight: "Pan jest moim pasterzem — mogę zaufać Jego prowadzeniu",
-  },
-  {
-    id: "3",
-    date: "2026-03-14",
-    passage: "Mt 6:25-34",
-    emotion: "Lęk o przyszłość",
-    keyInsight: "Nie martwić się o jutro — każdy dzień ma dość swojej biedy",
-  },
-  {
-    id: "4",
-    date: "2026-03-13",
-    passage: "Rz 8:28-39",
-    emotion: "Nadzieja",
-    keyInsight: "Nic nie może odłączyć mnie od miłości Bożej",
-  },
-];
-
-const MOCK_THEMES = [
-  { theme: "Zaufanie Bogu", count: 12, trend: "up" as const },
-  { theme: "Pokój wewnętrzny", count: 8, trend: "up" as const },
-  { theme: "Lęk i niepokój", count: 6, trend: "down" as const },
-  { theme: "Miłość bliźniego", count: 5, trend: "stable" as const },
-  { theme: "Wdzięczność", count: 4, trend: "up" as const },
-];
 
 const JOURNEY_STAGES = [
   {
     name: "Oczyszczenie",
     description: "Via Purgativa",
-    progress: 85,
+    progress: 0,
   },
   {
     name: "Oświecenie",
     description: "Via Illuminativa",
-    progress: 40,
+    progress: 0,
   },
   {
     name: "Zjednoczenie",
     description: "Via Unitiva",
-    progress: 10,
+    progress: 0,
   },
 ];
 
@@ -80,120 +47,104 @@ export default function DashboardPage() {
             Panel Duchowy
           </h1>
           <p className="text-sacred-text-muted">
-            Przegląd Twojej duchowej podróży i wzrostu w wierze
+            Twoja duchowa podróż dopiero się zaczyna — każdy krok zapisze się tutaj
           </p>
         </div>
 
         {/* Top stats row */}
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
           {/* Prayer streak */}
-          <div className="glow-candle rounded-xl border border-gold/20 bg-sacred-surface p-6 text-center">
-            <Flame className="mx-auto mb-2 h-8 w-8 text-candlelight animate-flicker" />
-            <p className="text-4xl font-bold text-gold">{MOCK_STREAK}</p>
+          <div className="rounded-xl border border-sacred-border bg-sacred-surface p-6 text-center">
+            <Flame className="mx-auto mb-2 h-8 w-8 text-sacred-text-muted/30" />
+            <p className="text-4xl font-bold text-parchment">0</p>
             <p className="mt-1 text-sm text-sacred-text-muted">
               Dni modlitwy z rzędu
+            </p>
+            <p className="mt-2 text-xs text-sacred-text-muted/50">
+              Zacznij pierwszą sesję, aby zapalić ogień
             </p>
           </div>
 
           {/* Total sessions */}
           <div className="rounded-xl border border-sacred-border bg-sacred-surface p-6 text-center">
-            <BookOpen className="mx-auto mb-2 h-8 w-8 text-gold/70" />
-            <p className="text-4xl font-bold text-parchment">
-              {MOCK_SESSIONS.length}
-            </p>
+            <BookOpen className="mx-auto mb-2 h-8 w-8 text-sacred-text-muted/30" />
+            <p className="text-4xl font-bold text-parchment">0</p>
             <p className="mt-1 text-sm text-sacred-text-muted">
               Sesje Lectio Divina
+            </p>
+            <p className="mt-2 text-xs text-sacred-text-muted/50">
+              Pierwsze Słowo czeka na Ciebie
             </p>
           </div>
 
           {/* Spiritual state */}
           <div className="rounded-xl border border-sacred-border bg-sacred-surface p-6 text-center">
-            <Heart className="mx-auto mb-2 h-8 w-8 text-sacred-red-light" />
+            <Heart className="mx-auto mb-2 h-8 w-8 text-sacred-text-muted/30" />
             <p className="text-lg font-semibold text-parchment">
-              Pocieszenie duchowe
+              Oczekujący
             </p>
             <p className="mt-1 text-sm text-sacred-text-muted">
               Aktualny stan ducha
+            </p>
+            <p className="mt-2 text-xs text-sacred-text-muted/50">
+              Gotowy na spotkanie z Bogiem
             </p>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Recent sessions */}
+          {/* Recent sessions — empty state */}
           <div className="rounded-xl border border-sacred-border bg-sacred-surface p-6">
             <h2 className="font-heading mb-4 flex items-center gap-2 text-xl text-gold">
               <Calendar className="h-5 w-5" />
               Ostatnie sesje
             </h2>
-            <div className="space-y-3">
-              {MOCK_SESSIONS.map((session) => (
-                <div
-                  key={session.id}
-                  className="rounded-lg border border-sacred-border bg-sacred-bg p-4 transition-colors hover:border-gold/20"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-medium text-parchment">
-                      {session.passage}
-                    </span>
-                    <span className="text-xs text-sacred-text-muted">
-                      {session.date}
-                    </span>
-                  </div>
-                  <p className="mb-1 text-sm text-sacred-text-muted">
-                    Stan: {session.emotion}
-                  </p>
-                  <p className="font-scripture text-sm text-gold-light">
-                    {session.keyInsight}
-                  </p>
-                </div>
-              ))}
+            <div className="flex flex-col items-center py-10 text-center">
+              <BookOpen className="mb-4 h-12 w-12 text-sacred-text-muted/20" />
+              <p className="mb-2 text-sm font-medium text-parchment/60">
+                Twoja historia duchowa jest jeszcze czystą kartą
+              </p>
+              <p className="mb-6 text-xs leading-relaxed text-sacred-text-muted/50">
+                Rozpocznij pierwszą modlitwę, aby ją zapisać
+              </p>
+              <Link
+                href="/lectio-divina"
+                className="rounded-lg border border-gold/30 bg-gold/10 px-4 py-2 text-sm text-gold transition-all hover:bg-gold/20"
+              >
+                Zacznij Lectio Divina
+              </Link>
             </div>
           </div>
 
-          {/* Recurring themes */}
+          {/* Recurring themes — empty state */}
           <div className="rounded-xl border border-sacred-border bg-sacred-surface p-6">
             <h2 className="font-heading mb-4 flex items-center gap-2 text-xl text-gold">
               <TrendingUp className="h-5 w-5" />
               Powtarzające się tematy
             </h2>
-            <div className="space-y-3">
-              {MOCK_THEMES.map((item) => (
-                <div
-                  key={item.theme}
-                  className="flex items-center justify-between rounded-lg border border-sacred-border bg-sacred-bg p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-parchment">{item.theme}</span>
-                    <span className="text-xs text-sacred-text-muted">
-                      ({item.count}x)
-                    </span>
-                  </div>
-                  <span
-                    className={`text-sm ${
-                      item.trend === "up"
-                        ? "text-green-400"
-                        : item.trend === "down"
-                          ? "text-sacred-red-light"
-                          : "text-sacred-text-muted"
-                    }`}
-                  >
-                    {item.trend === "up"
-                      ? "↑"
-                      : item.trend === "down"
-                        ? "↓"
-                        : "→"}
-                  </span>
-                </div>
-              ))}
+            <div className="flex flex-col items-center py-10 text-center">
+              <div className="relative mb-4">
+                <Sprout className="h-12 w-12 text-sacred-text-muted/20" />
+                <Lock className="absolute -bottom-1 -right-1 h-5 w-5 text-sacred-text-muted/30" />
+              </div>
+              <p className="mb-2 text-sm font-medium text-parchment/60">
+                Tematy pojawią się po pierwszych sesjach
+              </p>
+              <p className="text-xs leading-relaxed text-sacred-text-muted/50">
+                Pozwól Słowu zapuścić korzenie — wzorce ukażą się z czasem
+              </p>
             </div>
           </div>
         </div>
 
         {/* Journey progress */}
         <div className="mt-6 rounded-xl border border-sacred-border bg-sacred-surface p-6">
-          <h2 className="font-heading mb-6 text-xl text-gold">
+          <h2 className="font-heading mb-2 text-xl text-gold">
             Droga Duchowa
           </h2>
+          <p className="mb-6 text-sm text-sacred-text-muted/60">
+            Postęp będzie wzrastać wraz z każdą sesją modlitwy i Lectio Divina
+          </p>
           <div className="grid gap-6 md:grid-cols-3">
             {JOURNEY_STAGES.map((stage) => (
               <div key={stage.name} className="text-center">
@@ -209,8 +160,8 @@ export default function DashboardPage() {
                     style={{ width: `${stage.progress}%` }}
                   />
                 </div>
-                <p className="mt-2 text-sm text-sacred-text-muted">
-                  {stage.progress}%
+                <p className="mt-2 text-sm text-sacred-text-muted/50">
+                  Początek drogi
                 </p>
               </div>
             ))}
@@ -224,7 +175,7 @@ export default function DashboardPage() {
             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-6 py-3 text-gold transition-all hover:bg-gold/20"
           >
             <BookOpen className="h-5 w-5" />
-            Rozpocznij nową sesję Lectio Divina
+            Rozpocznij pierwszą sesję Lectio Divina
           </Link>
         </div>
       </div>
