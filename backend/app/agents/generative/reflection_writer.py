@@ -7,6 +7,7 @@ Uses RAG to enrich reflections with patristic and theological sources.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -145,18 +146,20 @@ class ReflectionWriterAgent:
         # Retrieve patristic and theological sources via RAG
         rag_context = await self._retrieve_sources(passage)
 
-        # Generate each layer
-        layers: list[ReflectionLayerContent] = []
-        for layer in ReflectionLayer:
-            layer_content = await self._generate_layer(
-                passage, user_context, layer, rag_context
-            )
-            layers.append(layer_content)
+        # Generate all four layers concurrently (4 sequential → 1 parallel batch)
+        layers: list[ReflectionLayerContent] = list(
+            await asyncio.gather(*[
+                self._generate_layer(passage, user_context, layer, rag_context)
+                for layer in ReflectionLayer
+            ])
+        )
 
-        # Generate synthesis and action
-        synthesis = await self._generate_synthesis(passage, layers, user_context)
-        prayer_response = await self._generate_prayer_response(passage, layers)
-        action_step = await self._generate_action_step(passage, layers, user_context)
+        # Generate synthesis, prayer, and action concurrently (3 sequential → 1 parallel batch)
+        synthesis, prayer_response, action_step = await asyncio.gather(
+            self._generate_synthesis(passage, layers, user_context),
+            self._generate_prayer_response(passage, layers),
+            self._generate_action_step(passage, layers, user_context),
+        )
 
         return Reflection(
             passage=passage,

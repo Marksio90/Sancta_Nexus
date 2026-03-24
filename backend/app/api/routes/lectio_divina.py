@@ -7,6 +7,7 @@ reflection submission.
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime
@@ -332,20 +333,30 @@ async def submit_reflection(request: ReflectionRequest, redis: RedisDep) -> Refl
     )
 
 
+_JOURNEY_CACHE_TTL = 3_600   # 1 hour
+_PATTERNS_CACHE_TTL = 3_600  # 1 hour
+
+
 @router.get("/journey/{user_id}")
 async def get_spiritual_journey(user_id: str, redis: RedisDep) -> dict[str, Any]:
     """Return the user's current spiritual journey stage via JourneyTrackerAgent (A-036).
 
     Analyses all stored sessions for the user and returns purgation /
     illumination / union stage, percentage progress, milestones, and the
-    next growth area.
+    next growth area.  Results are cached in Redis for 1 hour.
     """
     from app.agents.memory.journey_tracker import JourneyTrackerAgent
+
+    # --- Redis cache check ---
+    cache_key = f"journey_cache:{user_id}"
+    cached = await redis.get(cache_key)
+    if cached:
+        logger.debug("Journey cache HIT for user=%s", user_id)
+        return json.loads(cached)
 
     store = SessionStore(redis, namespace="lectio")
     user_sessions = await store.list_by_user(user_id)
 
-    # Build aggregate session data from the most recent session
     latest = (
         sorted(user_sessions, key=lambda s: s.get("created_at", ""), reverse=True)[0]
         if user_sessions
@@ -367,6 +378,10 @@ async def get_spiritual_journey(user_id: str, redis: RedisDep) -> dict[str, Any]
 
     tracker = JourneyTrackerAgent()
     journey = await tracker.track(user_id, session_data)
+
+    # --- Cache result ---
+    await redis.setex(cache_key, _JOURNEY_CACHE_TTL, json.dumps(journey))
+    logger.debug("Journey cached for user=%s (TTL=%ds)", user_id, _JOURNEY_CACHE_TTL)
     return journey
 
 
@@ -376,9 +391,16 @@ async def get_spiritual_patterns(user_id: str, redis: RedisDep) -> list[dict[str
 
     Analyses session history (up to last 30 sessions) to identify
     recurring themes, cyclical crises, grace moments, and growth
-    trajectories.
+    trajectories.  Results are cached in Redis for 1 hour.
     """
     from app.agents.memory.pattern_discovery import PatternDiscoveryAgent
+
+    # --- Redis cache check ---
+    cache_key = f"patterns_cache:{user_id}"
+    cached = await redis.get(cache_key)
+    if cached:
+        logger.debug("Patterns cache HIT for user=%s", user_id)
+        return json.loads(cached)
 
     store = SessionStore(redis, namespace="lectio")
     user_sessions = await store.list_by_user(user_id)
@@ -405,6 +427,10 @@ async def get_spiritual_patterns(user_id: str, redis: RedisDep) -> list[dict[str
 
     agent = PatternDiscoveryAgent()
     patterns = await agent.discover(user_id, sessions_for_analysis)
+
+    # --- Cache result ---
+    await redis.setex(cache_key, _PATTERNS_CACHE_TTL, json.dumps(patterns))
+    logger.debug("Patterns cached for user=%s (TTL=%ds)", user_id, _PATTERNS_CACHE_TTL)
     return patterns
 
 

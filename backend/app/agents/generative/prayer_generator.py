@@ -14,6 +14,8 @@ from typing import Any
 
 from langchain_openai import ChatOpenAI
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 # ── Tradition-specific system prompts ─────────────────────────────────────────
@@ -105,11 +107,12 @@ class PrayerGeneratorAgent:
 
     def __init__(
         self,
-        model_name: str = "gpt-4o",
+        model_name: str | None = None,
         temperature: float = 0.8,
     ) -> None:
-        self._llm = ChatOpenAI(model=model_name, temperature=temperature)
-        logger.info("PrayerGeneratorAgent (A-028) initialised with model=%s", model_name)
+        resolved = model_name or settings.LLM_CREATIVE_MODEL
+        self._llm = ChatOpenAI(model=resolved, temperature=temperature)
+        logger.info("PrayerGeneratorAgent (A-028) initialised with model=%s", resolved)
 
     # ------------------------------------------------------------------
     # Public API
