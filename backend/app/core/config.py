@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     ELEVENLABS_VOICE_CONTEMPLATIVE: str = ""    # e.g. "VR6AewLTigWG4xSOukaG"
     ELEVENLABS_VOICE_SACRED: str = ""           # e.g. "ErXwobaYiN019PkySvjV"
 
+    # ── VAPID (Web Push Notifications) ───────────────────────────────────────
+    # Generate keys: python -m py_vapid --gen-key
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_CLAIMS_EMAIL: str = "mailto:admin@sanctanexus.org"
+
     # ── LLM Configuration ─────────────────────────────────────────────────
     LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"
     LLM_FALLBACK_PROVIDER: str = "anthropic"  # secondary provider
