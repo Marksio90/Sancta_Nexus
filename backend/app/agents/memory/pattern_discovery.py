@@ -8,6 +8,8 @@ import logging
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 PATTERN_TYPES = [
@@ -23,8 +25,11 @@ PATTERN_TYPES = [
 class PatternDiscoveryAgent:
     """Discovers spiritual patterns through temporal analysis."""
 
-    def __init__(self, model_name: str = "gpt-4o"):
-        self.llm = ChatOpenAI(model=model_name, temperature=0.3)
+    def __init__(self, model_name: str | None = None):
+        self.llm = ChatOpenAI(
+            model=model_name or settings.LLM_FAST_MODEL,
+            temperature=0.3,
+        )
 
     async def discover(
         self, user_id: str, sessions: list[dict] | None = None

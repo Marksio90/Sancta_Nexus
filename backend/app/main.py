@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.dependencies import close_all_connections, create_tables
+from app.middleware.timing import TimingMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,10 @@ app = FastAPI(
     version=settings.VERSION,
     lifespan=lifespan,
 )
+
+# ── Observability ────────────────────────────────────────────────────────────
+
+app.add_middleware(TimingMiddleware)
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 

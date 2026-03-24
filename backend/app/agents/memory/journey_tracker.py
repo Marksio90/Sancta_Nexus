@@ -8,6 +8,8 @@ import logging
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 JOURNEY_STAGES = {
@@ -35,8 +37,11 @@ JOURNEY_STAGES = {
 class JourneyTrackerAgent:
     """Tracks user's spiritual journey through the three classical stages."""
 
-    def __init__(self, model_name: str = "gpt-4o"):
-        self.llm = ChatOpenAI(model=model_name, temperature=0.3)
+    def __init__(self, model_name: str | None = None):
+        self.llm = ChatOpenAI(
+            model=model_name or settings.LLM_FAST_MODEL,
+            temperature=0.3,
+        )
 
     async def track(self, user_id: str, session_data: dict) -> dict:
         """Analyze session and update journey position."""
