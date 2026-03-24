@@ -190,7 +190,8 @@ class LectioDivinaSupervisor:
     async def _meditatio(
         self, state: LectioDivinaState
     ) -> LectioDivinaState:
-        """A-011: Generate meditation with kerygmatic awareness."""
+        """A-011 + A-029: Generate meditation with kerygmatic awareness,
+        enriched by ReflectionWriterAgent's multi-layered analysis."""
         logger.info("Node: meditatio")
         user_context = {
             "emotion_vector": state.get("emotion_vector", {}),
@@ -201,6 +202,55 @@ class LectioDivinaSupervisor:
             user_context=user_context,
             kerygmatic_theme=state.get("kerygmatic_theme", ""),
         )
+
+        # --- A-029: ReflectionWriterAgent — adds synthesis, prayer_response, action_step ---
+        try:
+            from app.agents.generative.reflection_writer import (
+                ReflectionWriterAgent,
+                ScripturePassage as ReflectionPassage,
+                UserContext as ReflectionUserContext,
+            )
+            from app.core.llm import get_llm_client
+
+            scripture = state.get("scripture", {})
+            verse_start = scripture.get("verse_start", 1)
+            verse_end = scripture.get("verse_end", verse_start)
+            book = scripture.get("book", "")
+            chapter = scripture.get("chapter", 1)
+
+            passage = ReflectionPassage(
+                reference=f"{book} {chapter},{verse_start}-{verse_end}",
+                text=scripture.get("text", ""),
+                book=book,
+                chapter=chapter,
+                verses=f"{verse_start}-{verse_end}",
+                liturgical_context=(
+                    (state.get("liturgical_context") or {}).get("season")
+                ),
+            )
+            user_ctx = ReflectionUserContext(
+                user_id=state.get("user_id", "anonymous"),
+                prayer_tradition=state.get("tradition") or None,
+                theological_depth="intermediate",
+            )
+            reflection_agent = ReflectionWriterAgent(
+                llm_client=get_llm_client(tier="primary", temperature=0.7, max_tokens=2048)
+            )
+            reflection = await reflection_agent.write(passage, user_ctx)
+
+            meditation["reflection_synthesis"] = reflection.synthesis
+            meditation["reflection_prayer_response"] = reflection.prayer_response
+            meditation["reflection_action_step"] = reflection.action_step
+            meditation["patristic_quotes"] = reflection.patristic_quotes
+            logger.info(
+                "ReflectionWriterAgent (A-029) enriched meditation for %s",
+                passage.reference,
+            )
+        except Exception as exc:
+            logger.warning(
+                "ReflectionWriterAgent (A-029) failed; proceeding without enrichment: %s", exc
+            )
+
         return {**state, "meditation": meditation}
 
     async def _oratio(self, state: LectioDivinaState) -> LectioDivinaState:

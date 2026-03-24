@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Share2, Check, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Share2, Check, MessageSquare, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { useNotesStore } from "@/stores/notes";
 
 export interface OriginalLanguageEntry {
@@ -49,7 +49,7 @@ export function ScriptureDisplay({
   const [showOriginal, setShowOriginal] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
-  const { getNote, saveNote, loadFromStorage } = useNotesStore();
+  const { getNote, saveNote, deleteNote, loadFromStorage } = useNotesStore();
   const [noteText, setNoteText] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
 
@@ -79,6 +79,11 @@ export function ScriptureDisplay({
     saveNote(reference, noteText);
     setNoteSaved(true);
     setTimeout(() => setNoteSaved(false), 2000);
+  };
+
+  const handleDeleteNote = () => {
+    deleteNote(reference);
+    setNoteText("");
   };
 
   return (
@@ -258,20 +263,32 @@ export function ScriptureDisplay({
                 rows={5}
                 className="w-full rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] p-4 text-sm leading-relaxed text-[--color-sacred-text] placeholder:text-[--color-sacred-text-muted]/30 focus:border-[--color-gold]/40 focus:outline-none focus:ring-1 focus:ring-[--color-gold]/20 resize-none"
               />
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex items-center justify-between gap-2">
                 <p className="text-xs text-[--color-sacred-text-muted]/40">
                   Notatki zapisywane lokalnie na urządzeniu
                 </p>
-                <button
-                  onClick={handleSaveNote}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-4 py-2 text-xs font-medium text-[--color-gold] transition-all hover:bg-[--color-gold]/20"
-                >
-                  {noteSaved ? (
-                    <><Check className="h-3.5 w-3.5" /> Zapisano</>
-                  ) : (
-                    "Zapisz refleksję"
+                <div className="flex items-center gap-2">
+                  {getNote(reference) && (
+                    <button
+                      onClick={handleDeleteNote}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[--color-sacred-red]/30 bg-[--color-sacred-red]/5 px-3 py-2 text-xs text-[--color-sacred-red-light]/70 transition-all hover:bg-[--color-sacred-red]/10"
+                      title="Usuń notatkę"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Usuń
+                    </button>
                   )}
-                </button>
+                  <button
+                    onClick={handleSaveNote}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-4 py-2 text-xs font-medium text-[--color-gold] transition-all hover:bg-[--color-gold]/20"
+                  >
+                    {noteSaved ? (
+                      <><Check className="h-3.5 w-3.5" /> Zapisano</>
+                    ) : (
+                      "Zapisz refleksję"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}

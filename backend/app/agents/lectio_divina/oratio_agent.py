@@ -305,6 +305,42 @@ class OratioAgent:
         if self._llm is None:
             return dict(FALLBACK_PRAYER)
 
+        # --- A-028: PrayerGeneratorAgent delegation (ignatian/carmelite/franciscan/benedictine/charismatic) ---
+        _PRAYER_GENERATOR_TRADITIONS = frozenset(
+            {"ignatian", "carmelite", "franciscan", "benedictine", "charismatic"}
+        )
+        if tradition in _PRAYER_GENERATOR_TRADITIONS:
+            try:
+                from app.agents.generative.prayer_generator import PrayerGeneratorAgent
+                prayer_agent = PrayerGeneratorAgent()
+                # Convert emotion_state dict → string (top emotion or joined)
+                if emotion_state:
+                    top_emotion = max(emotion_state, key=emotion_state.get)
+                    emotion_str = f"{top_emotion} ({emotion_state[top_emotion]:.2f})"
+                else:
+                    emotion_str = "neutral"
+                prayer = await prayer_agent.generate(
+                    scripture_text=scripture.get("text", ""),
+                    emotion_state=emotion_str,
+                    tradition=tradition,
+                )
+                if len(prayer.get("prayer_text", "")) >= 30:
+                    prayer.setdefault("elements", [])
+                    prayer.setdefault("spiritual_movement", "peace")
+                    logger.info(
+                        "A-028 PrayerGeneratorAgent produced prayer: tradition=%s, len=%d",
+                        tradition,
+                        len(prayer["prayer_text"]),
+                    )
+                    return prayer
+            except Exception as exc:
+                logger.warning(
+                    "PrayerGeneratorAgent (A-028) failed for tradition=%s (%s); "
+                    "falling back to OratioAgent template.",
+                    tradition,
+                    exc,
+                )
+
         prompt_template = TRADITION_PROMPTS[tradition]
         system_prompt = prompt_template.format(
             reference=reference,

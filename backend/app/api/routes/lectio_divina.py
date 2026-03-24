@@ -125,6 +125,7 @@ class RunPipelineResponse(BaseModel):
     action: dict[str, Any] | None = None
     tradition: str = ""
     kerygmatic_theme: str = ""
+    journey: dict[str, Any] | None = None
     error: str | None = None
 
 
@@ -331,6 +332,82 @@ async def submit_reflection(request: ReflectionRequest, redis: RedisDep) -> Refl
     )
 
 
+@router.get("/journey/{user_id}")
+async def get_spiritual_journey(user_id: str, redis: RedisDep) -> dict[str, Any]:
+    """Return the user's current spiritual journey stage via JourneyTrackerAgent (A-036).
+
+    Analyses all stored sessions for the user and returns purgation /
+    illumination / union stage, percentage progress, milestones, and the
+    next growth area.
+    """
+    from app.agents.memory.journey_tracker import JourneyTrackerAgent
+
+    store = SessionStore(redis, namespace="lectio")
+    user_sessions = await store.list_by_user(user_id)
+
+    # Build aggregate session data from the most recent session
+    latest = (
+        sorted(user_sessions, key=lambda s: s.get("created_at", ""), reverse=True)[0]
+        if user_sessions
+        else {}
+    )
+    session_data = {
+        "emotions": {
+            "primary": (
+                latest.get("emotions", [{}])[-1].get("primary", "neutral")
+                if latest.get("emotions")
+                else "neutral"
+            ),
+        },
+        "spiritual_state": "",
+        "reflection": "",
+        "scripture": "",
+        "total_sessions": len(user_sessions),
+    }
+
+    tracker = JourneyTrackerAgent()
+    journey = await tracker.track(user_id, session_data)
+    return journey
+
+
+@router.get("/patterns/{user_id}")
+async def get_spiritual_patterns(user_id: str, redis: RedisDep) -> list[dict[str, Any]]:
+    """Discover recurring spiritual patterns via PatternDiscoveryAgent (A-037).
+
+    Analyses session history (up to last 30 sessions) to identify
+    recurring themes, cyclical crises, grace moments, and growth
+    trajectories.
+    """
+    from app.agents.memory.pattern_discovery import PatternDiscoveryAgent
+
+    store = SessionStore(redis, namespace="lectio")
+    user_sessions = await store.list_by_user(user_id)
+
+    sessions_for_analysis = [
+        {
+            "date": s.get("created_at", ""),
+            "primary_emotion": (
+                s.get("emotions", [{}])[-1].get("primary", "neutral")
+                if s.get("emotions")
+                else "neutral"
+            ),
+            "spiritual_state": (
+                s.get("emotions", [{}])[-1].get("state", "")
+                if s.get("emotions")
+                else ""
+            ),
+            "scripture_ref": (s.get("scripture") or {}).get("readings", [""])[0]
+            if isinstance((s.get("scripture") or {}).get("readings"), list)
+            else "",
+        }
+        for s in sorted(user_sessions, key=lambda s: s.get("created_at", ""), reverse=True)
+    ]
+
+    agent = PatternDiscoveryAgent()
+    patterns = await agent.discover(user_id, sessions_for_analysis)
+    return patterns
+
+
 @router.get("/history/{user_id}", response_model=list[SessionHistoryItem])
 async def get_session_history(user_id: str, redis: RedisDep) -> list[SessionHistoryItem]:
     """Get session history for a user."""
@@ -370,6 +447,30 @@ async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineRespons
         tradition=request.tradition,
     )
 
+    # --- A-036: JourneyTrackerAgent — track spiritual progress after each session ---
+    journey: dict[str, Any] | None = None
+    try:
+        from app.agents.memory.journey_tracker import JourneyTrackerAgent
+
+        session_data = {
+            "emotions": {
+                "primary": (result.get("prayer") or {}).get("spiritual_movement", "neutral"),
+            },
+            "spiritual_state": (result.get("prayer") or {}).get("spiritual_movement", ""),
+            "reflection": (result.get("meditation") or {}).get("key_word", ""),
+            "scripture": (result.get("scripture") or {}).get("text", ""),
+        }
+        tracker = JourneyTrackerAgent()
+        journey = await tracker.track(request.user_id, session_data)
+        logger.info(
+            "JourneyTrackerAgent (A-036): user=%s stage=%s progress=%s%%",
+            request.user_id,
+            journey.get("current_stage"),
+            journey.get("progress_percentage"),
+        )
+    except Exception:
+        logger.warning("JourneyTrackerAgent (A-036) failed; journey not tracked.")
+
     return RunPipelineResponse(
         scripture=result.get("scripture"),
         meditation=result.get("meditation"),
@@ -378,5 +479,6 @@ async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineRespons
         action=result.get("action"),
         tradition=result.get("tradition", ""),
         kerygmatic_theme=result.get("kerygmatic_theme", ""),
+        journey=journey,
         error=result.get("error"),
     )

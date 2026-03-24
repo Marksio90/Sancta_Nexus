@@ -124,7 +124,7 @@ export default function LectioDivinaPage() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [liturgicalCtx, setLiturgicalCtx] = useState<LiturgicalContext | null>(null);
   const { isLoading, currentSession, generateSession } = useLectioStore();
-  const { recordSession } = useProgressStore();
+  const { recordSession, addTheme } = useProgressStore();
   const sessionStartRef = useRef<Date>(new Date());
   const sessionRecordedRef = useRef(false);
 
@@ -135,7 +135,7 @@ export default function LectioDivinaPage() {
     fetchLiturgicalContext().then(setLiturgicalCtx);
   }, []);
 
-  // Record session when the user reaches Actio (final stage)
+  // Record session and track kerygmatic theme when the user reaches Actio (final stage)
   useEffect(() => {
     if (stage === "actio" && !sessionRecordedRef.current) {
       sessionRecordedRef.current = true;
@@ -149,8 +149,13 @@ export default function LectioDivinaPage() {
         emotion: emotion || "nieznany",
         durationMinutes: Math.max(1, durationMinutes),
       });
+      // Track kerygmatic theme for pattern discovery in dashboard
+      const theme = currentSession?.kerygmaticTheme;
+      if (theme) {
+        addTheme(theme);
+      }
     }
-  }, [stage, emotion, recordSession, currentSession]);
+  }, [stage, emotion, recordSession, addTheme, currentSession]);
 
   const goToStage = useCallback(
     async (direction: 1 | -1) => {
