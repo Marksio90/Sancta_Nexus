@@ -10,6 +10,7 @@ from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Enum,
     Float,
@@ -17,6 +18,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -250,3 +252,204 @@ class SpiritualInsight(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="spiritual_insights")
+
+
+# ── Community models ──────────────────────────────────────────────────────────
+
+
+class IntentionStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ANSWERED = "answered"
+    CLOSED = "closed"
+
+
+class PrayerIntention(Base):
+    """A prayer request shared publicly or kept private within the community."""
+
+    __tablename__ = "prayer_intentions"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    # nullable → allows anonymous / guest intentions
+    user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    content: Mapped[str] = mapped_column(String(500), nullable=False)
+    author_display: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), default="general", nullable=False)
+    prayer_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[IntentionStatus] = mapped_column(
+        Enum(IntentionStatus, name="intention_status",
+             values_callable=lambda e: [x.value for x in e]),
+        default=IntentionStatus.ACTIVE,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class PrayerGroup(Base):
+    """A parish or online prayer group."""
+
+    __tablename__ = "prayer_groups"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    parish: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    leader_user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    category: Mapped[str] = mapped_column(String(50), default="general", nullable=False)
+    schedule: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    member_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    memberships: Mapped[list["PrayerGroupMembership"]] = relationship(
+        back_populates="group", cascade="all, delete-orphan"
+    )
+
+
+class PrayerGroupMembership(Base):
+    """Membership of a user in a prayer group."""
+
+    __tablename__ = "prayer_group_memberships"
+    __table_args__ = (UniqueConstraint("group_id", "user_id", name="uq_group_user"),)
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    group_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("prayer_groups.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[str] = mapped_column(String(20), default="member", nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    group: Mapped["PrayerGroup"] = relationship(back_populates="memberships")
+
+
+class CommunityRosary(Base):
+    """A community Rosary session (synchronous or asynchronous)."""
+
+    __tablename__ = "community_rosaries"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    initiator_user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    mystery_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    intention: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    scheduled_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(20), default="open", nullable=False)
+    participant_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    participations: Mapped[list["RosaryParticipation"]] = relationship(
+        back_populates="rosary", cascade="all, delete-orphan"
+    )
+
+
+class RosaryParticipation(Base):
+    """Record of a user joining and completing a community Rosary."""
+
+    __tablename__ = "rosary_participations"
+    __table_args__ = (UniqueConstraint("rosary_id", "user_id", name="uq_rosary_user"),)
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    rosary_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("community_rosaries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # bitmask: bit N set → decade N+1 completed (5 bits → 5 decades)
+    decades_mask: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    rosary: Mapped["CommunityRosary"] = relationship(back_populates="participations")
+
+
+class NovenaTracking(Base):
+    """User's progress through a specific novena."""
+
+    __tablename__ = "novena_trackings"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    novena_id: Mapped[str] = mapped_column(String(60), nullable=False)
+    intention: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # bitmask: bit N set → day N+1 prayed (9 bits)
+    completed_days_mask: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    is_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

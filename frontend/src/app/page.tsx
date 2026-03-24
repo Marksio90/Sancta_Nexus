@@ -9,6 +9,7 @@ import {
   Cross,
   ChevronRight,
   Church,
+  Users,
 } from "lucide-react";
 import { VerseShareButton } from "@/components/ui/verse-share-button";
 
@@ -121,6 +122,16 @@ const features = [
     href: "/przygotowanie",
     color: "from-rose-900/20 to-rose-800/5",
     border: "hover:border-rose-600/40",
+  },
+  {
+    icon: Users,
+    title: "Wspólnota",
+    latin: "Ubi Caritas et Amor",
+    description:
+      "Intencje modlitewne, grupy parafialne, Różaniec wspólnotowy z medytacją AI nad 20 tajemnicami oraz 8 nowenn z codziennym trackingiem postępu.",
+    href: "/wspolnota",
+    color: "from-teal-900/20 to-teal-800/5",
+    border: "hover:border-teal-600/40",
   },
 ];
 
