@@ -6,6 +6,9 @@ import Link from "next/link";
 import { StageIndicator } from "@/components/ui/stage-indicator";
 import { BreathingTimer } from "@/components/ui/breathing-timer";
 import { ScriptureDisplay } from "@/components/ui/scripture-display";
+import { VoicePlayer } from "@/components/voice/VoicePlayer";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
+import { AmbientPlayer } from "@/components/voice/AmbientPlayer";
 import { useLectioStore } from "@/stores/lectio";
 import { useProgressStore } from "@/stores/progress";
 import type { LectioDivinaStage } from "@/types";
@@ -191,11 +194,14 @@ export default function LectioDivinaPage() {
           Powrot
         </Link>
 
-        {/* Stage indicator */}
-        <StageIndicator
-          stages={STAGES.map((s) => STAGE_LABELS[s])}
-          currentStage={currentStage}
-        />
+        {/* Stage indicator + Ambient Player */}
+        <div className="flex items-center justify-between">
+          <StageIndicator
+            stages={STAGES.map((s) => STAGE_LABELS[s])}
+            currentStage={currentStage}
+          />
+          <AmbientPlayer className="ml-4 shrink-0" />
+        </div>
 
         {/* Stage content */}
         <div
@@ -238,13 +244,25 @@ export default function LectioDivinaPage() {
                 Podziel sie swoim stanem ducha. Pomoze to dobrac odpowiedni
                 fragment Pisma Swietego i poprowadzic Twoja modlitwe.
               </p>
-              <textarea
-                value={emotion}
-                onChange={(e) => setEmotion(e.target.value)}
-                placeholder="Np. Czuje spokoj, ale tez lekki niepokoj o przyszlosc..."
-                className="mx-auto block w-full max-w-lg resize-none rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4 text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/50 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
-                rows={4}
-              />
+              <div className="relative mx-auto w-full max-w-lg">
+                <textarea
+                  value={emotion}
+                  onChange={(e) => setEmotion(e.target.value)}
+                  placeholder="Np. Czuje spokoj, ale tez lekki niepokoj o przyszlosc..."
+                  className="block w-full resize-none rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4 pb-12 text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/50 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
+                  rows={4}
+                />
+                {/* Voice recorder inside the textarea footer */}
+                <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                  <VoiceRecorder
+                    onTranscript={(text) => setEmotion((prev) => prev ? `${prev} ${text}` : text)}
+                    placeholder="Powiedz jak się czujesz"
+                  />
+                  <span className="text-[10px] text-[--color-sacred-text-muted]/40">
+                    lub mów głosem
+                  </span>
+                </div>
+              </div>
               <p className="mx-auto mt-4 max-w-md text-xs text-[--color-sacred-text-muted]/50">
                 Twoje slowa sa bezpieczne. System nigdy nie osadza — tylko towarzyszy.
               </p>
@@ -257,25 +275,36 @@ export default function LectioDivinaPage() {
               <h2 className="font-heading mb-2 text-center text-2xl text-[--color-gold]">
                 Lectio
               </h2>
-              <p className="mb-8 text-center text-[--color-sacred-text-muted]">
+              <p className="mb-4 text-center text-[--color-sacred-text-muted]">
                 Czytaj uwazanie. Pozwol, aby slowa dotarly do Twojego serca.
               </p>
 
+              {/* TTS: read scripture aloud */}
               {(() => {
                 const p = currentSession?.passage ?? MOCK_SCRIPTURE;
                 return (
-                  <ScriptureDisplay
-                    book={p.book}
-                    chapter={p.chapter}
-                    startVerse={p.startVerse}
-                    endVerse={p.endVerse}
-                    text={p.text}
-                    translation={p.translation}
-                    historicalContext={p.historicalContext}
-                    patristicNote={p.patristicNote}
-                    originalLanguageKey={p.originalLanguageKey}
-                    catechismRef={p.catechismRef}
-                  />
+                  <>
+                    <div className="mb-4 flex justify-center">
+                      <VoicePlayer
+                        text={p.text}
+                        profile="sacred"
+                        label="Odsłuchaj fragment"
+                        speed={0.85}
+                      />
+                    </div>
+                    <ScriptureDisplay
+                      book={p.book}
+                      chapter={p.chapter}
+                      startVerse={p.startVerse}
+                      endVerse={p.endVerse}
+                      text={p.text}
+                      translation={p.translation}
+                      historicalContext={p.historicalContext}
+                      patristicNote={p.patristicNote}
+                      originalLanguageKey={p.originalLanguageKey}
+                      catechismRef={p.catechismRef}
+                    />
+                  </>
                 );
               })()}
             </div>
@@ -378,7 +407,17 @@ export default function LectioDivinaPage() {
                 </p>
               </div>
 
-              <p className="mt-6 text-center text-sm text-[--color-sacred-text-muted]">
+              {/* TTS: pray aloud */}
+              <div className="mt-5 flex justify-center">
+                <VoicePlayer
+                  text={currentSession?.prayer?.prayerText ?? MOCK_PRAYER}
+                  profile="contemplative"
+                  label="Odmów modlitwę głosem"
+                  speed={0.8}
+                />
+              </div>
+
+              <p className="mt-3 text-center text-sm text-[--color-sacred-text-muted]">
                 Mozesz odmowic te modlitwe wlasnymi slowami lub w ciszy serca.
               </p>
             </div>
