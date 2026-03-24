@@ -21,7 +21,7 @@ Usage::
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -187,3 +187,83 @@ def get_llm_creative(
 ) -> BaseChatModel:
     """Get a creative LLM for prayer & reflection generation."""
     return get_llm(tier="creative", temperature=temperature, max_tokens=max_tokens)
+
+
+# ---------------------------------------------------------------------------
+# LLM Client Adapter
+# ---------------------------------------------------------------------------
+
+
+class LLMClientAdapter:
+    """Wraps a LangChain BaseChatModel to provide a simple .chat() interface.
+
+    Several Sancta Nexus agents (IgnatianDiscernmentAgent,
+    SpiritualDirectorOrchestrator, ReflectionWriterAgent) expect an async
+    ``chat(messages, *, temperature, max_tokens)`` method that accepts
+    OpenAI-style message dicts and returns an object with a ``.content``
+    attribute.  This adapter bridges LangChain's ``ainvoke`` API to that
+    contract.
+    """
+
+    def __init__(self, llm: BaseChatModel) -> None:
+        self._llm = llm
+
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> Any:
+        """Invoke the underlying LLM with OpenAI-style message dicts.
+
+        Args:
+            messages: List of ``{"role": ..., "content": ...}`` dicts.
+            temperature: Optional per-call temperature override.
+            max_tokens: Optional per-call max_tokens override.
+
+        Returns:
+            LangChain AI message object with a ``.content`` str attribute.
+        """
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+        lc_messages: list[Any] = []
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            if role == "system":
+                lc_messages.append(SystemMessage(content=content))
+            elif role == "assistant":
+                lc_messages.append(AIMessage(content=content))
+            else:
+                lc_messages.append(HumanMessage(content=content))
+
+        llm = self._llm
+        bind_kwargs: dict[str, Any] = {}
+        if temperature is not None:
+            bind_kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            bind_kwargs["max_tokens"] = max_tokens
+        if bind_kwargs:
+            try:
+                llm = llm.bind(**bind_kwargs)
+            except Exception:
+                pass  # some models do not support per-call binding
+
+        return await llm.ainvoke(lc_messages)
+
+
+def get_llm_client(
+    *,
+    tier: UseCaseTier = "primary",
+    temperature: float = 0.5,
+    max_tokens: int = 2048,
+) -> LLMClientAdapter:
+    """Get an LLM wrapped in the ``.chat()`` adapter interface.
+
+    Used by agents that expect an async ``chat(messages, **kwargs)`` method,
+    such as :class:`~app.agents.spiritual_director.ignatian_agent.IgnatianDiscernmentAgent`
+    and :class:`~app.agents.spiritual_director.director_orchestrator.SpiritualDirectorOrchestrator`.
+    """
+    llm = get_llm(tier=tier, temperature=temperature, max_tokens=max_tokens)
+    return LLMClientAdapter(llm)

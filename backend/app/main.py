@@ -76,6 +76,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.lectio_divina", "/api/v1/lectio-divina", ["lectio-divina"]),
     ("app.api.routes.bible", "/api/v1/bible", ["bible"]),
     ("app.api.routes.spiritual_director", "/api/v1/spiritual-director", ["spiritual-director"]),
+    ("app.api.routes.orchestrate", "/api/v1/orchestrate", ["orchestrate"]),
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
     ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),

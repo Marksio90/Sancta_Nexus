@@ -10,10 +10,13 @@ import {
   Sprout,
   Star,
   ArrowRight,
+  ScrollText,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useProgressStore } from "@/stores/progress";
+import { useNotesStore } from "@/stores/notes";
 
 const ENCOURAGEMENTS = [
   { text: "Każda droga zaczyna się od pierwszego kroku. Twój dopiero przed Tobą.", ref: "Ps 37,23" },
@@ -49,9 +52,14 @@ export default function DashboardPage() {
     journeyProgress,
   } = useProgressStore();
 
+  const { loadFromStorage: loadNotes, getAllNotes, deleteNote } = useNotesStore();
+
   useEffect(() => {
     loadFromStorage();
-  }, [loadFromStorage]);
+    loadNotes();
+  }, [loadFromStorage, loadNotes]);
+
+  const savedNotes = getAllNotes();
 
   const encouragement =
     ENCOURAGEMENTS[(totalSessions + new Date().getDay()) % ENCOURAGEMENTS.length];
@@ -281,6 +289,41 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+
+        {/* ── Saved reflections (getAllNotes) ── */}
+        {savedNotes.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-6">
+            <h2 className="font-heading mb-5 flex items-center gap-2 text-xl text-gold">
+              <ScrollText className="h-5 w-5" />
+              Moje refleksje
+              <span className="ml-auto text-sm font-normal text-[--color-gold]/40">
+                {savedNotes.length} {savedNotes.length === 1 ? "notatka" : "notatek"}
+              </span>
+            </h2>
+            <ul className="space-y-3">
+              {savedNotes.map((note) => (
+                <li
+                  key={note.ref}
+                  className="rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-bg] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs font-semibold text-[--color-gold]/70">{note.ref}</p>
+                    <button
+                      onClick={() => deleteNote(note.ref)}
+                      className="shrink-0 rounded p-1 text-[--color-sacred-text-muted]/30 transition-colors hover:text-[--color-sacred-red-light]/60"
+                      title="Usuń notatkę"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <p className="font-scripture mt-2 line-clamp-3 text-sm leading-relaxed text-[--color-sacred-text-muted]">
+                    {note.text}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* ── Encouragement block ── */}
         <div className="mt-6 rounded-2xl border border-[--color-gold]/10 bg-gradient-to-br from-[--color-gold]/5 to-transparent p-7 text-center">

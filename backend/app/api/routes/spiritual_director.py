@@ -293,6 +293,9 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
             detail="User does not own this session",
         )
 
+    from app.agents.spiritual_director.director_orchestrator import SpiritualDirectorOrchestrator
+    from app.core.llm import get_llm_client
+
     now = datetime.utcnow()
 
     # Record user message
@@ -302,15 +305,34 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         "timestamp": now.isoformat(),
     })
 
-    # Analyse emotion
+    # Analyse emotion (async path uses EmotionDetectorAgent A-022 + SpiritualStateClassifier A-025)
     emotion_svc = EmotionService()
-    analysis = emotion_svc.analyze_text(request.content)
+    try:
+        analysis = await emotion_svc.analyze_text_async(
+            request.content,
+            user_history=[
+                {"text": m["content"], "timestamp": m["timestamp"]}
+                for m in session.get("messages", [])
+                if m["role"] == "user"
+            ],
+        )
+    except Exception:
+        analysis = emotion_svc.analyze_text(request.content)
+
     spiritual_state = emotion_svc.get_spiritual_state(analysis)
+
+    # Run CrisisDetectorAgent (A-026) — safety-critical
+    crisis_info: dict = {"is_crisis": False, "severity": "none", "concerns": [], "resources": []}
+    try:
+        crisis_info = await emotion_svc.detect_crisis(request.content, analysis.vector)
+    except Exception:
+        logger.warning("CrisisDetectorAgent check failed; proceeding without crisis info.")
 
     session["emotions"].append({
         "timestamp": now.isoformat(),
         "primary": analysis.primary_emotion,
         "state": spiritual_state.state.value,
+        "crisis_severity": crisis_info.get("severity", "none"),
     })
 
     # Find relevant scripture
@@ -334,14 +356,34 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         for m in matches
     ]
 
-    # Generate director response
-    director_response = _generate_director_response(
-        user_message=request.content,
-        tradition=session["tradition"],
-        analysis=analysis,
-        spiritual_state=spiritual_state,
-        matches=matches,
-    )
+    # Generate director response via SpiritualDirectorOrchestrator (A-047)
+    llm_client = get_llm_client(tier="primary", temperature=0.7, max_tokens=2048)
+    orchestrator = SpiritualDirectorOrchestrator(llm_client=llm_client)
+    try:
+        orchestrator_result = await orchestrator.direct(
+            user_id=request.user_id,
+            message=request.content,
+            tradition=session["tradition"],
+        )
+        director_response = orchestrator_result.response
+        follow_ups = orchestrator_result.follow_up_questions or _generate_follow_up_questions(
+            session["tradition"], analysis.primary_emotion
+        )
+        suggested_scriptures_extra = [
+            {"reference": ref, "passage": "", "explanation": ""}
+            for ref in (orchestrator_result.scripture_references or [])
+        ]
+        suggested = (suggested + suggested_scriptures_extra)[:5]
+    except Exception:
+        logger.exception("SpiritualDirectorOrchestrator failed; using template fallback.")
+        director_response = _generate_director_response(
+            user_message=request.content,
+            tradition=session["tradition"],
+            analysis=analysis,
+            spiritual_state=spiritual_state,
+            matches=matches,
+        )
+        follow_ups = _generate_follow_up_questions(session["tradition"], analysis.primary_emotion)
 
     session["messages"].append({
         "role": "director",
@@ -350,10 +392,6 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
     })
     await store.update(request.session_id, session)
 
-    follow_ups = _generate_follow_up_questions(
-        session["tradition"], analysis.primary_emotion
-    )
-
     return MessageResponse(
         session_id=request.session_id,
         director_response=director_response,
@@ -361,6 +399,8 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
             "primary_emotion": analysis.primary_emotion,
             "secondary_emotions": analysis.secondary_emotions,
             "confidence": analysis.confidence,
+            "crisis_severity": crisis_info.get("severity", "none"),
+            "crisis_resources": crisis_info.get("resources", []) if crisis_info.get("is_crisis") else [],
         },
         suggested_scriptures=suggested,
         spiritual_state=spiritual_state.state.value,

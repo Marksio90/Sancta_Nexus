@@ -21,8 +21,8 @@ from typing import Any
 
 from .magisterium_validator import MagisteriumValidator, ValidationResult
 from .patristic_agent import PatristicAgent, PatristicReference
-from .exegesis_agent import ExegesisAgent, ExegesisResult, ScripturePassage
-from .doctrine_guard import DoctrineGuardAgent, DoctrineCheckResult
+from .exegesis_agent import ExegesisAgent
+from .doctrine_guard import DoctrineGuardAgent
 
 logger = logging.getLogger(__name__)
 
@@ -88,19 +88,21 @@ class TheologicalValidationPipeline:
     def __init__(
         self,
         exegesis_agent: ExegesisAgent,
-        magisterium_validator: MagisteriumValidator,
-        patristic_agent: PatristicAgent,
         doctrine_guard: DoctrineGuardAgent,
         *,
+        magisterium_validator: MagisteriumValidator | None = None,
+        patristic_agent: PatristicAgent | None = None,
         threshold: float = AGGREGATE_THRESHOLD,
         fallback_content: str = _DEFAULT_FALLBACK,
     ) -> None:
         """
         Args:
             exegesis_agent: ExegesisAgent instance for Gate 1.
-            magisterium_validator: MagisteriumValidator for Gate 2.
-            patristic_agent: PatristicAgent for Gate 3.
-            doctrine_guard: DoctrineGuardAgent for Gate 4.
+            doctrine_guard: DoctrineGuardAgent for Gate 4 (CRITICAL).
+            magisterium_validator: Optional MagisteriumValidator for Gate 2.
+                When None, Gate 2 is skipped with moderate confidence.
+            patristic_agent: Optional PatristicAgent for Gate 3.
+                When None, Gate 3 is skipped with moderate confidence.
             threshold: Minimum aggregate score to pass (default 0.85).
             fallback_content: Safe content to return on failure.
         """
@@ -219,19 +221,26 @@ class TheologicalValidationPipeline:
     async def _gate_scripture_coherence(
         self, content: str, scripture_ref: str
     ) -> GateResult:
-        """Gate 1: Verify scripture coherence via exegesis."""
+        """Gate 1: Verify scripture coherence via ExegesisAgent (A-018)."""
         start = time.monotonic()
 
         try:
             passage = self._parse_scripture_ref(scripture_ref, content)
-            result: ExegesisResult = await self._exegesis.analyze(passage)
-            confidence = result.overall_confidence
-            status = (
-                GateStatus.PASSED if confidence >= 0.6 else GateStatus.FAILED
+            result: dict[str, str] = await self._exegesis.analyze(
+                book=passage.book,
+                chapter=passage.chapter,
+                verse_start=passage.verse_start,
+                verse_end=passage.verse_end if passage.verse_end else passage.verse_start,
+                text=passage.text,
             )
+            # Confidence: proportion of dimensions with non-empty responses
+            non_empty = sum(1 for v in result.values() if v and len(v) > 20)
+            total_dims = max(len(result), 1)
+            confidence = round(non_empty / total_dims, 4)
+            status = GateStatus.PASSED if confidence >= 0.5 else GateStatus.FAILED
             details = (
                 f"Exegesis confidence={confidence:.4f}, "
-                f"dimensions analysed={len(result.all_dimensions)}"
+                f"dimensions analysed={total_dims}"
             )
         except Exception as exc:
             logger.exception("Gate 1 (Scripture Coherence) error")
@@ -249,15 +258,23 @@ class TheologicalValidationPipeline:
         )
 
     async def _gate_magisterium_alignment(self, content: str) -> GateResult:
-        """Gate 2: Validate against Magisterium sources."""
+        """Gate 2: Validate against Magisterium sources (requires Qdrant)."""
         start = time.monotonic()
+
+        if self._magisterium is None:
+            duration = (time.monotonic() - start) * 1000
+            return GateResult(
+                gate_name="magisterium_alignment",
+                status=GateStatus.SKIPPED,
+                confidence=0.7,  # moderate confidence when skipped
+                details="MagisteriumValidator not configured (no Qdrant); gate skipped.",
+                duration_ms=round(duration, 2),
+            )
 
         try:
             result: ValidationResult = await self._magisterium.validate(content)
             confidence = result.confidence
-            status = (
-                GateStatus.PASSED if result.is_valid else GateStatus.FAILED
-            )
+            status = GateStatus.PASSED if result.is_valid else GateStatus.FAILED
             details = (
                 f"Valid={result.is_valid}, "
                 f"references={len(result.references)}, "
@@ -283,8 +300,18 @@ class TheologicalValidationPipeline:
     async def _gate_patristic_crossref(
         self, content: str, scripture_ref: str
     ) -> GateResult:
-        """Gate 3: Cross-reference with patristic sources."""
+        """Gate 3: Cross-reference with patristic sources (requires Qdrant)."""
         start = time.monotonic()
+
+        if self._patristic is None:
+            duration = (time.monotonic() - start) * 1000
+            return GateResult(
+                gate_name="patristic_crossref",
+                status=GateStatus.SKIPPED,
+                confidence=0.7,
+                details="PatristicAgent not configured (no Qdrant); gate skipped.",
+                duration_ms=round(duration, 2),
+            )
 
         try:
             refs: list[PatristicReference] = (
@@ -292,7 +319,6 @@ class TheologicalValidationPipeline:
                     scripture_ref, content
                 )
             )
-            # Confidence based on number and quality of references found
             if refs:
                 avg_relevance = sum(r.relevance_score for r in refs) / len(refs)
                 confidence = min(avg_relevance, 1.0)
@@ -324,21 +350,21 @@ class TheologicalValidationPipeline:
         )
 
     async def _gate_doctrine_guard(self, content: str) -> GateResult:
-        """Gate 4: Final doctrine safety check (CRITICAL)."""
+        """Gate 4: Final doctrine safety check via DoctrineGuardAgent (A-021). CRITICAL."""
         start = time.monotonic()
 
         try:
-            result: DoctrineCheckResult = await self._doctrine.guard(content)
-            confidence = 1.0 if result.passed else 0.0
-            status = (
-                GateStatus.PASSED if result.passed else GateStatus.FAILED
-            )
+            result: dict = await self._doctrine.guard(content)
+            passed: bool = result.get("passed", False)
+            violations: list[str] = result.get("violations", [])
+            confidence = result.get("confidence", 1.0 if passed else 0.0)
+            status = GateStatus.PASSED if passed else GateStatus.FAILED
             details = (
-                f"Checked {result.checked_dogma_count} dogmas, "
-                f"violations={len(result.violations)}"
+                f"Checked {len(self._doctrine._dogmas)} dogmas, "
+                f"violations={len(violations)}"
             )
-            if result.violations:
-                details += f"; {'; '.join(result.violations[:3])}"
+            if violations:
+                details += f"; {'; '.join(violations[:3])}"
         except Exception as exc:
             logger.exception("Gate 4 (Doctrine Guard) error - FAILING CLOSED")
             confidence = 0.0

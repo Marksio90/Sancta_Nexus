@@ -151,6 +151,110 @@ class EmotionService:
     # Public API
     # ------------------------------------------------------------------
 
+    async def analyze_text_async(
+        self,
+        text: str,
+        user_history: list[dict] | None = None,
+    ) -> EmotionAnalysis:
+        """LLM-powered 36-dim emotion analysis using EmotionDetectorAgent (A-022)
+        and SpiritualStateClassifier (A-025).
+
+        Falls back to the keyword-based ``analyze_text`` when the LLM is
+        unavailable.
+
+        Args:
+            text: User-provided text.
+            user_history: Optional list of previous session dicts for the
+                SpiritualStateClassifier context.
+
+        Returns:
+            :class:`EmotionAnalysis` with LLM-derived emotion vector when
+            possible, keyword-based otherwise.
+        """
+        from app.agents.emotion.emotion_detector import EmotionDetectorAgent
+        from app.agents.emotion.spiritual_state_classifier import SpiritualStateClassifier
+
+        detector = EmotionDetectorAgent()
+        classifier = SpiritualStateClassifier()
+
+        try:
+            vector = await detector.detect(text)
+        except Exception:
+            logger.warning("EmotionDetectorAgent failed; falling back to keywords.")
+            return self.analyze_text(text)
+
+        if not vector:
+            return self.analyze_text(text)
+
+        primary = max(vector, key=vector.get)  # type: ignore[arg-type]
+        secondary = [
+            label
+            for label, score in vector.items()
+            if score >= self._SECONDARY_THRESHOLD and label != primary
+        ]
+        confidence = min(1.0, max(vector.values()) + 0.1)
+
+        # Classify spiritual state with the full Ignatian taxonomy
+        spiritual_state_type = self._classify_spiritual_state(vector)
+        try:
+            state_obj = await classifier.classify(vector, user_history or [])
+            from app.agents.emotion.spiritual_state_classifier import SpiritualStateEnum
+            _enum_to_type: dict[str, SpiritualStateType] = {
+                SpiritualStateEnum.CONSOLATION.value: SpiritualStateType.CONSOLATION,
+                SpiritualStateEnum.DESOLATION.value: SpiritualStateType.DESOLATION,
+                SpiritualStateEnum.DARK_NIGHT.value: SpiritualStateType.DARK_NIGHT,
+                SpiritualStateEnum.PEACE.value: SpiritualStateType.PEACE,
+                SpiritualStateEnum.DRYNESS.value: SpiritualStateType.SEEKING,
+                SpiritualStateEnum.FERVOR.value: SpiritualStateType.CONSOLATION,
+                SpiritualStateEnum.TEMPTATION.value: SpiritualStateType.DESOLATION,
+                SpiritualStateEnum.GROWTH.value: SpiritualStateType.SEEKING,
+            }
+            spiritual_state_type = _enum_to_type.get(
+                state_obj.primary_state.value, spiritual_state_type
+            )
+        except Exception:
+            logger.warning("SpiritualStateClassifier failed; using heuristic state.")
+
+        return EmotionAnalysis(
+            vector=vector,
+            primary_emotion=primary,
+            secondary_emotions=sorted(secondary, key=lambda l: vector[l], reverse=True),
+            confidence=round(confidence, 4),
+            spiritual_state=spiritual_state_type,
+        )
+
+    async def detect_crisis(
+        self,
+        text: str,
+        emotion_vector: dict[str, float] | None = None,
+    ) -> dict:
+        """Run CrisisDetectorAgent (A-026) on the given text.
+
+        Returns a dict with keys ``is_crisis``, ``severity``, ``concerns``,
+        ``resources``.  Safe fallback returns ``{"is_crisis": False, ...}``
+        on any error.
+
+        Args:
+            text: User message text.
+            emotion_vector: Optional pre-computed emotion vector.
+        """
+        from app.agents.emotion.crisis_detector import CrisisDetectorAgent
+
+        detector = CrisisDetectorAgent()
+        try:
+            result = await detector.check(
+                text, emotion_vector or {}
+            )
+            return {
+                "is_crisis": result.is_crisis,
+                "severity": result.severity,
+                "concerns": list(result.concerns),
+                "resources": list(result.resources),
+            }
+        except Exception:
+            logger.exception("CrisisDetectorAgent failed; assuming no crisis.")
+            return {"is_crisis": False, "severity": "none", "concerns": [], "resources": []}
+
     def analyze_text(self, text: str) -> EmotionAnalysis:
         """Analyse free-form text and return a 36-dim emotion vector.
 

@@ -3,61 +3,37 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, ArrowLeft, AlertTriangle, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { useDirectorStore } from "@/stores/director";
+import type { SpiritualTradition } from "@/types";
 
 /* ── Tradition mapping ────────────────────────────────────────────────── */
 const TRADITIONS = [
   {
-    id: "ignatian",
+    id: "ignatian" as SpiritualTradition,
     label: "Ignacjańska",
     description: "Rozeznawanie duchowe, Ćwiczenia Duchowe św. Ignacego",
   },
   {
-    id: "carmelite",
+    id: "carmelite" as SpiritualTradition,
     label: "Karmelitańska",
     description: "Modlitwa kontemplacyjna, św. Teresa z Ávili, św. Jan od Krzyża",
   },
   {
-    id: "benedictine",
+    id: "benedictine" as SpiritualTradition,
     label: "Benedyktyńska",
     description: "Ora et labora, Reguła św. Benedykta, Liturgia Godzin",
   },
   {
-    id: "franciscan",
+    id: "franciscan" as SpiritualTradition,
     label: "Franciszkańska",
     description: "Ubóstwo duchowe, radość, bliskość ze stworzeniem",
   },
   {
-    id: "dominican",
+    id: "dominican" as SpiritualTradition,
     label: "Dominikańska",
     description: "Contemplata aliis tradere — kontemplacja przekazywana innym",
   },
 ];
-
-/* ── Types ────────────────────────────────────────────────────────────── */
-interface Message {
-  id: string;
-  role: "user" | "director";
-  content: string;
-  timestamp: Date;
-  scriptures?: { reference: string; passage: string; explanation: string }[];
-  followUps?: string[];
-  prayerSuggestion?: string;
-  spiritualState?: string;
-}
-
-interface StartSessionResponse {
-  session_id: string;
-  opening_message: string;
-}
-
-interface MessageApiResponse {
-  director_response: string;
-  suggested_scriptures: { reference: string; passage: string; explanation: string }[];
-  follow_up_questions: string[];
-  prayer_suggestion?: string;
-  spiritual_state?: string;
-}
 
 /* ── Anonymous user ID (persistent across sessions) ────────────────────── */
 function getAnonId(): string {
@@ -72,15 +48,21 @@ function getAnonId(): string {
 
 /* ── Component ────────────────────────────────────────────────────────── */
 export default function SpiritualDirectorPage() {
-  const [selectedTradition, setSelectedTradition] = useState("ignatian");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedTradition, setSelectedTradition] = useState<SpiritualTradition>("ignatian");
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userId = useRef(getAnonId());
+
+  const {
+    messages,
+    isTyping,
+    isLoading,
+    error,
+    startSession,
+    sendMessage,
+    clearError,
+  } = useDirectorStore();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,94 +72,34 @@ export default function SpiritualDirectorPage() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  /* ── Start new session when tradition changes ──────────────────────── */
-  const startSession = useCallback(
-    async (tradition: string) => {
-      setMessages([]);
-      setSessionId(null);
-      setError(null);
-      setIsTyping(true);
-      try {
-        const res = await api.post<StartSessionResponse>(
-          "/api/v1/spiritual-director/session",
-          { user_id: userId.current, tradition }
-        );
-        setSessionId(res.session_id);
-        setMessages([
-          {
-            id: crypto.randomUUID(),
-            role: "director",
-            content: res.opening_message,
-            timestamp: new Date(),
-          },
-        ]);
-      } catch (err) {
-        const msg =
-          err instanceof ApiError
-            ? "Nie można połączyć się z kierownikiem duchowym. Spróbuj ponownie."
-            : "Wystąpił błąd. Sprawdź połączenie.";
-        setError(msg);
-      } finally {
-        setIsTyping(false);
-      }
+  /* ── Start new session ──────────────────────────────────────────────── */
+  const handleStartSession = useCallback(
+    (tradition: SpiritualTradition) => {
+      clearError();
+      startSession(userId.current, tradition);
     },
-    []
+    [startSession, clearError]
   );
 
   /* ── Auto-start on mount ───────────────────────────────────────────── */
   useEffect(() => {
-    startSession(selectedTradition);
+    handleStartSession(selectedTradition);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Tradition change ──────────────────────────────────────────────── */
-  const handleTraditionChange = (id: string) => {
+  const handleTraditionChange = (id: SpiritualTradition) => {
     setSelectedTradition(id);
-    startSession(id);
+    handleStartSession(id);
   };
 
   /* ── Send message ──────────────────────────────────────────────────── */
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isTyping || !sessionId) return;
-
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+    if (!input.trim() || isTyping || isLoading) return;
+    const content = input.trim();
     setInput("");
-    setIsTyping(true);
-    setError(null);
-
-    try {
-      const res = await api.post<MessageApiResponse>(
-        "/api/v1/spiritual-director/message",
-        { session_id: sessionId, user_id: userId.current, content: userMsg.content }
-      );
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "director",
-          content: res.director_response,
-          timestamp: new Date(),
-          scriptures: res.suggested_scriptures,
-          followUps: res.follow_up_questions,
-          prayerSuggestion: res.prayer_suggestion ?? undefined,
-          spiritualState: res.spiritual_state ?? undefined,
-        },
-      ]);
-    } catch {
-      setError("Nie udało się wysłać wiadomości. Spróbuj ponownie.");
-      setMessages((prev) => prev.slice(0, -1)); // remove user message on error
-      setInput(userMsg.content);
-    } finally {
-      setIsTyping(false);
-    }
+    await sendMessage(content);
   };
 
   /* ── Keyboard shortcut: Enter to send ─────────────────────────────── */
@@ -187,6 +109,8 @@ export default function SpiritualDirectorPage() {
       handleSend(e as unknown as React.FormEvent);
     }
   };
+
+  const sessionReady = !isLoading && messages.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col px-4 py-8">
@@ -342,7 +266,7 @@ export default function SpiritualDirectorPage() {
               </div>
             ))}
 
-            {isTyping && (
+            {(isTyping || isLoading) && (
               <div className="flex justify-start">
                 <div className="rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface-light] px-4 py-3">
                   <p className="text-xs font-semibold text-[--color-gold]">
@@ -370,11 +294,11 @@ export default function SpiritualDirectorPage() {
                 placeholder="Napisz swoją myśl lub pytanie… (Enter = wyślij)"
                 rows={2}
                 className="flex-1 resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
-                disabled={isTyping || !sessionId}
+                disabled={isTyping || !sessionReady}
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isTyping || !sessionId}
+                disabled={!input.trim() || isTyping || !sessionReady}
                 className="self-end flex items-center gap-2 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-5 py-3 text-[--color-gold] transition-all hover:bg-[--color-gold]/20 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <Send className="h-4 w-4" />
