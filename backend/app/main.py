@@ -85,6 +85,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
     ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
+    ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:

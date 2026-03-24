@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, ArrowLeft, AlertTriangle, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { VoicePlayer } from "@/components/voice/VoicePlayer";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
+import { AmbientPlayer } from "@/components/voice/AmbientPlayer";
 import { useDirectorStore } from "@/stores/director";
 import type { SpiritualTradition } from "@/types";
 
@@ -133,6 +136,9 @@ export default function SpiritualDirectorPage() {
           <p className="text-sm text-[--color-sacred-text-muted]">
             Rozmowa w duchu wybranej tradycji — prowadzona przez AI, zakorzeniona w Piśmie
           </p>
+          <div className="mt-3 flex justify-center">
+            <AmbientPlayer />
+          </div>
         </div>
 
         {/* Disclaimer */}
@@ -196,10 +202,18 @@ export default function SpiritualDirectorPage() {
                   }`}
                 >
                   {msg.role === "director" && (
-                    <p className="mb-1.5 text-xs font-semibold text-[--color-gold]">
-                      Kierownik Duchowy ·{" "}
-                      {TRADITIONS.find((t) => t.id === selectedTradition)?.label}
-                    </p>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-[--color-gold]">
+                        Kierownik Duchowy ·{" "}
+                        {TRADITIONS.find((t) => t.id === selectedTradition)?.label}
+                      </p>
+                      <VoicePlayer
+                        text={msg.content}
+                        profile="narrator_male"
+                        label="Odsłuchaj"
+                        speed={0.9}
+                      />
+                    </div>
                   )}
                   <p className="leading-relaxed">{msg.content}</p>
 
@@ -287,15 +301,27 @@ export default function SpiritualDirectorPage() {
           {/* Input */}
           <form onSubmit={handleSend} className="border-t border-[--color-sacred-border] p-4">
             <div className="flex gap-3">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Napisz swoją myśl lub pytanie… (Enter = wyślij)"
-                rows={2}
-                className="flex-1 resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
-                disabled={isTyping || !sessionReady}
-              />
+              <div className="relative flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Napisz swoją myśl lub pytanie… (Enter = wyślij)"
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 pb-8 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
+                  disabled={isTyping || !sessionReady}
+                />
+                {/* Mic button inside textarea footer */}
+                <div className="absolute bottom-2 left-3">
+                  <VoiceRecorder
+                    onTranscript={(text) =>
+                      setInput((prev) => (prev ? `${prev} ${text}` : text))
+                    }
+                    disabled={isTyping || !sessionReady}
+                    placeholder="Mów do kierownika"
+                  />
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping || !sessionReady}

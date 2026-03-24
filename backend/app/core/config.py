@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ELEVENLABS_API_KEY: str = ""
 
+    # ── ElevenLabs sacred voice IDs (optional — configure for premium TTS) ──
+    # Leave empty to use OpenAI TTS as primary provider.
+    ELEVENLABS_VOICE_NARRATOR_MALE: str = ""    # e.g. "pNInz6obpgDQGcFmaJgB"
+    ELEVENLABS_VOICE_NARRATOR_FEMALE: str = ""  # e.g. "EXAVITQu4vr4xnSDxMaL"
+    ELEVENLABS_VOICE_CONTEMPLATIVE: str = ""    # e.g. "VR6AewLTigWG4xSOukaG"
+    ELEVENLABS_VOICE_SACRED: str = ""           # e.g. "ErXwobaYiN019PkySvjV"
+
     # ── LLM Configuration ─────────────────────────────────────────────────
     LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"
     LLM_FALLBACK_PROVIDER: str = "anthropic"  # secondary provider
