@@ -1,58 +1,83 @@
 "use client";
 
 import { useEffect } from "react";
+import { prefetchTodayScripture } from "@/lib/offline-cache";
+import {
+  subscribeWebPush,
+  requestNotificationPermission,
+  scheduleLocalReminders,
+  initCapacitorPush,
+} from "@/lib/notifications";
 
 /**
- * Registers the service worker and schedules daily prayer reminders.
- * Must be rendered in a client component inside <body>.
+ * ServiceWorkerProvider
+ *
+ * Responsibilities:
+ *  1. Register /sw.js service worker
+ *  2. Pre-fetch today's scripture into IndexedDB for offline use
+ *  3. Subscribe to VAPID web push (if permission already granted)
+ *  4. Initialise Capacitor push notifications (no-op on web)
+ *  5. Register Periodic Background Sync (Chrome 80+) for daily scripture
+ *  6. Schedule local prayer reminders via Capacitor or SW postMessage
  */
 export function ServiceWorkerProvider() {
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined") return;
+
+    // Offline scripture pre-fetch (IndexedDB) — no permission needed
+    prefetchTodayScripture().catch(() => {});
+
+    // ── Capacitor native push (no-op on plain web) ────────────────────────
+    initCapacitorPush((_title, _body) => {
+      // Could show an in-app toast here
+    }).catch(() => {});
+
+    if (!("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
-      .then((reg) => {
-        console.info("[SW] Registered", reg.scope);
+      .then(async (reg) => {
+        // ── Periodic Background Sync ──────────────────────────────────────
+        try {
+          const pbsm = (reg as unknown as {
+            periodicSync?: {
+              register(tag: string, opts: { minInterval: number }): Promise<void>;
+            };
+          }).periodicSync;
+          if (pbsm) {
+            await pbsm.register("daily-scripture-prefetch", {
+              minInterval: 24 * 60 * 60 * 1000,
+            });
+          }
+        } catch {
+          // Chrome only — ignored elsewhere
+        }
 
-        // Schedule daily prayer notification (if permission granted)
-        scheduleDailyPrayer();
+        // ── Web Push subscription ─────────────────────────────────────────
+        if (Notification.permission === "granted") {
+          subscribeWebPush().catch(() => {});
+        }
+
+        // Tell SW to pre-fetch tomorrow's scripture in background
+        reg.active?.postMessage({ type: "PREFETCH_SCRIPTURE" });
       })
       .catch((err) => console.warn("[SW] Registration failed:", err));
+
+    // ── Prayer reminders ──────────────────────────────────────────────────
+    if (Notification.permission === "granted") {
+      scheduleLocalReminders().catch(() => {});
+    } else if (Notification.permission === "default") {
+      // Ask non-intrusively after 30s on first visit
+      const t = setTimeout(async () => {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+          subscribeWebPush().catch(() => {});
+          scheduleLocalReminders().catch(() => {});
+        }
+      }, 30_000);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   return null;
-}
-
-async function scheduleDailyPrayer() {
-  if (!("Notification" in window)) return;
-
-  // Only ask if not yet determined
-  if (Notification.permission === "default") {
-    // Don't ask immediately — wait for user interaction elsewhere
-    return;
-  }
-
-  if (Notification.permission !== "granted") return;
-
-  // Use localStorage to avoid showing notification more than once per day
-  const lastKey = "sancta_nexus_last_notif";
-  const last = localStorage.getItem(lastKey);
-  const today = new Date().toDateString();
-  if (last === today) return;
-
-  localStorage.setItem(lastKey, today);
-
-  const hour = new Date().getHours();
-  const timeToMorning = hour < 7 ? (7 - hour) * 3600000 : 0;
-
-  if (timeToMorning > 0) {
-    setTimeout(() => {
-      new Notification("Sancta Nexus — Jutrznia", {
-        body: "Dobry poranek! Czas na Lectio Divina — Słowo Boże czeka.",
-        icon: "/icons/icon-192.svg",
-        tag: "morning-prayer",
-      });
-    }, timeToMorning);
-  }
 }
