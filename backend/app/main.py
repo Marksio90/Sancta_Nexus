@@ -88,6 +88,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
     ("app.api.routes.notifications", "/api/v1/notifications", ["notifications"]),
     ("app.api.routes.knowledge", "/api/v1/knowledge", ["knowledge"]),
+    ("app.api.routes.sacraments", "/api/v1/sacraments", ["sacraments"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:

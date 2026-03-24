@@ -8,6 +8,7 @@ import {
   Sparkles,
   Cross,
   ChevronRight,
+  Church,
 } from "lucide-react";
 import { VerseShareButton } from "@/components/ui/verse-share-button";
 
@@ -110,6 +111,16 @@ const features = [
     href: "/dashboard",
     color: "from-emerald-900/20 to-emerald-800/5",
     border: "hover:border-emerald-600/40",
+  },
+  {
+    icon: Church,
+    title: "Przygotowanie Sakramentalne",
+    latin: "Via Sacramentalis",
+    description:
+      "Rachunek sumienia z AI-kierownikiem duchowym, program RCIA dla dorosłych, przygotowanie do małżeństwa (Teologia Ciała) i bierzmowania z 7 darami Ducha Świętego.",
+    href: "/przygotowanie",
+    color: "from-rose-900/20 to-rose-800/5",
+    border: "hover:border-rose-600/40",
   },
 ];
 
