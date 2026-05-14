@@ -426,6 +426,8 @@ class IntentionStatus(str, enum.Enum):
     ACTIVE = "active"
     ANSWERED = "answered"
     CLOSED = "closed"
+    PENDING_MODERATION = "pending_moderation"
+    REJECTED = "rejected"
 
 
 class PrayerIntention(Base):
@@ -461,6 +463,21 @@ class PrayerIntention(Base):
     )
     expires_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # Moderation fields
+    moderator_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    moderated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rejection_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    group_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("prayer_groups.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
 
