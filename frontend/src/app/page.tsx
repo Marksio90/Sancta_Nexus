@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Church,
   Users,
+  BookMarked,
 } from "lucide-react";
 import { VerseShareButton } from "@/components/ui/verse-share-button";
 
@@ -95,13 +96,23 @@ const features = [
   },
   {
     icon: MessageCircle,
-    title: "Kierownik Duchowy",
-    latin: "Contemplata Aliis Tradere",
+    title: "Asystent refleksji",
+    latin: "Contemplata et Meditata",
     description:
-      "Rozmowa z AI kierownikiem duchowym w siedmiu tradycjach: ignacjańskiej, karmelitańskiej, benedyktyńskiej, franciszkańskiej, charyzmatycznej, dominikańskiej i maryjnej.",
-    href: "/spiritual-director",
+      "Podziel się myślami po modlitwie, Lectio Divina lub z dziennika. Asystent pomaga uporządkować refleksje i wrócić do Słowa Bożego. Nie zastępuje kapłana, kierownika duchowego ani terapeuty.",
+    href: "/asystent-refleksji",
     color: "from-purple-900/20 to-purple-800/5",
     border: "hover:border-purple-600/40",
+  },
+  {
+    icon: BookMarked,
+    title: "Dziennik duchowy",
+    latin: "Cor ad Cor Loquitur",
+    description:
+      "Prywatny dziennik refleksji, modlitw i owoców Lectio Divina. Tylko Ty widzisz swoje wpisy. Eksportuj lub usuń w dowolnym momencie.",
+    href: "/dziennik",
+    color: "from-violet-900/20 to-violet-800/5",
+    border: "hover:border-violet-600/40",
   },
   {
     icon: BarChart3,

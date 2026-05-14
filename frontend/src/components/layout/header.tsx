@@ -10,7 +10,8 @@ const NAV_LINKS = [
   { href: "/lectio-divina", label: "Lectio Divina" },
   { href: "/bible", label: "Biblia" },
   { href: "/breviary", label: "Brewiarz" },
-  { href: "/spiritual-director", label: "Kierownik Duchowy" },
+  { href: "/asystent-refleksji", label: "Asystent refleksji" },
+  { href: "/dziennik", label: "Dziennik" },
   { href: "/dashboard", label: "Dashboard" },
 ];
 
