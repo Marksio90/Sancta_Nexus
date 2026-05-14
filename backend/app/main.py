@@ -88,7 +88,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     # experimental (renamed from spiritual_director in Phase 2)
     ("app.api.routes.reflection_assistant", "/api/v1/reflection-assistant", ["reflection-assistant"]),
     ("app.api.routes.sacraments", "/api/v1/sacramental-prep", ["sacramental-prep"]),
-    ("app.api.routes.community", "/api/v1/prayer-intentions", ["prayer-intentions"]),
+    ("app.api.routes.community", "/api/v1/community", ["community"]),
     # core infrastructure (always active)
     ("app.api.routes.journal", "/api/v1/journal", ["journal"]),
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),

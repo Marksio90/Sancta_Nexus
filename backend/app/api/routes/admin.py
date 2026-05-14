@@ -32,6 +32,7 @@ from app.models.database import (
     UserRole,
 )
 from app.services.audit.audit_service import audit
+from app.services.community.intention_service import PrayerIntentionService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -392,3 +393,83 @@ async def list_ai_interactions(
         page=page,
         page_size=page_size,
     )
+
+
+# ── Intention moderation ──────────────────────────────────────────────────────
+
+
+class RejectIntentionBody(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    reason: str = Field(..., min_length=1, max_length=500, description="Reason for rejection.")
+
+
+@router.get(
+    "/intentions/pending",
+    summary="Lista intencji oczekujących na moderację",
+)
+async def list_pending_intentions(
+    db: DbSession,
+    admin: User = require_admin,
+) -> dict[str, Any]:
+    """Return all prayer intentions with PENDING_MODERATION status. Admin only."""
+    svc = PrayerIntentionService()
+    intentions = await svc.list_pending_moderation(db)
+    return {"intentions": intentions, "count": len(intentions)}
+
+
+@router.post(
+    "/intentions/{intention_id}/approve",
+    summary="Zatwierdź intencję modlitewną",
+)
+async def approve_intention(
+    intention_id: str,
+    db: DbSession,
+    admin: User = require_admin,
+) -> dict[str, Any]:
+    """Approve a pending prayer intention — sets status to ACTIVE. Admin only."""
+    svc = PrayerIntentionService()
+    result = await svc.approve(db, intention_id, admin.id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Intention not found or already moderated.",
+        )
+    await audit.log(
+        db,
+        event_type=AuditEventType.INTENTION_MODERATED,
+        user_id=result.get("user_id"),
+        actor_id=admin.id,
+        description=f"Intention {intention_id} approved by admin {admin.id}",
+        payload={"intention_id": intention_id, "action": "approved"},
+    )
+    return result
+
+
+@router.post(
+    "/intentions/{intention_id}/reject",
+    summary="Odrzuć intencję modlitewną",
+)
+async def reject_intention(
+    intention_id: str,
+    body: RejectIntentionBody,
+    db: DbSession,
+    admin: User = require_admin,
+) -> dict[str, Any]:
+    """Reject a pending prayer intention with a reason. Admin only."""
+    svc = PrayerIntentionService()
+    result = await svc.reject(db, intention_id, admin.id, body.reason)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Intention not found or already moderated.",
+        )
+    await audit.log(
+        db,
+        event_type=AuditEventType.INTENTION_MODERATED,
+        user_id=result.get("user_id"),
+        actor_id=admin.id,
+        description=f"Intention {intention_id} rejected by admin {admin.id}",
+        payload={"intention_id": intention_id, "action": "rejected"},
+    )
+    return result
