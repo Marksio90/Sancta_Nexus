@@ -1,7 +1,15 @@
-"""Spiritual Director API routes.
+"""Reflection Assistant API routes.
 
-Provides endpoints for AI-assisted spiritual direction sessions,
-supporting multiple Catholic spiritual traditions.
+Provides endpoints for the AI-assisted reflection assistant (Asystent refleksji).
+Helps users organise thoughts after prayer, Lectio Divina, or journal entries.
+
+Safe naming policy:
+- Public API prefix: /api/v1/reflection-assistant
+- Product name (PL): Asystent refleksji
+- Internal file: spiritual_director.py (scheduled for rename in Phase 2)
+
+The assistant does NOT replace a priest, confessor, spiritual director,
+or therapist. All AI responses pass through app.core.safety.AISafetyLayer.
 """
 
 from __future__ import annotations

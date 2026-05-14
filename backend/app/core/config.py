@@ -89,5 +89,26 @@ class Settings(BaseSettings):
     THEOLOGY_VALIDATION_THRESHOLD: float = 0.85
     EMOTION_DIMENSIONS: int = 36
 
+    # ── Feature Flags ─────────────────────────────────────────────────────
+    # stable
+    FEATURE_LECTIO_DIVINA: bool = True
+    FEATURE_BIBLE: bool = True
+    # beta
+    FEATURE_PRAYER_JOURNAL: bool = True
+    FEATURE_BREVIARY: bool = True
+    FEATURE_NOTIFICATIONS: bool = True
+    # experimental
+    FEATURE_REFLECTION_ASSISTANT: bool = True
+    FEATURE_PRAYER_INTENTIONS: bool = False
+    FEATURE_SACRAMENTAL_PREP: bool = False
+    # planned
+    FEATURE_COMMUNITIES: bool = False
+    FEATURE_RETREAT_PROGRAMS: bool = False
+    FEATURE_SPIRITUAL_DASHBOARD: bool = False
+    FEATURE_CONTENT_LIBRARY: bool = False
+    FEATURE_EXAMINATION_OF_CONSCIENCE: bool = False
+    FEATURE_DISCERNMENT_NOTEBOOK: bool = False
+    FEATURE_VOICE: bool = False
+
 
 settings = Settings()
