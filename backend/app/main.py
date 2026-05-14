@@ -50,9 +50,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Sancta Nexus API",
     description=(
-        "AI-powered prayer and spiritual direction platform featuring 47 "
-        "specialised agents for Lectio Divina, emotional discernment, and "
-        "theological scholarship."
+        "Katolicka platforma modlitwy i formacji duchowej. "
+        "Wspiera Lectio Divina, dziennik duchowy, Asystenta refleksji i programy formacyjne. "
+        "Nie zastępuje kapłana, spowiednika ani kierownika duchowego."
     ),
     version=settings.VERSION,
     lifespan=lifespan,
@@ -78,18 +78,25 @@ app.add_middleware(
 # yet implemented -- they simply will not be registered.
 
 _ROUTERS: list[tuple[str, str, list[str]]] = [
+    # stable
     ("app.api.routes.lectio_divina", "/api/v1/lectio-divina", ["lectio-divina"]),
     ("app.api.routes.bible", "/api/v1/bible", ["bible"]),
-    ("app.api.routes.spiritual_director", "/api/v1/spiritual-director", ["spiritual-director"]),
-    ("app.api.routes.orchestrate", "/api/v1/orchestrate", ["orchestrate"]),
+    # beta
+    ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
+    ("app.api.routes.notifications", "/api/v1/notifications", ["notifications"]),
+    # experimental
+    # NOTE: spiritual_director module is being renamed to reflection-assistant (Phase 1).
+    # The public API prefix is already updated; internal file rename follows in Phase 2.
+    ("app.api.routes.spiritual_director", "/api/v1/reflection-assistant", ["reflection-assistant"]),
+    ("app.api.routes.sacraments", "/api/v1/sacramental-prep", ["sacramental-prep"]),
+    ("app.api.routes.community", "/api/v1/prayer-intentions", ["prayer-intentions"]),
+    # core infrastructure (always active)
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
-    ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
-    ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
-    ("app.api.routes.notifications", "/api/v1/notifications", ["notifications"]),
+    ("app.api.routes.orchestrate", "/api/v1/orchestrate", ["orchestrate"]),
     ("app.api.routes.knowledge", "/api/v1/knowledge", ["knowledge"]),
-    ("app.api.routes.sacraments", "/api/v1/sacraments", ["sacraments"]),
-    ("app.api.routes.community", "/api/v1/community", ["community"]),
+    # voice — experimental, behind feature flag
+    ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
