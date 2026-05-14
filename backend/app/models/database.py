@@ -59,11 +59,50 @@ class SessionType(str, enum.Enum):
     MEDITATION = "meditation"
 
 
+class UserRole(str, enum.Enum):
+    """Platform role assigned to a user.
+
+    Hierarchy (ascending privilege):
+        user < premium_user < moderator < editor
+        < spiritual_content_reviewer < group_leader
+        < organization_admin < admin
+    """
+
+    USER = "user"
+    PREMIUM_USER = "premium_user"
+    MODERATOR = "moderator"
+    EDITOR = "editor"
+    SPIRITUAL_CONTENT_REVIEWER = "spiritual_content_reviewer"
+    GROUP_LEADER = "group_leader"
+    ORGANIZATION_ADMIN = "organization_admin"
+    ADMIN = "admin"
+
+
+class AuditEventType(str, enum.Enum):
+    """Types of operations recorded in the audit log."""
+
+    USER_REGISTERED = "user_registered"
+    USER_ROLE_CHANGED = "user_role_changed"
+    USER_DELETED = "user_deleted"
+    USER_DATA_EXPORTED = "user_data_exported"
+    AI_RESPONSE_GENERATED = "ai_response_generated"
+    AI_RESPONSE_REWRITTEN = "ai_response_rewritten"
+    AI_CRISIS_DETECTED = "ai_crisis_detected"
+    CONTENT_CREATED = "content_created"
+    CONTENT_PUBLISHED = "content_published"
+    CONTENT_ARCHIVED = "content_archived"
+    INTENTION_MODERATED = "intention_moderated"
+    MODULE_TOGGLED = "module_toggled"
+    ROLE_PERMISSION_DENIED = "role_permission_denied"
+    JOURNAL_ENTRY_DELETED = "journal_entry_deleted"
+    ACCOUNT_DELETION_REQUESTED = "account_deletion_requested"
+
+
 # ── Models ───────────────────────────────────────────────────────────────────
 
 
 class User(Base):
-    """Platform user with spiritual profile and subscription metadata."""
+    """Platform user with role, subscription, and soft-delete support."""
 
     __tablename__ = "users"
 
@@ -76,6 +115,16 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(1024), nullable=False)
     spiritual_profile_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda e: [x.value for x in e],
+        ),
+        default=UserRole.USER,
+        server_default=UserRole.USER.value,
+        nullable=False,
+    )
     subscription_tier: Mapped[SubscriptionTier] = mapped_column(
         Enum(
             SubscriptionTier,
@@ -86,6 +135,8 @@ class User(Base):
         server_default=SubscriptionTier.FREE.value,
         nullable=False,
     )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -105,6 +156,15 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     spiritual_insights: Mapped[list["SpiritualInsight"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    privacy_settings: Mapped[Optional["UserPrivacySettings"]] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    audit_logs: Mapped[list["AuditLog"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    ai_interactions: Mapped[list["AiInteraction"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -252,6 +312,111 @@ class SpiritualInsight(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="spiritual_insights")
+
+
+# ── Privacy / GDPR ───────────────────────────────────────────────────────────
+
+
+class UserPrivacySettings(Base):
+    """Per-user privacy configuration. Created on first access (privacy-by-design)."""
+
+    __tablename__ = "user_privacy_settings"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    # Journal is private by default — user must explicitly share entries
+    journal_is_private: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    # Allow AI to use journal text for reflection suggestions
+    ai_can_read_journal: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    # Retain AI interaction history
+    ai_history_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    # Preferred language (overrides account default)
+    preferred_language: Mapped[str] = mapped_column(String(5), default="pl", server_default="pl", nullable=False)
+    # Preferred spiritual tradition
+    spiritual_tradition: Mapped[str] = mapped_column(
+        String(64), default="ignatian", server_default="ignatian", nullable=False
+    )
+    # Soft-delete requested timestamp (GDPR right to erasure)
+    deletion_requested_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship(back_populates="privacy_settings")
+
+
+# ── Audit Log ────────────────────────────────────────────────────────────────
+
+
+class AuditLog(Base):
+    """Immutable record of every important platform operation.
+
+    Rules:
+    - Never delete rows from this table.
+    - user_id may be NULL for system/admin actions without a session.
+    - actor_id is who performed the action (may differ from user_id for admin ops).
+    - payload_json stores context without PII (use IDs, not content).
+    """
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    event_type: Mapped[AuditEventType] = mapped_column(
+        Enum(AuditEventType, name="audit_event_type", values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False), nullable=True, index=True
+    )
+    # Short human-readable summary — no PII, no sensitive content
+    description: Mapped[str] = mapped_column(String(512), nullable=False)
+    # JSON with non-sensitive context (module name, role, flag name, etc.)
+    payload_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    user: Mapped[Optional["User"]] = relationship(back_populates="audit_logs", foreign_keys=[user_id])
+
+
+# ── AI Interactions ───────────────────────────────────────────────────────────
+
+
+class AiInteraction(Base):
+    """Record of every AI response, including safety assessment metadata.
+
+    Stores only metadata — NOT the raw user message or AI response text.
+    Full text lives in the session context (Redis) and expires automatically.
+    """
+
+    __tablename__ = "ai_interactions"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    module: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Risk category from AISafetyLayer
+    risk_category: Mapped[str] = mapped_column(String(64), nullable=False)
+    was_modified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Policy violations if any (comma-separated names)
+    violations: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+
+    user: Mapped[Optional["User"]] = relationship(back_populates="ai_interactions")
 
 
 # ── Community models ──────────────────────────────────────────────────────────

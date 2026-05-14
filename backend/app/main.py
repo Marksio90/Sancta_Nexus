@@ -85,14 +85,14 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
     ("app.api.routes.notifications", "/api/v1/notifications", ["notifications"]),
     # experimental
-    # NOTE: spiritual_director module is being renamed to reflection-assistant (Phase 1).
-    # The public API prefix is already updated; internal file rename follows in Phase 2.
-    ("app.api.routes.spiritual_director", "/api/v1/reflection-assistant", ["reflection-assistant"]),
+    # experimental (renamed from spiritual_director in Phase 2)
+    ("app.api.routes.reflection_assistant", "/api/v1/reflection-assistant", ["reflection-assistant"]),
     ("app.api.routes.sacraments", "/api/v1/sacramental-prep", ["sacramental-prep"]),
     ("app.api.routes.community", "/api/v1/prayer-intentions", ["prayer-intentions"]),
     # core infrastructure (always active)
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
+    ("app.api.routes.admin", "/api/v1/admin", ["admin"]),
     ("app.api.routes.orchestrate", "/api/v1/orchestrate", ["orchestrate"]),
     ("app.api.routes.knowledge", "/api/v1/knowledge", ["knowledge"]),
     # voice — experimental, behind feature flag

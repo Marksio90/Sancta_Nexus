@@ -1,201 +1,275 @@
-"""User profile and spiritual journey API routes for Sancta Nexus.
+"""User profile, privacy settings, and data management routes.
 
-Provides endpoints for viewing and updating user profiles, and
-retrieving a user's spiritual journey summary.
+All endpoints require authentication. Users can only access their own data
+unless they have an elevated role.
+
+Endpoints:
+    GET  /me/profile           — own profile
+    PUT  /me/profile           — update own profile
+    GET  /me/privacy           — privacy settings
+    PUT  /me/privacy           — update privacy settings
+    GET  /me/export            — export all personal data (JSON)
+    POST /me/ai-history/clear  — clear AI interaction history
+    POST /me/delete            — request account deletion (soft-delete)
 """
 
 from __future__ import annotations
 
+import json
 import logging
-from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
+
+from app.core.dependencies import DbSession
+from app.core.rbac import require_authenticated
+from app.core.security import get_current_user
+from app.models.database import AuditEventType, User, UserPrivacySettings
+from app.services.audit.audit_service import audit
+from app.services.privacy.privacy_service import privacy_svc
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
-# ---------------------------------------------------------------------------
-# Request / response models
-# ---------------------------------------------------------------------------
+_VALID_TRADITIONS = {"ignatian", "carmelite", "benedictine", "franciscan", "dominican"}
+_VALID_LANGUAGES = {"pl", "en", "de", "fr", "es", "it", "pt", "uk"}
 
 
-class UserProfileResponse(BaseModel):
-    """Public user profile data."""
+# ── Schemas ───────────────────────────────────────────────────────────────────
 
+
+class ProfileResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     user_id: str
+    email: str
     display_name: str
-    spiritual_tradition: str = Field(
-        default="ignatian",
-        description="Preferred spiritual tradition.",
-    )
-    preferred_language: str = Field(default="pl", description="Preferred language code.")
+    role: str
+    subscription_tier: str
+    is_active: bool
     created_at: str
-    sessions_count: int = Field(default=0, description="Total spiritual direction sessions.")
 
 
-class UserProfileUpdate(BaseModel):
-    """Fields that can be updated on a user profile."""
-
+class ProfileUpdate(BaseModel):
     model_config = ConfigDict(strict=True)
 
-    display_name: str | None = Field(default=None, max_length=100)
-    spiritual_tradition: str | None = Field(default=None)
-    preferred_language: str | None = Field(default=None, max_length=5)
+    display_name: str | None = Field(default=None, min_length=1, max_length=100)
 
 
-class SpiritualJourneyResponse(BaseModel):
-    """Summary of a user's spiritual journey."""
-
+class PrivacySettingsResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
-    user_id: str
-    total_sessions: int
-    current_spiritual_state: str
-    dominant_themes: list[str]
-    recent_scriptures: list[str]
-    ignatian_movement: str = Field(
-        description="Overall movement direction: towards_consolation, towards_desolation, or stable.",
+    journal_is_private: bool
+    ai_can_read_journal: bool
+    ai_history_enabled: bool
+    preferred_language: str
+    spiritual_tradition: str
+
+
+class PrivacySettingsUpdate(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    journal_is_private: bool | None = None
+    ai_can_read_journal: bool | None = None
+    ai_history_enabled: bool | None = None
+    preferred_language: str | None = Field(default=None, min_length=2, max_length=5)
+    spiritual_tradition: str | None = None
+
+
+class ClearHistoryResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    deleted_count: int
+    message: str
+
+
+class DeletionResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    message: str
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _profile_response(user: User) -> ProfileResponse:
+    return ProfileResponse(
+        user_id=user.id,
+        email=user.email,
+        display_name=user.name,
+        role=user.role.value,
+        subscription_tier=user.subscription_tier.value,
+        is_active=user.is_active,
+        created_at=user.created_at.isoformat(),
     )
-    journey_start: str | None = Field(default=None, description="Date of first session.")
-    milestones: list[dict[str, str]]
 
 
-# ---------------------------------------------------------------------------
-# In-memory store (MVP placeholder)
-# ---------------------------------------------------------------------------
-
-_profiles: dict[str, dict[str, Any]] = {}
-
-
-def _get_or_create_profile(user_id: str) -> dict[str, Any]:
-    """Retrieve a user profile, creating a default if none exists."""
-    if user_id not in _profiles:
-        _profiles[user_id] = {
-            "user_id": user_id,
-            "display_name": f"User {user_id[:8]}",
-            "spiritual_tradition": "ignatian",
-            "preferred_language": "pl",
-            "created_at": datetime.utcnow().isoformat(),
-            "sessions_count": 0,
-        }
-    return _profiles[user_id]
-
-
-# ---------------------------------------------------------------------------
-# GET /{user_id}/profile
-# ---------------------------------------------------------------------------
+# ── GET /me/profile ───────────────────────────────────────────────────────────
 
 
 @router.get(
-    "/{user_id}/profile",
-    response_model=UserProfileResponse,
-    summary="Get a user's profile",
+    "/me/profile",
+    response_model=ProfileResponse,
+    summary="Pobierz własny profil",
 )
-async def get_profile(user_id: str) -> UserProfileResponse:
-    """Retrieve the profile for a given user.
-
-    If no profile exists yet, a default one is created automatically.
-    """
-    profile = _get_or_create_profile(user_id)
-
-    return UserProfileResponse(
-        user_id=profile["user_id"],
-        display_name=profile["display_name"],
-        spiritual_tradition=profile["spiritual_tradition"],
-        preferred_language=profile["preferred_language"],
-        created_at=profile["created_at"],
-        sessions_count=profile["sessions_count"],
-    )
+async def get_my_profile(
+    current_user: User = require_authenticated,
+) -> ProfileResponse:
+    """Zwraca profil zalogowanego użytkownika."""
+    return _profile_response(current_user)
 
 
-# ---------------------------------------------------------------------------
-# PUT /{user_id}/profile
-# ---------------------------------------------------------------------------
+# ── PUT /me/profile ───────────────────────────────────────────────────────────
 
 
 @router.put(
-    "/{user_id}/profile",
-    response_model=UserProfileResponse,
-    summary="Update a user's profile",
+    "/me/profile",
+    response_model=ProfileResponse,
+    summary="Zaktualizuj własny profil",
 )
-async def update_profile(user_id: str, update: UserProfileUpdate) -> UserProfileResponse:
-    """Update the profile for a given user.
-
-    Only provided (non-null) fields are updated; omitted fields retain
-    their current values.
-    """
-    profile = _get_or_create_profile(user_id)
-
+async def update_my_profile(
+    update: ProfileUpdate,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> ProfileResponse:
+    """Aktualizuje edytowalne pola profilu (display_name)."""
     if update.display_name is not None:
-        profile["display_name"] = update.display_name
-    if update.spiritual_tradition is not None:
-        valid_traditions = {"ignatian", "carmelite", "benedictine", "franciscan"}
-        if update.spiritual_tradition.lower() not in valid_traditions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid tradition '{update.spiritual_tradition}'. "
-                       f"Must be one of: {sorted(valid_traditions)}",
-            )
-        profile["spiritual_tradition"] = update.spiritual_tradition.lower()
-    if update.preferred_language is not None:
-        profile["preferred_language"] = update.preferred_language
+        current_user.name = update.display_name
 
-    return UserProfileResponse(
-        user_id=profile["user_id"],
-        display_name=profile["display_name"],
-        spiritual_tradition=profile["spiritual_tradition"],
-        preferred_language=profile["preferred_language"],
-        created_at=profile["created_at"],
-        sessions_count=profile["sessions_count"],
-    )
+    await db.flush()
+    await db.refresh(current_user)
+    return _profile_response(current_user)
 
 
-# ---------------------------------------------------------------------------
-# GET /{user_id}/spiritual-journey
-# ---------------------------------------------------------------------------
+# ── GET /me/privacy ───────────────────────────────────────────────────────────
 
 
 @router.get(
-    "/{user_id}/spiritual-journey",
-    response_model=SpiritualJourneyResponse,
-    summary="Get a user's spiritual journey summary",
+    "/me/privacy",
+    response_model=PrivacySettingsResponse,
+    summary="Pobierz ustawienia prywatności",
 )
-async def get_spiritual_journey(user_id: str) -> SpiritualJourneyResponse:
-    """Retrieve a summary of the user's spiritual journey.
+async def get_privacy_settings(
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> PrivacySettingsResponse:
+    """Zwraca ustawienia prywatności. Tworzy domyślne (privacy-first), jeśli nie istnieją."""
+    settings = await privacy_svc.get_or_create_privacy_settings(db, current_user)
+    return PrivacySettingsResponse(
+        journal_is_private=settings.journal_is_private,
+        ai_can_read_journal=settings.ai_can_read_journal,
+        ai_history_enabled=settings.ai_history_enabled,
+        preferred_language=settings.preferred_language,
+        spiritual_tradition=settings.spiritual_tradition,
+    )
 
-    Aggregates data from past sessions to provide an overview of
-    spiritual themes, emotional patterns, scripture encounters,
-    and overall Ignatian movement direction.
-    """
-    profile = _get_or_create_profile(user_id)
 
-    # MVP placeholder: return a representative journey summary
-    return SpiritualJourneyResponse(
-        user_id=user_id,
-        total_sessions=profile["sessions_count"],
-        current_spiritual_state="peace",
-        dominant_themes=[
-            "Trust in God's providence",
-            "Finding peace in uncertainty",
-            "Growing in prayer",
-        ],
-        recent_scriptures=[
-            "Ps 23:1-6",
-            "Phil 4:6-7",
-            "Is 41:10",
-        ],
-        ignatian_movement="stable",
-        journey_start=profile["created_at"] if profile["sessions_count"] > 0 else None,
-        milestones=[
-            {
-                "type": "first_session",
-                "description": "First spiritual direction session completed",
-                "date": profile["created_at"],
-            },
-        ] if profile["sessions_count"] > 0 else [],
+# ── PUT /me/privacy ───────────────────────────────────────────────────────────
+
+
+@router.put(
+    "/me/privacy",
+    response_model=PrivacySettingsResponse,
+    summary="Zaktualizuj ustawienia prywatności",
+)
+async def update_privacy_settings(
+    update: PrivacySettingsUpdate,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> PrivacySettingsResponse:
+    """Aktualizuje wybrane ustawienia prywatności. Pola None są pomijane."""
+    if update.preferred_language is not None and update.preferred_language not in _VALID_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Nieznany język '{update.preferred_language}'. "
+                   f"Dostępne: {sorted(_VALID_LANGUAGES)}",
+        )
+    if update.spiritual_tradition is not None and update.spiritual_tradition not in _VALID_TRADITIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Nieznana tradycja '{update.spiritual_tradition}'. "
+                   f"Dostępne: {sorted(_VALID_TRADITIONS)}",
+        )
+
+    priv = await privacy_svc.get_or_create_privacy_settings(db, current_user)
+
+    if update.journal_is_private is not None:
+        priv.journal_is_private = update.journal_is_private
+    if update.ai_can_read_journal is not None:
+        priv.ai_can_read_journal = update.ai_can_read_journal
+    if update.ai_history_enabled is not None:
+        priv.ai_history_enabled = update.ai_history_enabled
+    if update.preferred_language is not None:
+        priv.preferred_language = update.preferred_language
+    if update.spiritual_tradition is not None:
+        priv.spiritual_tradition = update.spiritual_tradition
+
+    await db.flush()
+    await db.refresh(priv)
+
+    return PrivacySettingsResponse(
+        journal_is_private=priv.journal_is_private,
+        ai_can_read_journal=priv.ai_can_read_journal,
+        ai_history_enabled=priv.ai_history_enabled,
+        preferred_language=priv.preferred_language,
+        spiritual_tradition=priv.spiritual_tradition,
+    )
+
+
+# ── GET /me/export ────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/me/export",
+    summary="Eksportuj wszystkie dane osobowe (RODO)",
+)
+async def export_my_data(
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> dict[str, Any]:
+    """Zwraca wszystkie dane osobowe użytkownika w formacie JSON (prawo do przenoszenia danych)."""
+    return await privacy_svc.export_user_data(db, current_user)
+
+
+# ── POST /me/ai-history/clear ─────────────────────────────────────────────────
+
+
+@router.post(
+    "/me/ai-history/clear",
+    response_model=ClearHistoryResponse,
+    summary="Wyczyść historię interakcji z AI",
+)
+async def clear_ai_history(
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> ClearHistoryResponse:
+    """Usuwa metadane historii interakcji z AI. Treść wiadomości nie jest przechowywana w bazie."""
+    deleted_count = await privacy_svc.clear_ai_history(db, current_user)
+    return ClearHistoryResponse(
+        deleted_count=deleted_count,
+        message=f"Usunięto {deleted_count} rekordów historii interakcji z AI.",
+    )
+
+
+# ── POST /me/delete ───────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/me/delete",
+    response_model=DeletionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Zażądaj usunięcia konta (RODO)",
+)
+async def request_account_deletion(
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> DeletionResponse:
+    """Oznacza konto do usunięcia (soft-delete). Konto zostanie trwale usunięte przez admina
+    po upływie okresu retencji. Po wywołaniu tego endpointu konto jest natychmiast dezaktywowane."""
+    await privacy_svc.request_deletion(db, current_user, actor_id=current_user.id)
+    return DeletionResponse(
+        message="Żądanie usunięcia konta zostało przyjęte. "
+                "Konto zostało dezaktywowane i będzie trwale usunięte przez administratora.",
     )
