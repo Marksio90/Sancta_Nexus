@@ -131,9 +131,16 @@ async def create_tables() -> None:
     On a fresh DB the enum types + tables are created.  If enum types
     already exist with stale values (e.g. from a failed prior attempt)
     we drop everything and recreate cleanly.
+
+    In production use Alembic migrations instead.
     """
     from sqlalchemy import text
     from app.models.database import Base  # noqa: F401 — ensure all models loaded
+
+    _ENUM_TYPES = [
+        "subscription_tier", "session_type", "user_role",
+        "audit_event_type", "intention_status",
+    ]
 
     engine = _get_engine()
     async with engine.begin() as conn:
@@ -142,8 +149,8 @@ async def create_tables() -> None:
         except Exception:
             # Likely stale enum types — drop all and retry
             await conn.run_sync(Base.metadata.drop_all)
-            await conn.execute(text("DROP TYPE IF EXISTS subscription_tier CASCADE"))
-            await conn.execute(text("DROP TYPE IF EXISTS session_type CASCADE"))
+            for enum_name in _ENUM_TYPES:
+                await conn.execute(text(f"DROP TYPE IF EXISTS {enum_name} CASCADE"))
             await conn.run_sync(Base.metadata.create_all)
 
 
