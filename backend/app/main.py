@@ -90,6 +90,7 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.sacraments", "/api/v1/sacramental-prep", ["sacramental-prep"]),
     ("app.api.routes.community", "/api/v1/prayer-intentions", ["prayer-intentions"]),
     # core infrastructure (always active)
+    ("app.api.routes.journal", "/api/v1/journal", ["journal"]),
     ("app.api.routes.auth", "/api/v1/auth", ["auth"]),
     ("app.api.routes.users", "/api/v1/users", ["users"]),
     ("app.api.routes.admin", "/api/v1/admin", ["admin"]),

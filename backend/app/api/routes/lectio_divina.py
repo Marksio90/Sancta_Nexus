@@ -1,8 +1,14 @@
 """Lectio Divina API routes.
 
-Provides endpoints for managing Lectio Divina prayer sessions,
-emotion analysis within sessions, scripture retrieval and
-reflection submission.
+5-etapowe rozważanie Pisma Świętego (Lectio → Meditatio → Oratio → Contemplatio → Actio).
+
+Wszystkie endpointy chronione JWT. user_id pochodzi z tokenu — nigdy z body requestu.
+
+Nowe w Phase 3:
+- POST /session/{id}/complete   — zamknij sesję i zapisz do PostgreSQL
+- POST /favorites               — dodaj ulubiony fragment
+- GET  /favorites               — lista ulubionych
+- DELETE /favorites/{id}        — usuń ulubiony
 """
 
 from __future__ import annotations
@@ -10,13 +16,26 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
-from app.core.dependencies import RedisDep
+from app.core.dependencies import DbSession, RedisDep
+from app.core.rbac import require_authenticated
+from app.models.database import (
+    AuditEventType,
+    FavoritePassage,
+    Prayer,
+    ScriptureEncounter,
+    Session as DbSession_model,
+    SessionType,
+    User,
+)
+from app.services.audit.audit_service import audit
 from app.services.cache.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -31,7 +50,6 @@ router = APIRouter()
 class StartSessionRequest(BaseModel):
     """Request body for starting a new Lectio Divina session."""
 
-    user_id: str
     tradition: str = "ignatian"
     preferred_translation: str = "BT"
     intention: str | None = None
@@ -46,6 +64,41 @@ class SessionResponse(BaseModel):
     created_at: str
     scripture: dict[str, Any] | None = None
     stage: str = "lectio"  # lectio | meditatio | oratio | contemplatio | actio
+
+
+class CompleteSessionRequest(BaseModel):
+    """Zamknij sesję i zapisz do bazy danych."""
+
+    fruit_of_day: str | None = Field(default=None, description="Owoc dnia — konkretne postanowienie.")
+    final_note: str | None = Field(default=None, description="Końcowa notatka do dziennika.")
+
+
+class CompleteSessionResponse(BaseModel):
+    session_id: str
+    db_session_id: str
+    message: str
+
+
+class FavoritePassageRequest(BaseModel):
+    book: str = Field(..., min_length=1, max_length=64)
+    chapter: int = Field(..., ge=1)
+    verse_start: int = Field(..., ge=1)
+    verse_end: int = Field(..., ge=1)
+    reference: str = Field(..., min_length=1, max_length=128)
+    excerpt: str | None = Field(default=None, max_length=512)
+    note: str | None = None
+
+
+class FavoritePassageResponse(BaseModel):
+    id: str
+    book: str
+    chapter: int
+    verse_start: int
+    verse_end: int
+    reference: str
+    excerpt: str | None
+    note: str | None
+    created_at: str
 
 
 class EmotionInputRequest(BaseModel):
@@ -73,7 +126,6 @@ class ReflectionRequest(BaseModel):
     """Request body for submitting a session reflection."""
 
     session_id: str
-    user_id: str
     stage: str  # which stage of lectio divina
     reflection_text: str
     grace_notes: list[str] = Field(default_factory=list)
@@ -139,16 +191,20 @@ _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 
 
 @router.post("/session", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
-async def start_session(request: StartSessionRequest, redis: RedisDep) -> SessionResponse:
-    """Start a new Lectio Divina session.
+async def start_session(
+    request: StartSessionRequest,
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> SessionResponse:
+    """Rozpocznij nową sesję Lectio Divina.
 
-    Creates a session, determines liturgical context and selects an
-    initial scripture passage.
+    Tworzy sesję w Redis (aktywna przez 24h). Po zakończeniu wywołaj
+    POST /session/{id}/complete, aby utrwalić w PostgreSQL.
     """
     from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 
     session_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     calendar = LiturgicalCalendar()
     today = calendar.get_today()
@@ -161,7 +217,7 @@ async def start_session(request: StartSessionRequest, redis: RedisDep) -> Sessio
 
     session_data = {
         "session_id": session_id,
-        "user_id": request.user_id,
+        "user_id": current_user.id,
         "status": "active",
         "created_at": now.isoformat(),
         "tradition": request.tradition,
@@ -174,15 +230,112 @@ async def start_session(request: StartSessionRequest, redis: RedisDep) -> Sessio
     store = SessionStore(redis, namespace="lectio")
     await store.create(session_id, session_data)
 
-    logger.info("Started Lectio Divina session %s for user %s", session_id, request.user_id)
+    logger.info("Started Lectio Divina session %s for user %s", session_id, current_user.id)
 
     return SessionResponse(
         session_id=session_id,
-        user_id=request.user_id,
+        user_id=current_user.id,
         status="active",
         created_at=now.isoformat(),
         scripture=scripture_info,
         stage="lectio",
+    )
+
+
+@router.post("/session/{session_id}/complete", response_model=CompleteSessionResponse)
+async def complete_session(
+    session_id: str,
+    body: CompleteSessionRequest,
+    redis: RedisDep,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> CompleteSessionResponse:
+    """Zamknij sesję Lectio Divina i zapisz do PostgreSQL.
+
+    Tworzy rekordy: Session, ScriptureEncounter (jeśli był fragment),
+    Prayer (jeśli był etap oratio).
+    """
+    store = SessionStore(redis, namespace="lectio")
+    session = await store.get(session_id)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesja nie istnieje lub wygasła.")
+    if session["user_id"] != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="To nie jest Twoja sesja.")
+
+    now = datetime.now(timezone.utc)
+    started_at = datetime.fromisoformat(session["created_at"])
+
+    # Zapis sesji do DB
+    db_session = DbSession_model(
+        user_id=current_user.id,
+        session_type=SessionType.LECTIO_DIVINA,
+        scripture_reference=session.get("scripture", {}).get("readings", [""])[0] if session.get("scripture") else None,
+        started_at=started_at,
+        ended_at=now,
+        notes=body.final_note,
+    )
+    db.add(db_session)
+    await db.flush()
+
+    # Zapis napotkania z Pismem
+    scripture = session.get("scripture", {})
+    readings = scripture.get("readings", [])
+    if readings:
+        reflection_text = session.get("reflections", {}).get("meditatio", {}).get("text")
+        encounter = ScriptureEncounter(
+            user_id=current_user.id,
+            session_id=db_session.id,
+            book=readings[0].split(" ")[0] if readings else "unknown",
+            chapter=1,
+            verse_start=1,
+            verse_end=1,
+            user_reflection=reflection_text,
+        )
+        db.add(encounter)
+
+    # Zapis modlitwy z etapu oratio
+    oratio = session.get("reflections", {}).get("oratio", {})
+    if oratio.get("text"):
+        prayer = Prayer(
+            user_id=current_user.id,
+            session_id=db_session.id,
+            content=oratio["text"],
+            prayer_type="oratio",
+            tradition=session.get("tradition", "ignatian"),
+        )
+        db.add(prayer)
+
+    # Owoc dnia — zapisz jako modlitwę actio
+    if body.fruit_of_day:
+        actio_prayer = Prayer(
+            user_id=current_user.id,
+            session_id=db_session.id,
+            content=body.fruit_of_day,
+            prayer_type="actio",
+            tradition=session.get("tradition", "ignatian"),
+        )
+        db.add(actio_prayer)
+
+    # Oznacz sesję Redis jako zakończoną
+    session["status"] = "completed"
+    session["ended_at"] = now.isoformat()
+    session["db_session_id"] = db_session.id
+    await store.update(session_id, session)
+
+    await audit.log(
+        db,
+        event_type=AuditEventType.CONTENT_CREATED,
+        user_id=current_user.id,
+        actor_id=current_user.id,
+        description=f"Lectio Divina session completed and saved to DB. session_id={db_session.id}",
+        payload={"redis_session_id": session_id, "db_session_id": db_session.id},
+    )
+
+    logger.info("Session %s completed and saved to DB as %s", session_id, db_session.id)
+    return CompleteSessionResponse(
+        session_id=session_id,
+        db_session_id=db_session.id,
+        message="Sesja Lectio Divina została zakończona i zapisana do dziennika.",
     )
 
 
@@ -286,8 +439,12 @@ async def get_scripture_for_date(date: str) -> ScriptureForDateResponse:
 
 
 @router.post("/reflection", response_model=ReflectionResponse)
-async def submit_reflection(request: ReflectionRequest, redis: RedisDep) -> ReflectionResponse:
-    """Submit a reflection for the current Lectio Divina stage."""
+async def submit_reflection(
+    request: ReflectionRequest,
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> ReflectionResponse:
+    """Zapisz refleksję dla bieżącego etapu Lectio Divina."""
     store = SessionStore(redis, namespace="lectio")
     session = await store.get(request.session_id)
     if not session:
@@ -295,6 +452,9 @@ async def submit_reflection(request: ReflectionRequest, redis: RedisDep) -> Refl
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session {request.session_id} not found",
         )
+
+    if session["user_id"] != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="To nie jest Twoja sesja.")
 
     if request.stage not in _STAGE_ORDER:
         raise HTTPException(
@@ -508,3 +668,93 @@ async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineRespons
         journey=journey,
         error=result.get("error"),
     )
+
+
+# ── Ulubione fragmenty ────────────────────────────────────────────────────────
+
+
+@router.post("/favorites", response_model=FavoritePassageResponse, status_code=status.HTTP_201_CREATED)
+async def add_favorite(
+    body: FavoritePassageRequest,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> FavoritePassageResponse:
+    """Dodaj fragment Pisma do ulubionych."""
+    passage = FavoritePassage(
+        user_id=current_user.id,
+        book=body.book,
+        chapter=body.chapter,
+        verse_start=body.verse_start,
+        verse_end=body.verse_end,
+        reference=body.reference,
+        excerpt=body.excerpt,
+        note=body.note,
+    )
+    db.add(passage)
+    try:
+        await db.flush()
+        await db.refresh(passage)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ten fragment jest już w ulubionych.",
+        )
+    return FavoritePassageResponse(
+        id=passage.id,
+        book=passage.book,
+        chapter=passage.chapter,
+        verse_start=passage.verse_start,
+        verse_end=passage.verse_end,
+        reference=passage.reference,
+        excerpt=passage.excerpt,
+        note=passage.note,
+        created_at=passage.created_at.isoformat(),
+    )
+
+
+@router.get("/favorites", response_model=list[FavoritePassageResponse])
+async def list_favorites(
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> list[FavoritePassageResponse]:
+    """Lista ulubionych fragmentów Pisma zalogowanego użytkownika."""
+    result = await db.execute(
+        select(FavoritePassage)
+        .where(FavoritePassage.user_id == current_user.id)
+        .order_by(FavoritePassage.created_at.desc())
+    )
+    passages = result.scalars().all()
+    return [
+        FavoritePassageResponse(
+            id=p.id,
+            book=p.book,
+            chapter=p.chapter,
+            verse_start=p.verse_start,
+            verse_end=p.verse_end,
+            reference=p.reference,
+            excerpt=p.excerpt,
+            note=p.note,
+            created_at=p.created_at.isoformat(),
+        )
+        for p in passages
+    ]
+
+
+@router.delete("/favorites/{favorite_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_favorite(
+    favorite_id: str,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> None:
+    """Usuń fragment z ulubionych."""
+    result = await db.execute(
+        select(FavoritePassage).where(
+            FavoritePassage.id == favorite_id,
+            FavoritePassage.user_id == current_user.id,
+        )
+    )
+    passage = result.scalar_one_or_none()
+    if passage is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ulubiony fragment nie istnieje.")
+    await db.delete(passage)
+    await db.flush()

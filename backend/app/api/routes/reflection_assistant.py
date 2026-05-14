@@ -19,10 +19,14 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.core.dependencies import RedisDep
+from app.core.dependencies import DbSession, RedisDep
+from app.core.rbac import require_authenticated
+from app.core.safety import RiskCategory, ai_safety
+from app.models.database import User
+from app.services.audit.audit_service import audit
 from app.services.cache.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -113,9 +117,8 @@ TRADITIONS: list[dict[str, Any]] = [
 
 
 class StartDirectionRequest(BaseModel):
-    """Request to start a spiritual direction session."""
+    """Request to start an Asystent refleksji session."""
 
-    user_id: str
     tradition: str = "ignatian"
     initial_intention: str | None = None
     previous_session_id: str | None = None
@@ -134,10 +137,9 @@ class DirectionSessionResponse(BaseModel):
 
 
 class MessageRequest(BaseModel):
-    """Request to send a message in a direction session."""
+    """Request to send a message in a reflection session."""
 
     session_id: str
-    user_id: str
     content: str
     message_type: str = "text"  # text | voice_transcription
 
@@ -153,15 +155,20 @@ class DirectorMessage(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    """Response to a user message in a direction session."""
+    """Response to a user message in a reflection session."""
 
     session_id: str
-    director_response: str
+    assistant_response: str
     emotion_analysis: dict[str, Any] = Field(default_factory=dict)
     suggested_scriptures: list[dict[str, Any]] = Field(default_factory=list)
     spiritual_state: str | None = None
     follow_up_questions: list[str] = Field(default_factory=list)
     prayer_suggestion: str | None = None
+    # Disclaimer zawsze dołączony do odpowiedzi AI
+    disclaimer: str = (
+        "Asystent refleksji pomaga uporządkować myśli i wrócić do modlitwy. "
+        "Nie zastępuje kapłana, spowiednika, kierownika duchowego ani terapeuty."
+    )
 
 
 class TraditionInfo(BaseModel):
@@ -219,18 +226,18 @@ _OPENING_MESSAGES: dict[str, str] = {
 async def start_direction_session(
     request: StartDirectionRequest,
     redis: RedisDep,
+    current_user: User = require_authenticated,
 ) -> DirectionSessionResponse:
-    """Start a new spiritual direction session.
+    """Rozpocznij sesję Asystenta refleksji.
 
-    The session is configured with the chosen Catholic spiritual
-    tradition and provides an appropriate opening message.
+    Sesja jest konfigurowana tradycją duchową i zwraca wiadomość otwierającą.
     """
     if request.tradition not in {t["id"] for t in TRADITIONS}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"Unknown tradition '{request.tradition}'. "
-                f"Available: {[t['id'] for t in TRADITIONS]}"
+                f"Nieznana tradycja '{request.tradition}'. "
+                f"Dostępne: {[t['id'] for t in TRADITIONS]}"
             ),
         )
 
@@ -243,13 +250,13 @@ async def start_direction_session(
 
     session_data: dict[str, Any] = {
         "session_id": session_id,
-        "user_id": request.user_id,
+        "user_id": current_user.id,
         "tradition": request.tradition,
         "status": "active",
         "created_at": now.isoformat(),
         "messages": [
             {
-                "role": "director",
+                "role": "assistant",
                 "content": opening,
                 "timestamp": now.isoformat(),
             }
@@ -261,15 +268,15 @@ async def start_direction_session(
     await store.create(session_id, session_data)
 
     logger.info(
-        "Started spiritual direction session %s (tradition=%s) for user %s",
+        "Started reflection assistant session %s (tradition=%s) for user %s",
         session_id,
         request.tradition,
-        request.user_id,
+        current_user.id,
     )
 
     return DirectionSessionResponse(
         session_id=session_id,
-        user_id=request.user_id,
+        user_id=current_user.id,
         tradition=request.tradition,
         status="active",
         created_at=now.isoformat(),
@@ -278,27 +285,33 @@ async def start_direction_session(
 
 
 @router.post("/message", response_model=MessageResponse)
-async def send_message(request: MessageRequest, redis: RedisDep) -> MessageResponse:
-    """Send a message in a spiritual direction session.
+async def send_message(
+    request: MessageRequest,
+    db: DbSession,
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> MessageResponse:
+    """Wyślij wiadomość w sesji Asystenta refleksji.
 
-    The director analyses the user's emotional state, references
-    relevant scripture and responds with spiritual guidance.
+    Asystent analizuje stan emocjonalny, sugeruje odniesienia do Pisma
+    i odpowiada wsparciem refleksyjnym. Każda odpowiedź przechodzi przez
+    AISafetyLayer zanim trafi do użytkownika.
     """
     from app.services.emotion.emotion_service import EmotionService
     from app.services.scripture.scripture_matcher import IgnatianState, MatchContext, ScriptureMatcher
 
-    store = SessionStore(redis, namespace="direction")
+    store = SessionStore(redis, namespace="assistant")
     session = await store.get(request.session_id)
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session {request.session_id} not found",
+            detail=f"Sesja {request.session_id} nie istnieje.",
         )
 
-    if session["user_id"] != request.user_id:
+    if session["user_id"] != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not own this session",
+            detail="Nie masz dostępu do tej sesji.",
         )
 
     from app.agents.spiritual_director.director_orchestrator import SpiritualDirectorOrchestrator
@@ -306,14 +319,13 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
 
     now = datetime.utcnow()
 
-    # Record user message
     session["messages"].append({
         "role": "user",
         "content": request.content,
         "timestamp": now.isoformat(),
     })
 
-    # Analyse emotion (async path uses EmotionDetectorAgent A-022 + SpiritualStateClassifier A-025)
+    # Analiza emocji (EmotionDetectorAgent A-022 + SpiritualStateClassifier A-025)
     emotion_svc = EmotionService()
     try:
         analysis = await emotion_svc.analyze_text_async(
@@ -329,7 +341,7 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
 
     spiritual_state = emotion_svc.get_spiritual_state(analysis)
 
-    # Run CrisisDetectorAgent (A-026) — safety-critical
+    # CrisisDetectorAgent (A-026) — krytyczne dla bezpieczeństwa
     crisis_info: dict = {"is_crisis": False, "severity": "none", "concerns": [], "resources": []}
     try:
         crisis_info = await emotion_svc.detect_crisis(request.content, analysis.vector)
@@ -343,10 +355,10 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         "crisis_severity": crisis_info.get("severity", "none"),
     })
 
-    # Find relevant scripture
+    # Wyszukiwanie fragmentów Pisma
     matcher = ScriptureMatcher()
     context = MatchContext(
-        user_id=request.user_id,
+        user_id=current_user.id,
         ignatian_state=(
             IgnatianState(spiritual_state.ignatian_movement.replace("towards_", ""))
             if spiritual_state.ignatian_movement.startswith("towards_")
@@ -364,16 +376,16 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         for m in matches
     ]
 
-    # Generate director response via SpiritualDirectorOrchestrator (A-047)
+    # Generowanie odpowiedzi przez SpiritualDirectorOrchestrator (A-047)
     llm_client = get_llm_client(tier="primary", temperature=0.7, max_tokens=2048)
     orchestrator = SpiritualDirectorOrchestrator(llm_client=llm_client)
     try:
         orchestrator_result = await orchestrator.direct(
-            user_id=request.user_id,
+            user_id=current_user.id,
             message=request.content,
             tradition=session["tradition"],
         )
-        director_response = orchestrator_result.response
+        raw_response = orchestrator_result.response
         follow_ups = orchestrator_result.follow_up_questions or _generate_follow_up_questions(
             session["tradition"], analysis.primary_emotion
         )
@@ -384,7 +396,7 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         suggested = (suggested + suggested_scriptures_extra)[:5]
     except Exception:
         logger.exception("SpiritualDirectorOrchestrator failed; using template fallback.")
-        director_response = _generate_director_response(
+        raw_response = _generate_director_response(
             user_message=request.content,
             tradition=session["tradition"],
             analysis=analysis,
@@ -393,16 +405,37 @@ async def send_message(request: MessageRequest, redis: RedisDep) -> MessageRespo
         )
         follow_ups = _generate_follow_up_questions(session["tradition"], analysis.primary_emotion)
 
+    # AISafetyLayer — każda odpowiedź AI musi przejść przez warstwę bezpieczeństwa
+    safety_result = ai_safety.process(
+        user_message=request.content,
+        ai_response=raw_response,
+    )
+    assistant_response = safety_result.final_response
+
     session["messages"].append({
-        "role": "director",
-        "content": director_response,
+        "role": "assistant",
+        "content": assistant_response,
         "timestamp": datetime.utcnow().isoformat(),
     })
     await store.update(request.session_id, session)
 
+    # Zapis interakcji AI do audytu
+    try:
+        await audit.log_ai_interaction(
+            db,
+            user_id=current_user.id,
+            module="reflection-assistant",
+            risk_category=safety_result.assessment.category.value,
+            was_modified=safety_result.was_modified,
+            violations=safety_result.assessment.detected_issues,
+            session_id=request.session_id,
+        )
+    except Exception:
+        logger.warning("Failed to log AI interaction for session %s.", request.session_id)
+
     return MessageResponse(
         session_id=request.session_id,
-        director_response=director_response,
+        assistant_response=assistant_response,
         emotion_analysis={
             "primary_emotion": analysis.primary_emotion,
             "secondary_emotions": analysis.secondary_emotions,

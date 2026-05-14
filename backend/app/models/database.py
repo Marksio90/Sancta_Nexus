@@ -591,6 +591,72 @@ class RosaryParticipation(Base):
     rosary: Mapped["CommunityRosary"] = relationship(back_populates="participations")
 
 
+class JournalEntry(Base):
+    """Wpis w dzienniku duchowym użytkownika.
+
+    Prywatny domyślnie. Użytkownik może go eksportować i usunąć.
+    Treść traktowana jako wrażliwa — nie jest przesyłana do AI
+    bez jawnej zgody (privacy_settings.ai_can_read_journal).
+    """
+
+    __tablename__ = "journal_entries"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    # Comma-separated tags e.g. "modlitwa,Ewangelia,pokój"
+    tags: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    # Mood / tone: spokój, niepokój, wdzięczność, smutek, radość, etc.
+    mood: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    # Linked scripture reference e.g. "J 3,16"
+    scripture_reference: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    # Linked Lectio Divina session ID (Redis key or DB session UUID)
+    lectio_session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    # Linked retreat program ID
+    program_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    # Soft-delete
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User")
+
+
+class FavoritePassage(Base):
+    """Ulubiony fragment Pisma Świętego zapisany przez użytkownika."""
+
+    __tablename__ = "favorite_passages"
+    __table_args__ = (UniqueConstraint("user_id", "book", "chapter", "verse_start", "verse_end",
+                                       name="uq_favorite_passage"),)
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    book: Mapped[str] = mapped_column(String(64), nullable=False)
+    chapter: Mapped[int] = mapped_column(Integer, nullable=False)
+    verse_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    verse_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Display reference e.g. "J 3,16-17"
+    reference: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Short excerpt of the passage text
+    excerpt: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    # Personal note added by user
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User")
+
+
 class NovenaTracking(Base):
     """User's progress through a specific novena."""
 
