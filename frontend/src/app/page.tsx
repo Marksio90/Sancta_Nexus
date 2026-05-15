@@ -11,6 +11,7 @@ import {
   Church,
   Users,
   BookMarked,
+  Flame,
 } from "lucide-react";
 import { VerseShareButton } from "@/components/ui/verse-share-button";
 
@@ -113,6 +114,16 @@ const features = [
     href: "/dziennik",
     color: "from-violet-900/20 to-violet-800/5",
     border: "hover:border-violet-600/40",
+  },
+  {
+    icon: Flame,
+    title: "Rachunek Sumienia",
+    latin: "Cor Contritum et Humiliatum",
+    description:
+      "Ignacjański Examen w 5 krokach: Wdzięczność, Prośba o światło, Przegląd dnia, Odpowiedź serca, Postanowienie na jutro. Wieczorna modlitwa porządkująca serce.",
+    href: "/rachunek-sumienia",
+    color: "from-orange-900/20 to-amber-900/5",
+    border: "hover:border-orange-600/40",
   },
   {
     icon: BarChart3,
