@@ -17,6 +17,8 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useProgressStore } from "@/stores/progress";
 import { useNotesStore } from "@/stores/notes";
+import { useInsightsStore, PATTERN_LABELS } from "@/stores/insights";
+import { useAuthStore } from "@/stores/auth";
 
 const ENCOURAGEMENTS = [
   { text: "Każda droga zaczyna się od pierwszego kroku. Twój dopiero przed Tobą.", ref: "Ps 37,23" },
@@ -53,11 +55,14 @@ export default function DashboardPage() {
   } = useProgressStore();
 
   const { loadFromStorage: loadNotes, getAllNotes, deleteNote } = useNotesStore();
+  const { data: insights, loading: insightsLoading, fetch: fetchInsights } = useInsightsStore();
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     loadFromStorage();
     loadNotes();
-  }, [loadFromStorage, loadNotes]);
+    if (isAuthenticated) fetchInsights();
+  }, [loadFromStorage, loadNotes, fetchInsights, isAuthenticated]);
 
   const savedNotes = getAllNotes();
 
@@ -73,11 +78,11 @@ export default function DashboardPage() {
 
         {/* Back */}
         <Link
-          href="/"
+          href="/dzisiaj"
           className="mb-8 inline-flex items-center gap-2 text-sm text-sacred-text-muted transition-colors hover:text-gold"
         >
           <ArrowLeft className="h-4 w-4" />
-          Strona główna
+          Dzisiaj
         </Link>
 
         {/* Header */}
@@ -141,6 +146,89 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
+
+        {/* ── AI Insights (backend) ── */}
+        {isAuthenticated && (
+          <div className="mb-6 rounded-2xl border border-[--color-gold]/15 bg-gradient-to-br from-[--color-gold]/5 to-transparent p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-heading flex items-center gap-2 text-xl text-gold">
+                <Heart className="h-5 w-5" />
+                Analiza AI twojego dziennika
+              </h2>
+              {insightsLoading && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[--color-gold]/30 border-t-[--color-gold]" />
+              )}
+            </div>
+
+            {!insights && !insightsLoading && (
+              <p className="text-sm text-[--color-sacred-text-muted]/50">
+                Zacznij pisać w dzienniku duchowym — AI odkryje powtarzające się tematy i wzorce łaski w Twoim życiu.
+              </p>
+            )}
+
+            {insights && (
+              <div className="space-y-4">
+                {/* Etap duchowy */}
+                <div className="rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[--color-gold]/60">
+                      Etap duchowy
+                    </span>
+                    <span className="text-xs text-[--color-gold]">
+                      {insights.journey.progress_percentage}%
+                    </span>
+                  </div>
+                  <p className="font-heading text-base text-[--color-parchment]">
+                    {insights.journey.stage_name_pl}
+                  </p>
+                  <p className="mt-1 text-xs text-[--color-sacred-text-muted]/60 leading-relaxed">
+                    {insights.journey.stage_description}
+                  </p>
+                  <div className="mt-3 h-1.5 rounded-full bg-[--color-sacred-border]">
+                    <div
+                      className="h-1.5 rounded-full bg-[--color-gold]/70 transition-all"
+                      style={{ width: `${insights.journey.progress_percentage}%` }}
+                    />
+                  </div>
+                  {insights.journey.next_growth_area && (
+                    <p className="mt-2 text-xs text-[--color-sacred-text-muted]/40">
+                      Obszar wzrostu: {insights.journey.next_growth_area}
+                    </p>
+                  )}
+                </div>
+
+                {/* Wzorce */}
+                {insights.patterns.length > 0 && (
+                  <div>
+                    <p className="text-xs text-[--color-sacred-text-muted]/50 mb-2 uppercase tracking-wider font-semibold">
+                      Odkryte wzorce
+                    </p>
+                    <div className="space-y-2">
+                      {insights.patterns.slice(0, 3).map((p, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3"
+                        >
+                          <span className="text-xs font-medium text-[--color-gold]/70">
+                            {PATTERN_LABELS[p.type] ?? p.type}
+                          </span>
+                          <p className="mt-0.5 text-xs text-[--color-sacred-text-muted]/70 leading-relaxed">
+                            {p.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Disclaimer */}
+                <p className="text-xs text-[--color-sacred-text-muted]/30 leading-relaxed">
+                  ℹ️ {insights.disclaimer}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Sessions + Themes ── */}
         <div className="grid gap-6 lg:grid-cols-2">
