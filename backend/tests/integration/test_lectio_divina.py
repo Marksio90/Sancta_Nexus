@@ -1,6 +1,6 @@
 """Integration tests for Lectio Divina API routes.
 
-Tests /run, /journey/{user_id}, /patterns/{user_id}, /history/{user_id},
+Tests /run, /journey/me, /patterns/me, /history/me,
 /session, /emotion, /reflection with mocked Redis and LLM calls.
 """
 
@@ -10,15 +10,44 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
+
+from app.core.rbac import require_authenticated
+from app.main import app
+
+
+BASE = "/api/v1/lectio-divina"
+
+
+def _mock_user(user_id: str = "test-user") -> MagicMock:
+    user = MagicMock()
+    user.id = user_id
+    return user
+
+
+@pytest_asyncio.fixture()
+async def authed_client(app_client: AsyncClient):
+    """app_client with require_authenticated overridden to return 'test-user'."""
+    app.dependency_overrides[require_authenticated] = lambda: _mock_user()
+    yield app_client
+    app.dependency_overrides.pop(require_authenticated, None)
+
+
+@pytest_asyncio.fixture()
+async def authed_seeded_client(seeded_client: AsyncClient):
+    """seeded_client with require_authenticated overridden to return 'test-user'."""
+    app.dependency_overrides[require_authenticated] = lambda: _mock_user()
+    yield seeded_client
+    app.dependency_overrides.pop(require_authenticated, None)
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/lectio-divina/scripture/{date}
+# GET /scripture/{date}  — public, no auth required
 # ---------------------------------------------------------------------------
 
 async def test_get_scripture_for_date(app_client: AsyncClient):
-    response = await app_client.get("/api/v1/lectio-divina/scripture/2026-01-01")
+    response = await app_client.get(f"{BASE}/scripture/2026-01-01")
     assert response.status_code == 200
     data = response.json()
     assert "date" in data
@@ -27,19 +56,21 @@ async def test_get_scripture_for_date(app_client: AsyncClient):
 
 
 async def test_get_scripture_invalid_date(app_client: AsyncClient):
-    response = await app_client.get("/api/v1/lectio-divina/scripture/not-a-date")
+    response = await app_client.get(f"{BASE}/scripture/not-a-date")
     assert response.status_code == 400
 
 
 # ---------------------------------------------------------------------------
-# POST /api/v1/lectio-divina/session
+# POST /session
 # ---------------------------------------------------------------------------
 
-async def test_start_session_creates_session(app_client: AsyncClient):
-    response = await app_client.post(
-        "/api/v1/lectio-divina/session",
-        json={"user_id": "test-user", "tradition": "ignatian"},
-    )
+async def test_start_session_requires_auth(app_client: AsyncClient):
+    response = await app_client.post(f"{BASE}/session", json={"tradition": "ignatian"})
+    assert response.status_code == 401
+
+
+async def test_start_session_creates_session(authed_client: AsyncClient):
+    response = await authed_client.post(f"{BASE}/session", json={"tradition": "ignatian"})
     assert response.status_code == 201
     data = response.json()
     assert "session_id" in data
@@ -48,26 +79,35 @@ async def test_start_session_creates_session(app_client: AsyncClient):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/v1/lectio-divina/emotion
+# POST /emotion
 # ---------------------------------------------------------------------------
 
-async def test_analyze_emotion_requires_text_or_audio(seeded_client: AsyncClient):
-    response = await seeded_client.post(
-        "/api/v1/lectio-divina/emotion",
-        json={"session_id": "sess-001", "user_id": "test-user"},
+async def test_analyze_emotion_requires_text_or_audio(authed_seeded_client: AsyncClient):
+    """No text and no audio_url → 400."""
+    response = await authed_seeded_client.post(
+        f"{BASE}/emotion",
+        json={"session_id": "sess-001"},
     )
     assert response.status_code == 400
 
 
-async def test_analyze_emotion_with_text(seeded_client: AsyncClient):
-    response = await seeded_client.post(
-        "/api/v1/lectio-divina/emotion",
-        json={
-            "session_id": "sess-001",
-            "user_id": "test-user",
-            "text": "Czuję spokój i wdzięczność w modlitwie.",
-        },
-    )
+async def test_analyze_emotion_with_text(authed_seeded_client: AsyncClient):
+    emotion_result = MagicMock()
+    emotion_result.primary_emotion = "peace"
+    emotion_result.secondary_emotions = []
+    emotion_result.vector = {"peace": 0.9}
+    emotion_result.confidence = 0.85
+    emotion_result.spiritual_state = MagicMock(value="consolation")
+
+    with patch("app.services.emotion.emotion_service.EmotionService.analyze_text", return_value=emotion_result):
+        with patch("app.services.scripture.scripture_matcher.ScriptureMatcher.match", return_value=[]):
+            response = await authed_seeded_client.post(
+                f"{BASE}/emotion",
+                json={
+                    "session_id": "sess-001",
+                    "text": "Czuję spokój i wdzięczność w modlitwie.",
+                },
+            )
     assert response.status_code == 200
     data = response.json()
     assert "primary_emotion" in data
@@ -76,15 +116,14 @@ async def test_analyze_emotion_with_text(seeded_client: AsyncClient):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/v1/lectio-divina/reflection
+# POST /reflection
 # ---------------------------------------------------------------------------
 
-async def test_submit_reflection_advances_stage(seeded_client: AsyncClient):
-    response = await seeded_client.post(
-        "/api/v1/lectio-divina/reflection",
+async def test_submit_reflection_advances_stage(authed_seeded_client: AsyncClient):
+    response = await authed_seeded_client.post(
+        f"{BASE}/reflection",
         json={
             "session_id": "sess-001",
-            "user_id": "test-user",
             "stage": "lectio",
             "reflection_text": "Słowo 'trwaj' dotknęło moje serce.",
             "grace_notes": ["cisza", "obecność"],
@@ -96,12 +135,11 @@ async def test_submit_reflection_advances_stage(seeded_client: AsyncClient):
     assert data["next_stage"] == "meditatio"
 
 
-async def test_submit_reflection_invalid_stage(seeded_client: AsyncClient):
-    response = await seeded_client.post(
-        "/api/v1/lectio-divina/reflection",
+async def test_submit_reflection_invalid_stage(authed_seeded_client: AsyncClient):
+    response = await authed_seeded_client.post(
+        f"{BASE}/reflection",
         json={
             "session_id": "sess-001",
-            "user_id": "test-user",
             "stage": "invalid_stage",
             "reflection_text": "test",
         },
@@ -110,20 +148,30 @@ async def test_submit_reflection_invalid_stage(seeded_client: AsyncClient):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/lectio-divina/history/{user_id}
+# GET /history/me
 # ---------------------------------------------------------------------------
 
-async def test_get_history_returns_list(seeded_client: AsyncClient):
-    response = await seeded_client.get("/api/v1/lectio-divina/history/test-user")
+async def test_get_history_requires_auth(app_client: AsyncClient):
+    response = await app_client.get(f"{BASE}/history/me")
+    assert response.status_code == 401
+
+
+async def test_get_history_returns_list(authed_seeded_client: AsyncClient):
+    response = await authed_seeded_client.get(f"{BASE}/history/me")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
 # ---------------------------------------------------------------------------
-# POST /api/v1/lectio-divina/run — full pipeline (mocked LLM)
+# POST /run — full pipeline (mocked LLM)
 # ---------------------------------------------------------------------------
 
-async def test_run_pipeline_returns_expected_shape(app_client: AsyncClient):
+async def test_run_pipeline_requires_auth(app_client: AsyncClient):
+    response = await app_client.post(f"{BASE}/run", json={"emotion_text": "Czuję spokój."})
+    assert response.status_code == 401
+
+
+async def test_run_pipeline_returns_expected_shape(authed_client: AsyncClient):
     mock_session_result = {
         "scripture": {"book": "J", "chapter": 15, "verse_start": 5, "verse_end": 5, "text": "..."},
         "meditation": {"questions": [], "reflection_layers": {}, "key_word": "trwaj"},
@@ -143,10 +191,9 @@ async def test_run_pipeline_returns_expected_shape(app_client: AsyncClient):
                     content="STAGE: purgation\nPROGRESS: 10\nMILESTONE: Start\nGROWTH: Modlitwa"
                 )
             )
-
-            response = await app_client.post(
-                "/api/v1/lectio-divina/run",
-                json={"emotion_text": "Czuję spokój.", "user_id": "test-user", "tradition": "ignatian"},
+            response = await authed_client.post(
+                f"{BASE}/run",
+                json={"emotion_text": "Czuję spokój.", "tradition": "ignatian"},
             )
 
     assert response.status_code == 200
@@ -155,15 +202,19 @@ async def test_run_pipeline_returns_expected_shape(app_client: AsyncClient):
     assert "prayer" in data
     assert "tradition" in data
     assert "kerygmatic_theme" in data
-    # journey field should be present (may be None if tracker fails gracefully)
     assert "journey" in data
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/lectio-divina/journey/{user_id}
+# GET /journey/me
 # ---------------------------------------------------------------------------
 
-async def test_get_journey_returns_stage_info(seeded_client: AsyncClient):
+async def test_get_journey_requires_auth(app_client: AsyncClient):
+    response = await app_client.get(f"{BASE}/journey/me")
+    assert response.status_code == 401
+
+
+async def test_get_journey_returns_stage_info(authed_seeded_client: AsyncClient):
     with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
         inst = MockLLM.return_value
         inst.ainvoke = AsyncMock(
@@ -171,7 +222,7 @@ async def test_get_journey_returns_stage_info(seeded_client: AsyncClient):
                 content="STAGE: illumination\nPROGRESS: 55\nMILESTONE: Głębsza modlitwa\nGROWTH: Kontemplacja"
             )
         )
-        response = await seeded_client.get("/api/v1/lectio-divina/journey/test-user")
+        response = await authed_seeded_client.get(f"{BASE}/journey/me")
 
     assert response.status_code == 200
     data = response.json()
@@ -179,7 +230,7 @@ async def test_get_journey_returns_stage_info(seeded_client: AsyncClient):
     assert "progress_percentage" in data
 
 
-async def test_get_journey_is_cached_on_second_call(seeded_client: AsyncClient):
+async def test_get_journey_is_cached_on_second_call(authed_seeded_client: AsyncClient):
     """Second call should hit Redis cache, not the LLM."""
     with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
         inst = MockLLM.return_value
@@ -188,25 +239,27 @@ async def test_get_journey_is_cached_on_second_call(seeded_client: AsyncClient):
                 content="STAGE: purgation\nPROGRESS: 20\nMILESTONE: -\nGROWTH: Modlitwa"
             )
         )
-        # First call — hits LLM
-        r1 = await seeded_client.get("/api/v1/lectio-divina/journey/test-user")
+        r1 = await authed_seeded_client.get(f"{BASE}/journey/me")
         first_call_count = inst.ainvoke.call_count
 
-        # Second call — should use Redis cache
-        r2 = await seeded_client.get("/api/v1/lectio-divina/journey/test-user")
+        r2 = await authed_seeded_client.get(f"{BASE}/journey/me")
         second_call_count = inst.ainvoke.call_count
 
     assert r1.status_code == 200
     assert r2.status_code == 200
-    # LLM not called again on second request
     assert second_call_count == first_call_count
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/lectio-divina/patterns/{user_id}
+# GET /patterns/me
 # ---------------------------------------------------------------------------
 
-async def test_get_patterns_returns_list(seeded_client: AsyncClient):
+async def test_get_patterns_requires_auth(app_client: AsyncClient):
+    response = await app_client.get(f"{BASE}/patterns/me")
+    assert response.status_code == 401
+
+
+async def test_get_patterns_returns_list(authed_seeded_client: AsyncClient):
     with patch("app.agents.memory.pattern_discovery.ChatOpenAI") as MockLLM:
         inst = MockLLM.return_value
         inst.ainvoke = AsyncMock(
@@ -214,7 +267,7 @@ async def test_get_patterns_returns_list(seeded_client: AsyncClient):
                 content="PATTERN: recurring_theme\nDESC: Zaufanie\nFREQ: tygodniowo\nSCRIPTURE: Ps 23"
             )
         )
-        response = await seeded_client.get("/api/v1/lectio-divina/patterns/test-user")
+        response = await authed_seeded_client.get(f"{BASE}/patterns/me")
 
     assert response.status_code == 200
     assert isinstance(response.json(), list)
