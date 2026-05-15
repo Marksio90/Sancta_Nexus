@@ -113,7 +113,20 @@ async def speech_to_text(
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
-    content_type = file.content_type or "audio/webm"
+    _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10 MB — matches nginx client_max_body_size
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail="Plik audio jest za duży (max 10 MB).")
+
+    _ALLOWED_AUDIO_TYPES = {
+        "audio/webm", "audio/ogg", "audio/mp4", "audio/wav",
+        "audio/mpeg", "audio/x-m4a", "video/webm",
+    }
+    content_type = (file.content_type or "audio/webm").split(";")[0].strip().lower()
+    if content_type not in _ALLOWED_AUDIO_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Nieobsługiwany typ pliku: {content_type}. Wymagany format audio.",
+        )
 
     try:
         result = await _stt.transcribe(

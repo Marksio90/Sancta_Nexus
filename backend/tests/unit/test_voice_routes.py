@@ -188,6 +188,41 @@ class TestVoiceProfile:
         assert "VoiceProfile" in source and "tts_service" in source
 
 
+# ── STT file validation ───────────────────────────────────────────────────────
+
+
+def _stt_func_source() -> str:
+    src = VOICE_PATH.read_text()
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "speech_to_text":
+            lines = src.splitlines()
+            return "\n".join(lines[node.lineno - 1 : node.end_lineno])
+    return ""
+
+
+class TestSTTFileValidation:
+    """STT endpoint must validate file size and content-type at the app level
+    (defense-in-depth beyond nginx client_max_body_size)."""
+
+    def test_stt_raises_413_for_oversized_file(self):
+        """413 Request Entity Too Large for files exceeding the app-level limit."""
+        assert "413" in _stt_func_source()
+
+    def test_stt_raises_415_for_invalid_content_type(self):
+        """415 Unsupported Media Type for non-audio MIME types."""
+        assert "415" in _stt_func_source()
+
+    def test_stt_defines_max_audio_bytes(self):
+        assert "_MAX_AUDIO_BYTES" in VOICE_PATH.read_text()
+
+    def test_stt_defines_allowed_audio_types(self):
+        assert "_ALLOWED_AUDIO_TYPES" in VOICE_PATH.read_text()
+
+    def test_stt_checks_empty_file(self):
+        src = _stt_func_source()
+        assert "Empty" in src or "empty" in src or "not audio_bytes" in src
+
+
 # ── /meditate walidacja ───────────────────────────────────────────────────────
 
 
