@@ -12,9 +12,6 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
-
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -107,12 +104,11 @@ class PrayerGeneratorAgent:
 
     def __init__(
         self,
-        model_name: str | None = None,
         temperature: float = 0.8,
     ) -> None:
-        resolved = model_name or settings.LLM_CREATIVE_MODEL
-        self._llm = ChatOpenAI(model=resolved, temperature=temperature)
-        logger.info("PrayerGeneratorAgent (A-028) initialised with model=%s", resolved)
+        from app.core.llm import get_llm
+        self._llm = get_llm(temperature=temperature)
+        logger.info("PrayerGeneratorAgent (A-028) initialised")
 
     # ------------------------------------------------------------------
     # Public API

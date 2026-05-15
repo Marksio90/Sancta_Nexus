@@ -17,7 +17,6 @@ import json
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
@@ -75,21 +74,11 @@ class ExegesisAgent:
     def __init__(
         self,
         *,
-        model: str = "gpt-4o",
         temperature: float = 0.3,
         max_tokens: int = 2048,
     ) -> None:
-        """
-        Args:
-            model: OpenAI model identifier.
-            temperature: Sampling temperature for the LLM.
-            max_tokens: Maximum tokens per dimension analysis.
-        """
-        self._llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        from app.core.llm import get_llm
+        self._llm = get_llm(temperature=temperature, max_tokens=max_tokens)
 
     # ------------------------------------------------------------------
     # Public API

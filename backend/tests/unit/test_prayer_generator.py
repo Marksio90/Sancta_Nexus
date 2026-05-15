@@ -14,18 +14,19 @@ SCRIPTURE_TEXT = "Ja jestem krzewem winnym, wy latoroślami."
 EMOTION_STATE = "peace"
 
 
+def _make_llm(response_content: str) -> MagicMock:
+    llm = MagicMock()
+    llm.ainvoke = AsyncMock(return_value=MagicMock(content=response_content))
+    return llm
+
+
 async def test_generate_returns_prayer_dict():
-    mock_response = MagicMock()
-    mock_response.content = json.dumps({
+    mock_llm = _make_llm(json.dumps({
         "prayer_text": "Panie Jezu, trwam w Tobie jak latorośl w krzewie. Amen.",
         "tradition": "ignatian",
         "elements": ["colloquium", "petitio"],
-    })
-
-    with patch("app.agents.generative.prayer_generator.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    }))
+    with patch("app.core.llm.get_llm", return_value=mock_llm):
         agent = PrayerGeneratorAgent()
         result = await agent.generate(SCRIPTURE_TEXT, EMOTION_STATE, tradition="ignatian")
 
@@ -36,13 +37,8 @@ async def test_generate_returns_prayer_dict():
 
 
 async def test_generate_returns_fallback_on_short_response():
-    mock_response = MagicMock()
-    mock_response.content = json.dumps({"prayer_text": "Ok.", "tradition": "ignatian", "elements": []})
-
-    with patch("app.agents.generative.prayer_generator.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    mock_llm = _make_llm(json.dumps({"prayer_text": "Ok.", "tradition": "ignatian", "elements": []}))
+    with patch("app.core.llm.get_llm", return_value=mock_llm):
         agent = PrayerGeneratorAgent()
         result = await agent.generate(SCRIPTURE_TEXT, EMOTION_STATE)
 
@@ -50,10 +46,9 @@ async def test_generate_returns_fallback_on_short_response():
 
 
 async def test_generate_returns_fallback_on_llm_error():
-    with patch("app.agents.generative.prayer_generator.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(side_effect=RuntimeError("timeout"))
-
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("timeout"))
+    with patch("app.core.llm.get_llm", return_value=mock_llm):
         agent = PrayerGeneratorAgent()
         result = await agent.generate(SCRIPTURE_TEXT, EMOTION_STATE)
 
@@ -62,27 +57,20 @@ async def test_generate_returns_fallback_on_llm_error():
 
 @pytest.mark.parametrize("tradition", ["ignatian", "carmelite", "franciscan", "benedictine", "charismatic"])
 async def test_generate_all_supported_traditions(tradition: str):
-    mock_response = MagicMock()
-    mock_response.content = json.dumps({
+    mock_llm = _make_llm(json.dumps({
         "prayer_text": f"Modlitwa w tradycji {tradition}. " * 5,
         "tradition": tradition,
         "elements": ["laudatio"],
-    })
-
-    with patch("app.agents.generative.prayer_generator.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    }))
+    with patch("app.core.llm.get_llm", return_value=mock_llm):
         agent = PrayerGeneratorAgent()
         result = await agent.generate(SCRIPTURE_TEXT, EMOTION_STATE, tradition=tradition)
 
     assert result["tradition"] == tradition or result["tradition"] == "ignatian"
 
 
-def test_prayer_generator_uses_settings_model():
-    from app.core.config import settings
-    with patch("app.agents.generative.prayer_generator.ChatOpenAI") as MockLLM:
+def test_prayer_generator_uses_llm_factory():
+    mock_llm = MagicMock()
+    with patch("app.core.llm.get_llm", return_value=mock_llm) as mock_factory:
         PrayerGeneratorAgent()
-        call_kwargs = MockLLM.call_args
-        used_model = call_kwargs.kwargs.get("model") or (call_kwargs.args[0] if call_kwargs.args else None)
-        assert used_model == settings.LLM_CREATIVE_MODEL
+        mock_factory.assert_called_once()

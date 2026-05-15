@@ -73,7 +73,7 @@ _SUICIDAL_PATTERNS: list[str] = [
     r"\bdon'?t\s+want\s+to\s+(be\s+)?alive\b",
     r"\bwish\s+I\s+(was|were)\s+dead\b",
     r"\bgoodbye\s+(cruel\s+)?world\b",
-    r"\bself[- ]?harm\b",
+    r"\bself[- ]?harm\w*\b",
     r"\bcut(ting)?\s+my(self)?\b",
 ]
 
