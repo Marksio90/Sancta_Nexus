@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRosarySocket } from "@/hooks/useRosarySocket";
+import { PremiumAudioButton } from "@/components/AudioPlayer";
+import { useBillingStore } from "@/stores/billing";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -35,6 +37,9 @@ export default function RozaniecPage() {
   const meditationRef = useRef<HTMLDivElement>(null);
 
   const ws = useRosarySocket(activeSessionId);
+  const { subscription, fetchStatus: fetchBilling } = useBillingStore();
+
+  useEffect(() => { fetchBilling(); }, [fetchBilling]);
 
   useEffect(() => {
     fetch(`${API}/api/v1/community/rosary/mysteries`)
@@ -305,12 +310,21 @@ export default function RozaniecPage() {
             </p>
           </div>
 
+          {/* Audio meditation (premium) */}
+          <div className="mb-4">
+            <PremiumAudioButton
+              mysteryType={selectedType}
+              mysteryNumber={selectedMysteryNum}
+              isPremium={subscription?.is_premium ?? false}
+            />
+          </div>
+
           {!meditation && !streamingMeditation && (
             <button
               onClick={() => streamMeditation(selectedType, selectedMysteryNum)}
               className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-3 text-sm text-gray-300 transition-all mb-4"
             >
-              ✨ Poprowadź mnie przez medytację
+              ✨ Poprowadź mnie przez medytację (tekst)
             </button>
           )}
 
