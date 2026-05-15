@@ -21,6 +21,18 @@ Every AI-generated response page **must** display the disclaimer:
 
 ## Commands
 
+### Makefile shortcuts (from repo root)
+
+```bash
+make dev          # Start Postgres + Redis (dev)
+make test         # All unit tests
+make check        # ruff lint + tsc --noEmit
+make lint / fmt   # ruff check / ruff format
+make up / down    # Production stack
+make ssl-init     # First-run certbot + nginx reload
+make migrate      # alembic upgrade head
+```
+
 ### Backend (run from `backend/`)
 
 ```bash
@@ -30,7 +42,7 @@ docker compose -f ../docker-compose.dev.yml up -d
 # Run the API server
 uvicorn app.main:app --reload --port 8000
 
-# All unit tests (skip rbac test — broken cffi in local env)
+# All unit tests — 882 tests, ~2s (skip rbac test — broken cffi in local env)
 python -m pytest tests/unit/ -q --ignore=tests/unit/test_rbac.py
 
 # Single test file
@@ -52,7 +64,7 @@ ruff format .           # auto-fix formatting
 
 ```bash
 npm run dev             # Next.js dev server on :3000
-npx tsc --noEmit        # TypeScript check (must be zero errors before commit)
+npx tsc --noEmit        # TypeScript check (zero errors — enforced before commit)
 npm run lint            # ESLint
 npm run build           # Production build
 ```
