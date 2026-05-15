@@ -38,7 +38,7 @@ function computeStreak(sessions: SessionRecord[]): number {
   today.setHours(0, 0, 0, 0);
 
   let streak = 0;
-  let expected = new Date(today);
+  const expected = new Date(today);
 
   for (const s of sorted) {
     const d = new Date(s.date);

@@ -123,7 +123,7 @@ export default function RegulaminPage() {
 
         <Section title="9. Odpowiedzialność">
           <p>
-            Platforma jest udostępniana „tak jak jest". Operator nie odpowiada za decyzje
+            Platforma jest udostępniana „tak jak jest&rdquo;. Operator nie odpowiada za decyzje
             podejmowane na podstawie treści wygenerowanych przez AI. Za decyzje duchowe
             odpowiada Użytkownik — ostatecznym autorytetem jest nauczanie Kościoła Katolickiego
             i żywy duszpasterz.

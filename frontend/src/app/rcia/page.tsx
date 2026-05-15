@@ -41,8 +41,8 @@ type AppState = "list" | "session" | "chat" | "reflection";
 
 export default function RCIAPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [curriculum, setCurriculum] = useState<any[]>([]);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [curriculum, setCurriculum] = useState<Record<string, unknown>[]>([]);
+  const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -52,12 +52,12 @@ export default function RCIAPage() {
   const [loadingReflection, setLoadingReflection] = useState(false);
 
   useEffect(() => {
-    api.get<{ stages: any[] }>("/api/v1/sacraments/rcia/curriculum")
+    api.get<{ stages: Record<string, unknown>[] }>("/api/v1/sacraments/rcia/curriculum")
       .then((d) => setCurriculum(d.stages || []))
       .catch(() => setCurriculum([]));
   }, []);
 
-  const openSession = (session: any) => {
+  const openSession = (session: Record<string, unknown>) => {
     setSelectedSession(session);
     setMessages([
       {
@@ -131,7 +131,7 @@ export default function RCIAPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {curriculum.map((stage: any) => {
+              {curriculum.map((stage: Record<string, unknown>) => {
                 const meta = STAGE_META[stage.stage] || {
                   label: stage.stage,
                   color: "from-gray-900/60 to-gray-800/40",
@@ -163,7 +163,7 @@ export default function RCIAPage() {
 
                     {/* Sessions */}
                     <div className="space-y-2 pl-2">
-                      {stage.sessions?.map((session: any) => (
+                      {(stage.sessions as Record<string, unknown>[] | undefined)?.map((session: Record<string, unknown>) => (
                         <button
                           key={session.session_id}
                           onClick={() => openSession(session)}

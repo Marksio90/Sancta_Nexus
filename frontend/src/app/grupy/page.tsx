@@ -32,8 +32,8 @@ type AppState = "list" | "detail" | "new";
 
 export default function GrupyPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [groups, setGroups] = useState<any[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<Record<string, unknown> | null>(null);
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
@@ -50,7 +50,7 @@ export default function GrupyPage() {
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<{ groups: any[] }>(
+      const data = await api.get<{ groups: Record<string, unknown>[] }>(
         `/api/v1/community/groups?category=${category}`
       );
       setGroups(data.groups || []);
@@ -62,6 +62,7 @@ export default function GrupyPage() {
   }, [category]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadGroups();
   }, [loadGroups]);
 

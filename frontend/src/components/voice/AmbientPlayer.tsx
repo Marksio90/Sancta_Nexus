@@ -166,6 +166,7 @@ export function AmbientPlayer({ className = "" }: AmbientPlayerProps) {
   useEffect(() => {
     const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE) as AmbientProfile | null;
     const savedVolume = localStorage.getItem(STORAGE_KEY_VOLUME);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedProfile) setProfile(savedProfile);
     if (savedVolume) setVolume(parseFloat(savedVolume));
   }, []);

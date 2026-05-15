@@ -20,14 +20,14 @@ export default function RozaniecPage() {
   const [appState, setAppState] = useState<AppState>("menu");
   const [todayMystery, setTodayMystery] = useState<MysteryType>("radosne");
   const [selectedType, setSelectedType] = useState<MysteryType>("radosne");
-  const [mysteries, setMysteries] = useState<any[]>([]);
-  const [allData, setAllData] = useState<any>(null);
-  const [selectedMystery, setSelectedMystery] = useState<any>(null);
+  const [mysteries, setMysteries] = useState<Record<string, unknown>[]>([]);
+  const [allData, setAllData] = useState<Record<string, unknown> | null>(null);
+  const [selectedMystery, setSelectedMystery] = useState<Record<string, unknown> | null>(null);
   const [selectedMysteryNum, setSelectedMysteryNum] = useState(1);
   const [meditation, setMeditation] = useState("");
   const [streamingMeditation, setStreamingMeditation] = useState(false);
   const [completedDecades, setCompletedDecades] = useState<Set<number>>(new Set());
-  const [communitySessions, setCommunitySessions] = useState<any[]>([]);
+  const [communitySessions, setCommunitySessions] = useState<Record<string, unknown>[]>([]);
   const [newIntention, setNewIntention] = useState("");
   const [creatingSession, setCreatingSession] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function RozaniecPage() {
   useEffect(() => { fetchBilling(); }, [fetchBilling]);
 
   useEffect(() => {
-    api.get<{ mystery_types: any; today: string }>("/api/v1/community/rosary/mysteries")
+    api.get<{ mystery_types: Record<string, unknown>; today: string }>("/api/v1/community/rosary/mysteries")
       .then((d) => {
         setAllData(d.mystery_types);
         const today = d.today as MysteryType;
@@ -54,7 +54,7 @@ export default function RozaniecPage() {
 
   const loadCommunity = useCallback(async () => {
     try {
-      const data = await api.get<{ sessions: any[] }>("/api/v1/community/rosary/community");
+      const data = await api.get<{ sessions: Record<string, unknown>[] }>("/api/v1/community/rosary/community");
       setCommunitySessions(data.sessions || []);
     } catch {}
   }, []);
@@ -97,14 +97,14 @@ export default function RozaniecPage() {
         setMeditation(text);
         meditationRef.current?.scrollTo(0, meditationRef.current.scrollHeight);
       }
-    } catch (e: any) {
-      if (e.name !== "AbortError") setMeditation("Błąd połączenia.");
+    } catch (e: unknown) {
+      if ((e as { name?: string }).name !== "AbortError") setMeditation("Błąd połączenia.");
     } finally {
       setStreamingMeditation(false);
     }
   };
 
-  const openMystery = (mystery: any) => {
+  const openMystery = (mystery: Record<string, unknown>) => {
     setSelectedMystery(mystery);
     setSelectedMysteryNum(mystery.number);
     setMeditation("");
@@ -129,7 +129,7 @@ export default function RozaniecPage() {
     }
   };
 
-  const joinSession = async (session: any) => {
+  const joinSession = async (session: Record<string, unknown>) => {
     try {
       await api.post(`/api/v1/community/rosary/community/${session.id}/join`, {});
     } catch {}

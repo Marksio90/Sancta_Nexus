@@ -17,7 +17,7 @@ const NAV_LINKS = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, loadFromStorage } = useAuthStore();
+  const { user, isAuthenticated, loadFromStorage } = useAuthStore();
 
   useEffect(() => {
     loadFromStorage();

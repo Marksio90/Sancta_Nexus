@@ -28,7 +28,7 @@ export function ServiceWorkerProvider() {
     prefetchTodayScripture().catch(() => {});
 
     // ── Capacitor native push (no-op on plain web) ────────────────────────
-    initCapacitorPush((_title, _body) => {
+    initCapacitorPush(() => {
       // Could show an in-app toast here
     }).catch(() => {});
 

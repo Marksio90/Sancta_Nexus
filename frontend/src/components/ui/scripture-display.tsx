@@ -56,6 +56,7 @@ export function ScriptureDisplay({
   // Load persisted notes on mount
   useEffect(() => {
     loadFromStorage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNoteText(getNote(reference));
   }, [reference, loadFromStorage, getNote]);
 

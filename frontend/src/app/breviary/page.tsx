@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Sun, Sunset, Moon, BookOpen, Bell } from "lucide-react";
 import { getLiturgicalInfo } from "@/lib/liturgical-season";
@@ -88,7 +88,7 @@ function getCurrentHour(): Hour {
 
 export default function BreviaryPage() {
   const [activeHour, setActiveHour] = useState<Hour>(getCurrentHour());
-  const [seasonInfo, setSeasonInfo] = useState(() => getLiturgicalInfo());
+  const [seasonInfo] = useState(() => getLiturgicalInfo());
   const [step, setStep] = useState(0);
 
   const hourData = HOURS.find((h) => h.id === activeHour)!;

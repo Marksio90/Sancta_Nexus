@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Play, Pause, Square, Volume2, Loader2 } from "lucide-react";
+import { Pause, Square, Volume2, Loader2 } from "lucide-react";
 
 
 export type VoiceProfileId =
@@ -133,6 +133,7 @@ export function VoicePlayer({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (autoPlay) play();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

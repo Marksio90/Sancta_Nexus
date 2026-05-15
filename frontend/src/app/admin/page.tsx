@@ -584,7 +584,7 @@ export default function AdminPage() {
           <p className="text-gray-500 text-sm mb-6">
             Ta strona jest dostępna wyłącznie dla administratorów Sancta Nexus.
           </p>
-          <a href="/" className="text-[#d4af37] text-sm underline">← Wróć do strony głównej</a>
+          <Link href="/" className="text-[#d4af37] text-sm underline">← Wróć do strony głównej</Link>
         </div>
       </main>
     );
