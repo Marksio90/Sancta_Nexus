@@ -80,6 +80,7 @@ app.add_middleware(
 _ROUTERS: list[tuple[str, str, list[str]]] = [
     # stable
     ("app.api.routes.lectio_divina", "/api/v1/lectio-divina", ["lectio-divina"]),
+    ("app.api.routes.examen", "/api/v1/examen", ["examen"]),
     ("app.api.routes.bible", "/api/v1/bible", ["bible"]),
     # beta
     ("app.api.routes.breviary", "/api/v1/breviary", ["breviary"]),
