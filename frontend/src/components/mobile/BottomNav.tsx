@@ -37,8 +37,8 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: true,
   },
   {
-    href: "/spiritual-director",
-    label: "Kierownik",
+    href: "/asystent-refleksji",
+    label: "Asystent",
     icon: <MessageCircle className="h-5 w-5" />,
     matchPrefix: true,
   },
