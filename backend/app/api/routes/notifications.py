@@ -53,7 +53,6 @@ class SubscribeRequest(BaseModel):
 class DeviceTokenRequest(BaseModel):
     token: str
     platform: str  # "capacitor" | "web"
-    user_id: str | None = None
 
 
 class TestNotificationRequest(BaseModel):
@@ -105,7 +104,6 @@ async def register_device_token(body: DeviceTokenRequest) -> dict[str, str]:
         {
             "token": body.token,
             "platform": body.platform,
-            "user_id": body.user_id,
             "registered_at": datetime.utcnow().isoformat(),
         }
     )
