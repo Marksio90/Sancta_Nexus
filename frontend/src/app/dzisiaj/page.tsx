@@ -204,8 +204,8 @@ export default function DzisiajPage() {
       const reg = await navigator.serviceWorker.ready;
 
       // Pobierz VAPID public key z backendu
-      const vapidData = await api.get<{ public_key: string }>("/api/v1/notifications/vapid-public-key");
-      const vapidKey = vapidData.public_key;
+      const vapidData = await api.get<{ publicKey: string }>("/api/v1/notifications/vapid-public-key");
+      const vapidKey = vapidData.publicKey;
 
       if (vapidKey) {
         const sub = await reg.pushManager.subscribe({
