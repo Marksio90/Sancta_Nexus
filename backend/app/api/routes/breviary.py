@@ -15,6 +15,7 @@ from app.services.scripture.liturgical_calendar import (
     LiturgicalDay,
     LiturgicalCalendar,
 )
+from app.services.scripture.saints_calendar import get_saint_today
 
 router = APIRouter()
 
@@ -156,6 +157,68 @@ async def get_current_season() -> dict[str, Any]:
         "label": _SEASON_LABELS.get(liturgical_day.season, liturgical_day.season),
         "color": liturgical_day.color,
         "feast": liturgical_day.feast,
+    }
+
+
+@router.get("/saint-today")
+async def get_saint_of_day() -> dict[str, Any]:
+    """Return the saint/feast for today's liturgical calendar."""
+    today = date.today()
+    saint = get_saint_today(today)
+    return {
+        "date": today.isoformat(),
+        "name": saint["name"],
+        "description": saint["description"],
+        "patronage": saint["patronage"],
+        "icon": saint["icon"],
+        "died": saint["died"],
+    }
+
+
+@router.get("/daily-engagement")
+async def get_daily_engagement() -> dict[str, Any]:
+    """Combined endpoint: liturgical day + saint + suggested morning prayer.
+
+    Używany przez widget 'Dzisiaj' w aplikacji — jeden request, pełne dane.
+    """
+    today = date.today()
+    cal = LiturgicalCalendar()
+    liturgical_day: LiturgicalDay = cal.get_today(today=today)
+    saint = get_saint_today(today)
+
+    # Sugerowana modlitwa poranna zależna od sezonu
+    _MORNING_PRAYERS: dict[str, str] = {
+        "advent": "Przyjdź Panie Jezu — Maranatha! Dziękuję za ten nowy dzień Adwentu.",
+        "christmas": "Chwała Bogu na wysokości! Dziękuję za dar Wcielonego Słowa.",
+        "lent": "Panie, pomóż mi dzisiaj nawrócić się choć w jednej małej rzeczy.",
+        "easter": "Alleluja! Zmartwychwstały Panie, prowadź mnie dzisiaj swoim Duchem.",
+        "ordinary": "Panie Jezu, oddaję Ci ten dzień — moje myśli, słowa i czyny.",
+    }
+    morning_prayer = _MORNING_PRAYERS.get(liturgical_day.season, _MORNING_PRAYERS["ordinary"])
+
+    return {
+        "date": today.isoformat(),
+        "day_of_week": today.strftime("%A"),
+        "liturgical": {
+            "season": liturgical_day.season,
+            "season_label": _SEASON_LABELS.get(liturgical_day.season, liturgical_day.season),
+            "color": liturgical_day.color,
+            "feast": liturgical_day.feast,
+            "rank": liturgical_day.rank,
+        },
+        "saint": {
+            "name": saint["name"],
+            "description": saint["description"],
+            "patronage": saint["patronage"],
+            "icon": saint["icon"],
+        },
+        "morning_prayer": morning_prayer,
+        "suggested_practices": [
+            {"label": "Jutrznia", "href": "/brewiarz", "icon": "🕯"},
+            {"label": "Lectio Divina", "href": "/lectio-divina", "icon": "📖"},
+            {"label": "Różaniec", "href": "/rozaniec", "icon": "📿"},
+            {"label": "Rachunek Sumienia (wieczór)", "href": "/rachunek-sumienia", "icon": "🔥"},
+        ],
     }
 
 

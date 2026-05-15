@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, MessageCircle, Clock, Cross } from "lucide-react";
+import { Home, BookOpen, MessageCircle, Clock, Sun } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 
 interface NavItem {
@@ -49,10 +49,10 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: true,
   },
   {
-    href: "/przygotowanie",
-    label: "Sakramenty",
-    icon: <Cross className="h-5 w-5" />,
-    matchPrefix: true,
+    href: "/dzisiaj",
+    label: "Dzisiaj",
+    icon: <Sun className="h-5 w-5" />,
+    matchPrefix: false,
   },
 ];
 
