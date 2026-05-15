@@ -13,6 +13,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit3,
+  TrendingUp,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -21,6 +25,7 @@ import {
   CreateEntryData,
   UpdateEntryData,
 } from "@/stores/journal";
+import { useInsightsStore, PATTERN_LABELS } from "@/stores/insights";
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 const MOODS = [
@@ -229,12 +234,15 @@ export default function DziennikPage() {
     clearError,
   } = useJournalStore();
 
+  const { data: insights, loading: insightsLoading, fetch: fetchInsights } = useInsightsStore();
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [search, setSearch] = useState("");
   const [moodFilter, setMoodFilter] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
 
   /* ── Auth check ─────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -489,6 +497,144 @@ export default function DziennikPage() {
           <p className="text-sm text-[--color-sacred-text-muted]/70">
             Twoje wpisy są prywatne — tylko Ty je widzisz
           </p>
+        </div>
+
+        {/* Moja droga — journey insights */}
+        <div className="mb-6">
+          <button
+            onClick={() => {
+              setShowInsights((v) => !v);
+              if (!showInsights && !insights) fetchInsights();
+            }}
+            className="flex w-full items-center justify-between rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface]/60 px-4 py-3 transition-all hover:border-[--color-gold]/25"
+          >
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="h-4 w-4 text-[--color-gold]/70" />
+              <span className="text-sm font-medium text-[--color-sacred-text-muted]">
+                Moja droga duchowa
+              </span>
+              {insights?.ai_enabled && insights.entry_count > 0 && (
+                <span className="rounded-full bg-[--color-gold]/10 px-2 py-0.5 text-[10px] text-[--color-gold]/70">
+                  {insights.entry_count} wpisów
+                </span>
+              )}
+            </div>
+            {showInsights ? (
+              <ChevronUp className="h-4 w-4 text-[--color-sacred-text-muted]/50" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-[--color-sacred-text-muted]/50" />
+            )}
+          </button>
+
+          {showInsights && (
+            <div className="mt-2 rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-5">
+              {insightsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex gap-1">
+                    {[0, 0.3, 0.6].map((delay, i) => (
+                      <span
+                        key={i}
+                        className="animate-sacred-pulse h-2 w-2 rounded-full bg-[--color-gold]/50"
+                        style={{ animationDelay: `${delay}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!insightsLoading && insights && !insights.ai_enabled && (
+                <div className="py-4 text-center">
+                  <p className="text-sm text-[--color-sacred-text-muted]/60">
+                    {insights.disclaimer}
+                  </p>
+                </div>
+              )}
+
+              {!insightsLoading && insights && insights.ai_enabled && insights.entry_count === 0 && (
+                <div className="py-4 text-center">
+                  <BookMarked className="mx-auto mb-3 h-8 w-8 text-[--color-gold]/20" />
+                  <p className="text-sm text-[--color-sacred-text-muted]/60">
+                    Dodaj pierwsze wpisy do dziennika, aby zobaczyć analizę drogi duchowej.
+                  </p>
+                </div>
+              )}
+
+              {!insightsLoading && insights && insights.ai_enabled && insights.entry_count > 0 && (
+                <>
+                  {/* Journey stage card */}
+                  <div className="mb-5 rounded-lg border border-[--color-gold]/15 bg-[--color-gold]/5 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-[--color-gold]/40">
+                          Etap drogi
+                        </p>
+                        <h3 className="font-heading text-lg text-[--color-gold]">
+                          {insights.journey.stage_name_pl}
+                        </h3>
+                        <p className="mt-0.5 text-xs text-[--color-sacred-text-muted]/70 leading-relaxed">
+                          {insights.journey.stage_description}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-2xl font-light text-[--color-gold]/50">
+                        {insights.journey.progress_percentage}%
+                      </span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[--color-sacred-border]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[--color-gold]/50 to-[--color-gold]"
+                        style={{ width: `${insights.journey.progress_percentage}%` }}
+                      />
+                    </div>
+
+                    {insights.journey.next_growth_area && (
+                      <p className="mt-3 text-xs text-[--color-sacred-text-muted]/60 italic">
+                        Obszar wzrostu: {insights.journey.next_growth_area}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Patterns */}
+                  {insights.patterns.length > 0 && (
+                    <div className="mb-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Sparkles className="h-3.5 w-3.5 text-[--color-gold]/50" />
+                        <p className="text-xs font-medium text-[--color-sacred-text-muted]">
+                          Wzory duchowe
+                        </p>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {insights.patterns.slice(0, 4).map((pattern, i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] p-3"
+                          >
+                            <p className="mb-1 text-[10px] uppercase tracking-wider text-[--color-gold]/40">
+                              {PATTERN_LABELS[pattern.type] ?? pattern.type}
+                            </p>
+                            <p className="text-xs text-[--color-sacred-text-muted]/80 leading-relaxed">
+                              {pattern.description}
+                            </p>
+                            {pattern.related_scriptures && pattern.related_scriptures.length > 0 && (
+                              <p className="mt-1.5 text-[10px] text-[--color-gold]/50 italic font-scripture">
+                                {pattern.related_scriptures.slice(0, 2).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Disclaimer */}
+                  <p className="text-[11px] italic text-[--color-sacred-text-muted]/40 leading-relaxed border-t border-[--color-sacred-border] pt-3">
+                    {insights.disclaimer}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Search & filter */}

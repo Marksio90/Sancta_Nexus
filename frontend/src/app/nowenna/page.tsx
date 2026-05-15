@@ -1,19 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-// Lightweight local user ID (guest session — replace with real auth)
-function getGuestId(): string {
-  if (typeof window === "undefined") return "guest";
-  let id = localStorage.getItem("sn_guest_id");
-  if (!id) {
-    id = "guest-" + Math.random().toString(36).slice(2, 10);
-    localStorage.setItem("sn_guest_id", id);
-  }
-  return id;
-}
+import { api } from "@/lib/api";
 
 type AppState = "library" | "detail" | "day" | "tracking";
 
@@ -30,12 +18,9 @@ export default function NowennaPage() {
   const [loadingMy, setLoadingMy] = useState(false);
   const [intention, setIntention] = useState("");
   const [starting, setStarting] = useState(false);
-  const [userId, setUserId] = useState<string>("guest");
 
   useEffect(() => {
-    setUserId(getGuestId());
-    fetch(`${API}/api/v1/community/novenas`)
-      .then((r) => r.json())
+    api.get<{ novenas: any[] }>("/api/v1/community/novenas")
       .then((d) => setNovenas(d.novenas || []))
       .catch(() => {});
   }, []);
@@ -43,17 +28,14 @@ export default function NowennaPage() {
   const loadMyNovenas = useCallback(async () => {
     setLoadingMy(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/novenas/my?user_id=${userId}`
-      );
-      const data = await res.json();
+      const data = await api.get<{ novenas: any[] }>("/api/v1/community/novenas/my");
       setMyNovenas(data.novenas || []);
     } catch {
       setMyNovenas([]);
     } finally {
       setLoadingMy(false);
     }
-  }, [userId]);
+  }, []);
 
   const openNovena = async (novena: any) => {
     setSelected(novena);
@@ -61,8 +43,7 @@ export default function NowennaPage() {
     setMeditation("");
     setAppState("detail");
     try {
-      const res = await fetch(`${API}/api/v1/community/novenas/${novena.id}`);
-      const data = await res.json();
+      const data = await api.get<any>(`/api/v1/community/novenas/${novena.id}`);
       setSelectedFull(data);
     } catch {}
   };
@@ -73,10 +54,7 @@ export default function NowennaPage() {
     setMeditation("");
     setAppState("day");
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/novenas/${novenaId}/day/${day}`
-      );
-      const data = await res.json();
+      const data = await api.get<any>(`/api/v1/community/novenas/${novenaId}/day/${day}`);
       setDayContent(data);
     } catch {}
   };
@@ -84,10 +62,7 @@ export default function NowennaPage() {
   const loadMeditation = async (novenaId: string, day: number) => {
     setLoadingMeditation(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/novenas/${novenaId}/meditation/${day}`
-      );
-      const data = await res.json();
+      const data = await api.get<any>(`/api/v1/community/novenas/${novenaId}/meditation/${day}`);
       setMeditation(data.meditation || "");
     } catch {
       setMeditation("Nie udało się załadować medytacji.");
@@ -100,13 +75,9 @@ export default function NowennaPage() {
     if (!selected || starting) return;
     setStarting(true);
     try {
-      await fetch(
-        `${API}/api/v1/community/novenas/${selected.id}/start?user_id=${userId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intention: intention.trim() || null }),
-        }
+      await api.post(
+        `/api/v1/community/novenas/${selected.id}/start`,
+        { intention: intention.trim() || null }
       );
       await loadMyNovenas();
       setIntention("");
@@ -118,13 +89,9 @@ export default function NowennaPage() {
 
   const completeDay = async (trackingId: string, day: number) => {
     try {
-      await fetch(
-        `${API}/api/v1/community/novenas/tracking/${trackingId}/complete-day?user_id=${userId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ day }),
-        }
+      await api.post(
+        `/api/v1/community/novenas/tracking/${trackingId}/complete-day`,
+        { day }
       );
       await loadMyNovenas();
     } catch {}

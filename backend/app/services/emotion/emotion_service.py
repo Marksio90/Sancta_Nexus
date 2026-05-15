@@ -171,13 +171,11 @@ class EmotionService:
             :class:`EmotionAnalysis` with LLM-derived emotion vector when
             possible, keyword-based otherwise.
         """
-        from app.agents.emotion.emotion_detector import EmotionDetectorAgent
-        from app.agents.emotion.spiritual_state_classifier import SpiritualStateClassifier
-
-        detector = EmotionDetectorAgent()
-        classifier = SpiritualStateClassifier()
-
         try:
+            from app.agents.emotion.emotion_detector import EmotionDetectorAgent
+            from app.agents.emotion.spiritual_state_classifier import SpiritualStateClassifier
+            detector = EmotionDetectorAgent()
+            classifier = SpiritualStateClassifier()
             vector = await detector.detect(text)
         except Exception:
             logger.warning("EmotionDetectorAgent failed; falling back to keywords.")
@@ -238,10 +236,9 @@ class EmotionService:
             text: User message text.
             emotion_vector: Optional pre-computed emotion vector.
         """
-        from app.agents.emotion.crisis_detector import CrisisDetectorAgent
-
-        detector = CrisisDetectorAgent()
         try:
+            from app.agents.emotion.crisis_detector import CrisisDetectorAgent
+            detector = CrisisDetectorAgent()
             result = await detector.check(
                 text, emotion_vector or {}
             )

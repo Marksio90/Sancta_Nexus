@@ -76,24 +76,33 @@ ADVISORY_CATEGORIES: frozenset[RiskCategory] = frozenset(
 # ── Keyword patterns (heuristic, supplemented by LLM classification) ─────────
 
 _CRISIS_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(samobójstwo|suicide|zabić się|kill myself|nie chcę żyć|end my life)\b", re.I),
-    re.compile(r"\b(skrzywdz\w+|przemoc|abuse|hurt myself|self.harm)\b", re.I),
+    # suicidal ideation — Polish inflection + English
+    re.compile(r"\b(samobójstw\w*|samobójcz\w*|suicide\w*)\b", re.I),
+    re.compile(r"\bzabić\s+się\b|\bsię\s+zabić\b|\bkill\s+myself\b", re.I),
+    re.compile(r"\bnie\s+chcę\s+żyć\b|\bend\s+my\s+life\b\bwant\s+to\s+die\b", re.I),
+    re.compile(r"\bself[- ]?harm\w*\b|\bhurt\s+myself\b", re.I),
+    re.compile(r"\b(skrzywdz\w+\s+siebie|przemoc\s+wobec\s+siebie|abuse)\b", re.I),
 ]
 
 _CONFESSION_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(spowied\w+|rozgrzeszenie|absolucja|confession|absolution)\b", re.I),
+    # spowiedź + all Polish inflected forms (wyspowiadać, wyspowiadam, spowiadać…)
+    re.compile(r"\b(spowied\w+|wyspowiad\w+|spowiad\w+|rozgrzeszen\w+|absolucj\w+|confession\w*|absolution\w*)\b", re.I),
 ]
 
 _MORTAL_SIN_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(grzech ciężki|mortal sin|stan łaski|state of grace)\b", re.I),
+    re.compile(r"\bgrzech\s+(ciężki|śmiertelny)\b|\bmortal\s+sin\b|\bstan\s+łaski\b|\bstate\s+of\s+grace\b", re.I),
 ]
 
 _SACRAMENT_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(sakrament\w*|sacrament\w*|eucharystia|communion|bierzmowanie|confirmation)\b", re.I),
+    re.compile(r"\b(sakrament\w*|sacrament\w*|eucharyst\w*|communion|bierzmowani\w*|confirmation)\b", re.I),
 ]
 
 _MEDICAL_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\b(depresja|depression|lęk|anxiety|terapia|therapy|psychiatr\w+|medication)\b", re.I),
+    # Polish inflection: depresję, depresji, terapią, lęku, lękiem…
+    re.compile(r"\bdepresy\w*\b|\bdepresj\w+\b|\bdepression\b", re.I),
+    re.compile(r"\blęk\w*\b|\banxiet\w+\b", re.I),
+    re.compile(r"\bterapi\w+\b|\btherapy\b|\btherapist\b", re.I),
+    re.compile(r"\bpsychiatr\w+\b|\bmedication\b|\bpsycholog\w+\b", re.I),
 ]
 
 

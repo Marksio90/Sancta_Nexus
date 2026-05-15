@@ -17,14 +17,17 @@ SESSION_DATA = {
 }
 
 
+def _make_llm(response_content: str) -> MagicMock:
+    llm = MagicMock()
+    llm.ainvoke = AsyncMock(return_value=MagicMock(content=response_content))
+    return llm
+
+
 async def test_track_returns_expected_keys():
-    mock_response = MagicMock()
-    mock_response.content = "STAGE: illumination\nPROGRESS: 45\nMILESTONE: Regularna modlitwa\nGROWTH: Kontemplacja"
-
-    with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    mock_llm = _make_llm(
+        "STAGE: illumination\nPROGRESS: 45\nMILESTONE: Regularna modlitwa\nGROWTH: Kontemplacja"
+    )
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         tracker = JourneyTrackerAgent()
         result = await tracker.track("user-123", SESSION_DATA)
 
@@ -38,38 +41,28 @@ async def test_track_returns_expected_keys():
 
 
 async def test_track_returns_fallback_on_llm_error():
-    with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
-
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         tracker = JourneyTrackerAgent()
         result = await tracker.track("user-123", SESSION_DATA)
 
-    # Fallback defaults
     assert result["current_stage"] == "purgation"
     assert result["progress_percentage"] == 15
     assert "next_growth_area" in result
 
 
 async def test_track_clamps_progress_percentage():
-    mock_response = MagicMock()
-    mock_response.content = "STAGE: union\nPROGRESS: 999\nMILESTONE: test\nGROWTH: more"
-
-    with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    mock_llm = _make_llm("STAGE: union\nPROGRESS: 999\nMILESTONE: test\nGROWTH: more")
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         tracker = JourneyTrackerAgent()
         result = await tracker.track("user-123", SESSION_DATA)
 
     assert result["progress_percentage"] == 100
 
 
-def test_tracker_uses_settings_model():
-    """JourneyTrackerAgent should use settings.LLM_FAST_MODEL, not hardcoded 'gpt-4o'."""
-    from app.core.config import settings
-    with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
+def test_tracker_uses_llm_factory():
+    mock_llm = MagicMock()
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm) as mock_factory:
         JourneyTrackerAgent()
-        call_kwargs = MockLLM.call_args
-        assert call_kwargs.kwargs.get("model") == settings.LLM_FAST_MODEL or \
-               call_kwargs.args[0] == settings.LLM_FAST_MODEL if call_kwargs.args else True
+        mock_factory.assert_called_once()

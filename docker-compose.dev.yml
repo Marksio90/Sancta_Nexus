@@ -1,0 +1,58 @@
+# Lightweight dev stack — Postgres + Redis only.
+# Use this for local development without Neo4j and Qdrant overhead.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# The app runs outside Docker (uvicorn locally) and connects to these services.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sancta-dev-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sancta
+      POSTGRES_PASSWORD: sancta_dev
+      POSTGRES_DB: sancta_nexus_dev
+    volumes:
+      - dev_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sancta -d sancta_nexus_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: sancta-test-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: sancta
+      POSTGRES_PASSWORD: sancta_test
+      POSTGRES_DB: sancta_nexus_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sancta -d sancta_nexus_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: sancta-dev-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dev_postgres_data:
+    driver: local

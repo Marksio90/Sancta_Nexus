@@ -21,14 +21,15 @@ LLM_RESPONSE = (
 )
 
 
+def _make_llm(response_content: str) -> MagicMock:
+    llm = MagicMock()
+    llm.ainvoke = AsyncMock(return_value=MagicMock(content=response_content))
+    return llm
+
+
 async def test_discover_returns_pattern_list():
-    mock_response = MagicMock()
-    mock_response.content = LLM_RESPONSE
-
-    with patch("app.agents.memory.pattern_discovery.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(return_value=mock_response)
-
+    mock_llm = _make_llm(LLM_RESPONSE)
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         agent = PatternDiscoveryAgent()
         patterns = await agent.discover("user-123", SESSIONS)
 
@@ -40,7 +41,8 @@ async def test_discover_returns_pattern_list():
 
 
 async def test_discover_returns_defaults_when_no_sessions():
-    with patch("app.agents.memory.pattern_discovery.ChatOpenAI"):
+    mock_llm = MagicMock()
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         agent = PatternDiscoveryAgent()
         patterns = await agent.discover("user-123", sessions=None)
 
@@ -50,10 +52,9 @@ async def test_discover_returns_defaults_when_no_sessions():
 
 
 async def test_discover_returns_defaults_on_llm_error():
-    with patch("app.agents.memory.pattern_discovery.ChatOpenAI") as MockLLM:
-        instance = MockLLM.return_value
-        instance.ainvoke = AsyncMock(side_effect=RuntimeError("timeout"))
-
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("timeout"))
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
         agent = PatternDiscoveryAgent()
         patterns = await agent.discover("user-123", SESSIONS)
 
@@ -61,14 +62,8 @@ async def test_discover_returns_defaults_on_llm_error():
     assert len(patterns) >= 1
 
 
-def test_pattern_discovery_uses_settings_model():
-    from app.core.config import settings
-    with patch("app.agents.memory.pattern_discovery.ChatOpenAI") as MockLLM:
+def test_pattern_discovery_uses_llm_factory():
+    mock_llm = MagicMock()
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm) as mock_factory:
         PatternDiscoveryAgent()
-        call_kwargs = MockLLM.call_args
-        used_model = (
-            call_kwargs.kwargs.get("model")
-            if call_kwargs.kwargs
-            else (call_kwargs.args[0] if call_kwargs.args else None)
-        )
-        assert used_model == settings.LLM_FAST_MODEL
+        mock_factory.assert_called_once()

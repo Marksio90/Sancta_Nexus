@@ -105,7 +105,6 @@ class EmotionInputRequest(BaseModel):
     """Request body for submitting emotion data during a session."""
 
     session_id: str
-    user_id: str
     text: str | None = None
     audio_url: str | None = None
 
@@ -164,7 +163,6 @@ class RunPipelineRequest(BaseModel):
     """Request body for running the full Lectio Divina AI pipeline."""
 
     emotion_text: str
-    user_id: str = "anonymous"
     tradition: str = ""
 
 
@@ -340,7 +338,11 @@ async def complete_session(
 
 
 @router.post("/emotion", response_model=EmotionResponse)
-async def analyze_emotion(request: EmotionInputRequest, redis: RedisDep) -> EmotionResponse:
+async def analyze_emotion(
+    request: EmotionInputRequest,
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> EmotionResponse:
     """Analyse emotion input (text or audio) within a session.
 
     Returns the detected emotion vector, spiritual state and
@@ -380,7 +382,7 @@ async def analyze_emotion(request: EmotionInputRequest, redis: RedisDep) -> Emot
     # Get suggested scripture
     matcher = ScriptureMatcher()
     context = MatchContext(
-        user_id=request.user_id,
+        user_id=current_user.id,
         liturgical_season=session.get("scripture", {}).get("season"),
     )
     matches = matcher.match(analysis.vector, context)
@@ -497,8 +499,12 @@ _JOURNEY_CACHE_TTL = 3_600   # 1 hour
 _PATTERNS_CACHE_TTL = 3_600  # 1 hour
 
 
-@router.get("/journey/{user_id}")
-async def get_spiritual_journey(user_id: str, redis: RedisDep) -> dict[str, Any]:
+@router.get("/journey/me")
+async def get_spiritual_journey(
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> dict[str, Any]:
+    user_id = current_user.id
     """Return the user's current spiritual journey stage via JourneyTrackerAgent (A-036).
 
     Analyses all stored sessions for the user and returns purgation /
@@ -545,8 +551,12 @@ async def get_spiritual_journey(user_id: str, redis: RedisDep) -> dict[str, Any]
     return journey
 
 
-@router.get("/patterns/{user_id}")
-async def get_spiritual_patterns(user_id: str, redis: RedisDep) -> list[dict[str, Any]]:
+@router.get("/patterns/me")
+async def get_spiritual_patterns(
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> list[dict[str, Any]]:
+    user_id = current_user.id
     """Discover recurring spiritual patterns via PatternDiscoveryAgent (A-037).
 
     Analyses session history (up to last 30 sessions) to identify
@@ -594,8 +604,12 @@ async def get_spiritual_patterns(user_id: str, redis: RedisDep) -> list[dict[str
     return patterns
 
 
-@router.get("/history/{user_id}", response_model=list[SessionHistoryItem])
-async def get_session_history(user_id: str, redis: RedisDep) -> list[SessionHistoryItem]:
+@router.get("/history/me", response_model=list[SessionHistoryItem])
+async def get_session_history(
+    redis: RedisDep,
+    current_user: User = require_authenticated,
+) -> list[SessionHistoryItem]:
+    user_id = current_user.id
     """Get session history for a user."""
     store = SessionStore(redis, namespace="lectio")
     user_sessions = await store.list_by_user(user_id)
@@ -615,7 +629,10 @@ async def get_session_history(user_id: str, redis: RedisDep) -> list[SessionHist
 
 
 @router.post("/run", response_model=RunPipelineResponse)
-async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineResponse:
+async def run_lectio_pipeline(
+    request: RunPipelineRequest,
+    current_user: User = require_authenticated,
+) -> RunPipelineResponse:
     """Run the full Lectio Divina AI pipeline for a given emotion text.
 
     Executes the complete LangGraph flow:
@@ -628,7 +645,7 @@ async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineRespons
     from app.agents.lectio_divina.lectio_divina_graph import run_session
 
     result = await run_session(
-        user_id=request.user_id,
+        user_id=current_user.id,
         raw_input=request.emotion_text,
         tradition=request.tradition,
     )
@@ -647,10 +664,10 @@ async def run_lectio_pipeline(request: RunPipelineRequest) -> RunPipelineRespons
             "scripture": (result.get("scripture") or {}).get("text", ""),
         }
         tracker = JourneyTrackerAgent()
-        journey = await tracker.track(request.user_id, session_data)
+        journey = await tracker.track(current_user.id, session_data)
         logger.info(
             "JourneyTrackerAgent (A-036): user=%s stage=%s progress=%s%%",
-            request.user_id,
+            current_user.id,
             journey.get("current_stage"),
             journey.get("progress_percentage"),
         )

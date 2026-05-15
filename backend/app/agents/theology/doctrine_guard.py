@@ -15,7 +15,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
@@ -180,23 +179,12 @@ class DoctrineGuardAgent:
     def __init__(
         self,
         *,
-        model: str = "gpt-4o",
         temperature: float = 0.1,
         max_tokens: int = 2048,
         dogmas: list[dict[str, str]] | None = None,
     ) -> None:
-        """
-        Args:
-            model: OpenAI model identifier.
-            temperature: Low temperature for consistent classification.
-            max_tokens: Maximum tokens for response.
-            dogmas: Optional custom list of dogmas; defaults to the canonical 47.
-        """
-        self._llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        from app.core.llm import get_llm
+        self._llm = get_llm(temperature=temperature, max_tokens=max_tokens)
         self._dogmas = dogmas or DOGMAS
 
     async def guard(self, content: str) -> dict[str, Any]:
