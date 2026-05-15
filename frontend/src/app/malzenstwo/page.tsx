@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 const SESSION_ICONS = ["⛪", "❤", "🗣", "🌸", "👶", "🙏", "📱", "🗺"];
 
@@ -25,8 +24,7 @@ export default function MalzenstwoPage() {
     if (programLoaded) return;
     setAppState("loading");
     try {
-      const res = await fetch(`${API}/api/v1/sacraments/marriage/program`);
-      const data = await res.json();
+      const data = await api.get<{ sessions: any[] }>("/api/v1/sacraments/marriage/program");
       setProgram(data.sessions || []);
       setProgramLoaded(true);
     } catch {
@@ -61,19 +59,14 @@ export default function MalzenstwoPage() {
     setMessages(newMessages);
 
     try {
-      const res = await fetch(`${API}/api/v1/sacraments/marriage/discuss`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          session_id: selectedSession?.session_id,
-          conversation_history: newMessages.slice(-6).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const data = await api.post<{ response?: string }>("/api/v1/sacraments/marriage/discuss", {
+        message: userMsg,
+        session_id: selectedSession?.session_id,
+        conversation_history: newMessages.slice(-6).map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
-      const data = await res.json();
       setMessages([
         ...newMessages,
         { role: "assistant", content: data.response || "..." },
@@ -96,10 +89,9 @@ export default function MalzenstwoPage() {
     setLoadingReflection(true);
     setAppState("reflection");
     try {
-      const res = await fetch(
-        `${API}/api/v1/sacraments/marriage/reflection/${selectedSession.session_id}`
+      const data = await api.get<{ reflection?: string }>(
+        `/api/v1/sacraments/marriage/reflection/${selectedSession.session_id}`
       );
-      const data = await res.json();
       setReflection(data.reflection || "");
     } catch {
       setReflection("Nie udało się załadować refleksji.");

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 type AppState = "list" | "session" | "gifts" | "patron" | "chat";
 
@@ -34,8 +33,7 @@ export default function BierzmowaniePage() {
   const [loadingPatron, setLoadingPatron] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sacraments/confirmation/program`)
-      .then((r) => r.json())
+    api.get<{ sessions: any[]; gifts_of_spirit: any[] }>("/api/v1/sacraments/confirmation/program")
       .then((d) => {
         setProgram(d.sessions || []);
         setGifts(d.gifts_of_spirit || []);
@@ -64,19 +62,14 @@ export default function BierzmowaniePage() {
     setMessages(newMessages);
 
     try {
-      const res = await fetch(`${API}/api/v1/sacraments/confirmation/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: userMsg,
-          session_id: selectedSession?.session_id,
-          conversation_history: newMessages.slice(-6).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const data = await api.post<{ answer?: string }>("/api/v1/sacraments/confirmation/ask", {
+        question: userMsg,
+        session_id: selectedSession?.session_id,
+        conversation_history: newMessages.slice(-6).map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
-      const data = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.answer || "..." }]);
     } catch {
       setMessages([...newMessages, { role: "assistant", content: "Błąd połączenia." }]);
@@ -88,21 +81,10 @@ export default function BierzmowaniePage() {
   const findPatron = async () => {
     setLoadingPatron(true);
     try {
-      const res = await fetch(`${API}/api/v1/sacraments/confirmation/patron`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          interests: interests
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          personal_traits: traits
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-        }),
+      const data = await api.post<{ suggestions?: string }>("/api/v1/sacraments/confirmation/patron", {
+        interests: interests.split(",").map((s) => s.trim()).filter(Boolean),
+        personal_traits: traits.split(",").map((s) => s.trim()).filter(Boolean),
       });
-      const data = await res.json();
       setPatronSuggestions(data.suggestions || "");
     } catch {
       setPatronSuggestions("Nie udało się załadować propozycji.");

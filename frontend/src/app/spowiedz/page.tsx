@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 const STATES = [
   { value: "single", label: "Osoba wolna" },
@@ -53,14 +52,10 @@ export default function SpowiedzPage() {
   const loadOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const [cmdRes, stateRes] = await Promise.all([
-        fetch(`${API}/api/v1/sacraments/confession/commandments`),
-        fetch(
-          `${API}/api/v1/sacraments/confession/state-questions/${stateOfLife}`
-        ),
+      const [cmdData, stateData] = await Promise.all([
+        api.get<{ commandments: any[] }>("/api/v1/sacraments/confession/commandments"),
+        api.get<{ questions: string[] }>(`/api/v1/sacraments/confession/state-questions/${stateOfLife}`),
       ]);
-      const cmdData = await cmdRes.json();
-      const stateData = await stateRes.json();
       setCommandments(cmdData.commandments || []);
       setStateQuestions(stateData.questions || []);
       setStage("overview");
@@ -81,11 +76,15 @@ export default function SpowiedzPage() {
       setStage("reflection");
 
       try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const res = await fetch(
-          `${API}/api/v1/sacraments/confession/reflection/stream`,
+          "/api/v1/sacraments/confession/reflection/stream",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({
               commandment_number: commandmentNumber,
               state_of_life: stateOfLife,
@@ -124,15 +123,10 @@ export default function SpowiedzPage() {
   const generateContrition = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/sacraments/confession/act-of-contrition`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state_of_life: stateOfLife }),
-        }
+      const data = await api.post<{ act_of_contrition?: string }>(
+        "/api/v1/sacraments/confession/act-of-contrition",
+        { state_of_life: stateOfLife }
       );
-      const data = await res.json();
       setContritionText(data.act_of_contrition || "");
       setStage("contrition");
     } catch {
@@ -147,18 +141,10 @@ export default function SpowiedzPage() {
     if (!focusArea.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/sacraments/confession/resolution`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            focus_area: focusArea,
-            state_of_life: stateOfLife,
-          }),
-        }
+      const data = await api.post<{ resolution?: string }>(
+        "/api/v1/sacraments/confession/resolution",
+        { focus_area: focusArea, state_of_life: stateOfLife }
       );
-      const data = await res.json();
       setResolutionText(data.resolution || "");
       setStage("resolution");
     } catch {

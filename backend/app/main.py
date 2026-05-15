@@ -18,6 +18,63 @@ from app.middleware.timing import TimingMiddleware
 logger = logging.getLogger(__name__)
 
 
+# ── Background scheduler ──────────────────────────────────────────────────────
+
+
+def _build_scheduler():
+    """Buduje APScheduler z cron-jobami platformy.
+
+    Importowany leniwie żeby serwer startował nawet bez apscheduler w środowisku.
+    Zwraca None jeśli apscheduler nie jest zainstalowany.
+    """
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+    except ImportError:
+        logger.warning("apscheduler not installed — cron jobs disabled. Run: pip install apscheduler")
+        return None
+
+    scheduler = AsyncIOScheduler(timezone="Europe/Warsaw")
+
+    async def _morning_push_job() -> None:
+        try:
+            from app.api.routes.notifications import send_morning_notifications
+            result = await send_morning_notifications()
+            logger.info("Morning push sent: %s", result)
+        except Exception as exc:
+            logger.error("Morning push job failed: %s", exc)
+
+    async def _prefetch_tomorrow_scripture() -> None:
+        try:
+            from datetime import date, timedelta
+            from app.services.scripture.saints_calendar import get_saint_today
+            tomorrow = date.today() + timedelta(days=1)
+            saint = get_saint_today(tomorrow)
+            logger.info("Pre-fetched tomorrow's saint: %s", saint["name"])
+        except Exception as exc:
+            logger.error("Scripture prefetch job failed: %s", exc)
+
+    # Poranne powiadomienia — codziennie o 07:00 Warsaw
+    scheduler.add_job(
+        _morning_push_job,
+        trigger=CronTrigger(hour=7, minute=0, timezone="Europe/Warsaw"),
+        id="morning_push",
+        name="Poranne powiadomienia z patronem dnia",
+        replace_existing=True,
+    )
+
+    # Pre-fetch jutrzejszej liturgii — codziennie o 23:30 Warsaw
+    scheduler.add_job(
+        _prefetch_tomorrow_scripture,
+        trigger=CronTrigger(hour=23, minute=30, timezone="Europe/Warsaw"),
+        id="prefetch_scripture",
+        name="Pre-fetch jutrzejszej liturgii",
+        replace_existing=True,
+    )
+
+    return scheduler
+
+
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 
 
@@ -40,7 +97,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         logger.info("Database tables verified / created")
     except Exception as exc:
         logger.warning("Could not create tables (will retry on first request): %s", exc)
+
+    # Start background scheduler (cron jobs)
+    scheduler = _build_scheduler()
+    if scheduler is not None:
+        scheduler.start()
+        logger.info("Background scheduler started (2 jobs: morning push + scripture prefetch)")
+
     yield
+
+    # Graceful shutdown
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
+        logger.info("Background scheduler stopped")
     logger.info("Shutting down -- releasing infrastructure connections")
     await close_all_connections()
 

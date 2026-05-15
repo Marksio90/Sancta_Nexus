@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -89,15 +90,12 @@ const SEARCH_HINTS = [
   "Ps 23",
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 /* ── API helpers ───────────────────────────────────────────────────────── */
 
 async function searchBible(query: string): Promise<SearchResult[]> {
-  const params = new URLSearchParams({ q: query, limit: "15" });
-  const res = await fetch(`${API_BASE}/api/v1/bible/search?${params}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
+  const data = await api.get<{ results?: SearchResult[] }>(
+    `/api/v1/bible/search?q=${encodeURIComponent(query)}&limit=15`
+  );
   return data.results ?? [];
 }
 
@@ -105,19 +103,18 @@ async function analyzePassage(
   reference: string,
   originalQuery: string
 ): Promise<AnalysisResult> {
-  const res = await fetch(`${API_BASE}/api/v1/bible/ask`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question: `${reference} — ${originalQuery}`,
-      translation: "BT",
-      include_magisterium: true,
-      include_patristic: true,
-      max_passages: 5,
-    }),
+  const data = await api.post<{
+    literal_sense?: string;
+    allegorical_sense?: string;
+    moral_sense?: string;
+    anagogical_sense?: string;
+  }>("/api/v1/bible/ask", {
+    question: `${reference} — ${originalQuery}`,
+    translation: "BT",
+    include_magisterium: true,
+    include_patristic: true,
+    max_passages: 5,
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
   return {
     teologiczny: data.literal_sense || "Analiza niedostępna.",
     historyczny: data.allegorical_sense || "Analiza niedostępna.",

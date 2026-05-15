@@ -11,9 +11,8 @@ import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 import { AmbientPlayer } from "@/components/voice/AmbientPlayer";
 import { useLectioStore } from "@/stores/lectio";
 import { useProgressStore } from "@/stores/progress";
+import { api } from "@/lib/api";
 import type { LectioDivinaStage } from "@/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface LiturgicalContext {
   season: string;
@@ -24,10 +23,10 @@ interface LiturgicalContext {
 async function fetchLiturgicalContext(): Promise<LiturgicalContext | null> {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const res = await fetch(`${API_BASE}/api/v1/lectio-divina/scripture/${today}`);
-    if (res.ok) return res.json();
-  } catch { /* backend offline */ }
-  return null;
+    return await api.get<LiturgicalContext>(`/api/v1/lectio-divina/scripture/${today}`);
+  } catch {
+    return null;
+  }
 }
 
 const STAGES: LectioDivinaStage[] = [

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 const CATEGORY_META: Record<string, { icon: string; color: string }> = {
   rodziny: { icon: "👨‍👩‍👧", color: "from-rose-900/40 to-rose-800/20" },
@@ -51,10 +50,9 @@ export default function GrupyPage() {
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/groups?category=${category}`
+      const data = await api.get<{ groups: any[] }>(
+        `/api/v1/community/groups?category=${category}`
       );
-      const data = await res.json();
       setGroups(data.groups || []);
     } catch {
       setGroups([]);
@@ -69,14 +67,10 @@ export default function GrupyPage() {
 
   const join = async (groupId: string) => {
     if (joinedIds.has(groupId)) return;
-    // Simulate user_id — in production use real auth token
-    const userId = "guest-" + Math.random().toString(36).slice(2, 8);
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/groups/${groupId}/join?user_id=${userId}`,
-        { method: "POST" }
+      const data = await api.post<{ joined?: boolean }>(
+        `/api/v1/community/groups/${groupId}/join`, {}
       );
-      const data = await res.json();
       if (data.joined !== false) {
         setJoinedIds((prev) => new Set([...prev, groupId]));
         setGroups((prev) =>
@@ -92,16 +86,12 @@ export default function GrupyPage() {
     if (!name.trim() || creating) return;
     setCreating(true);
     try {
-      await fetch(`${API}/api/v1/community/groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || null,
-          category: newCategory,
-          schedule: schedule.trim() || null,
-          parish: parish.trim() || null,
-        }),
+      await api.post("/api/v1/community/groups", {
+        name: name.trim(),
+        description: description.trim() || null,
+        category: newCategory,
+        schedule: schedule.trim() || null,
+        parish: parish.trim() || null,
       });
       setCreated(true);
       setTimeout(() => {

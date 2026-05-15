@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRosarySocket } from "@/hooks/useRosarySocket";
 import { PremiumAudioButton } from "@/components/AudioPlayer";
 import { useBillingStore } from "@/stores/billing";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 type MysteryType = "radosne" | "bolesne" | "chwalebne" | "swietlne";
 type AppState = "menu" | "mysteries" | "decade" | "community" | "live";
@@ -42,8 +41,7 @@ export default function RozaniecPage() {
   useEffect(() => { fetchBilling(); }, [fetchBilling]);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/community/rosary/mysteries`)
-      .then((r) => r.json())
+    api.get<{ mystery_types: any; today: string }>("/api/v1/community/rosary/mysteries")
       .then((d) => {
         setAllData(d.mystery_types);
         const today = d.today as MysteryType;
@@ -56,8 +54,7 @@ export default function RozaniecPage() {
 
   const loadCommunity = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/v1/community/rosary/community`);
-      const data = await res.json();
+      const data = await api.get<{ sessions: any[] }>("/api/v1/community/rosary/community");
       setCommunitySessions(data.sessions || []);
     } catch {}
   }, []);
@@ -78,9 +75,13 @@ export default function RozaniecPage() {
     setStreamingMeditation(true);
 
     try {
-      const res = await fetch(`${API}/api/v1/community/rosary/meditate/stream`, {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch("/api/v1/community/rosary/meditate/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ mystery_type: mysteryType, mystery_number: mysteryNum }),
         signal: ctrl.signal,
       });
@@ -117,10 +118,9 @@ export default function RozaniecPage() {
   const createSession = async () => {
     setCreatingSession(true);
     try {
-      await fetch(`${API}/api/v1/community/rosary/community`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mystery_type: selectedType, intention: newIntention || null }),
+      await api.post("/api/v1/community/rosary/community", {
+        mystery_type: selectedType,
+        intention: newIntention || null,
       });
       setNewIntention("");
       await loadCommunity();
@@ -131,7 +131,7 @@ export default function RozaniecPage() {
 
   const joinSession = async (session: any) => {
     try {
-      await fetch(`${API}/api/v1/community/rosary/community/${session.id}/join`, { method: "POST" });
+      await api.post(`/api/v1/community/rosary/community/${session.id}/join`, {});
     } catch {}
     setActiveMysteryType(session.mystery_type as MysteryType);
     setActiveSessionId(session.id);

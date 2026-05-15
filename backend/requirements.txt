@@ -41,3 +41,6 @@ pywebpush>=2.0.0
 # Lightweight numerical (no torch required)
 numpy>=1.26.0
 stripe>=7.0.0
+
+# Task scheduling (cron-like background jobs)
+apscheduler>=3.10.0
