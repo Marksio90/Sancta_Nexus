@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { api } from "@/lib/api";
 
 export interface JourneyData {
   current_stage: string;
@@ -53,14 +54,11 @@ export const useInsightsStore = create<InsightsState>((set) => ({
   fetch: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await fetch("/api/v1/journal/insights", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: InsightsData = await res.json();
+      const data = await api.get<InsightsData>("/api/v1/journal/insights");
       set({ data, loading: false });
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : "Błąd pobierania analizy", loading: false });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Błąd pobierania analizy";
+      set({ error: msg, loading: false });
     }
   },
 }));
