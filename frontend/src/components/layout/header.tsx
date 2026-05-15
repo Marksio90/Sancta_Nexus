@@ -3,16 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Sparkles, LogIn, LogOut, User } from "lucide-react";
+import { Menu, X, Sparkles, LogIn, User } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 
 const NAV_LINKS = [
+  { href: "/dzisiaj", label: "Dzisiaj" },
   { href: "/lectio-divina", label: "Lectio Divina" },
-  { href: "/bible", label: "Biblia" },
-  { href: "/breviary", label: "Brewiarz" },
-  { href: "/asystent-refleksji", label: "Asystent refleksji" },
+  { href: "/rozaniec", label: "Różaniec" },
   { href: "/dziennik", label: "Dziennik" },
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/cennik", label: "Premium" },
 ];
 
 export function Header() {
@@ -61,17 +60,13 @@ export function Header() {
           <div className="ml-2 flex items-center gap-2 border-l border-[--color-sacred-border] pl-3">
             {isAuthenticated && user ? (
               <>
-                <span className="flex items-center gap-1.5 text-sm text-[--color-parchment]">
+                <Link
+                  href="/konto"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-[--color-parchment] hover:bg-[--color-sacred-surface] transition-all"
+                >
                   <User className="h-4 w-4 text-[--color-gold]" />
                   {user.displayName}
-                </span>
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-[--color-sacred-text-muted] transition-all hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Wyloguj
-                </button>
+                </Link>
               </>
             ) : (
               <>
@@ -137,20 +132,14 @@ export function Header() {
             <div className="mt-2 border-t border-[--color-sacred-border] pt-3">
               {isAuthenticated && user ? (
                 <>
-                  <div className="flex items-center gap-2 px-4 py-2 text-sm text-[--color-parchment]">
-                    <User className="h-4 w-4 text-[--color-gold]" />
-                    {user.displayName}
-                  </div>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm text-[--color-sacred-text-muted] transition-all hover:bg-[--color-sacred-surface] hover:text-[--color-parchment]"
+                  <Link
+                    href="/konto"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm text-[--color-parchment] hover:bg-[--color-sacred-surface] transition-all"
                   >
-                    <LogOut className="h-4 w-4" />
-                    Wyloguj
-                  </button>
+                    <User className="h-4 w-4 text-[--color-gold]" />
+                    {user.displayName} — Moje konto
+                  </Link>
                 </>
               ) : (
                 <>

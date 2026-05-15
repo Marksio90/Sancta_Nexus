@@ -34,7 +34,7 @@ export default function RegisterPage() {
     try {
       await register(email, password, displayName);
       toast.success("Konto utworzone pomyślnie");
-      router.push("/dashboard");
+      router.push("/onboarding");
     } catch {
       toast.error("Nie udało się utworzyć konta");
     }
