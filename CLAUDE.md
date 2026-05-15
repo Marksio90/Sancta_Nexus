@@ -42,7 +42,7 @@ docker compose -f ../docker-compose.dev.yml up -d
 # Run the API server
 uvicorn app.main:app --reload --port 8000
 
-# All unit tests — 1276 tests, ~2s (skip rbac test — broken cffi in local env)
+# All unit tests — 1346 tests, ~2s (skip rbac test — broken cffi in local env)
 python -m pytest tests/unit/ -q --ignore=tests/unit/test_rbac.py
 
 # Single test file
