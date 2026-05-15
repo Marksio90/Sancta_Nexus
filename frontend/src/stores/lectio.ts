@@ -22,10 +22,10 @@ interface LectioState {
 
 interface LectioActions {
   generateSession: (emotionText: string, tradition?: string) => Promise<void>;
-  startSession: (userId: string, tradition: SpiritualTradition) => Promise<void>;
+  startSession: (tradition: SpiritualTradition) => Promise<void>;
   analyzeEmotion: (text: string, sessionId?: string) => Promise<EmotionAnalysis>;
   submitReflection: (stage: LectioDivinaStage, text: string, sessionId: string) => Promise<void>;
-  getHistory: (userId: string) => Promise<void>;
+  getHistory: () => Promise<void>;
   clearError: () => void;
   resetSession: () => void;
 }
@@ -116,7 +116,7 @@ function mapPipelineResult(data: Record<string, any>, emotionText: string): Lect
   };
 }
 
-export const useLectioStore = create<LectioState & LectioActions>((set, get) => ({
+export const useLectioStore = create<LectioState & LectioActions>((set) => ({
   currentSession: null,
   emotionAnalysis: null,
   history: [],
@@ -128,13 +128,12 @@ export const useLectioStore = create<LectioState & LectioActions>((set, get) => 
     try {
       const data = await api.post<Record<string, unknown>>(
         "/api/v1/lectio-divina/run",
-        { emotion_text: emotionText, tradition, user_id: "anonymous" }
+        { emotion_text: emotionText, tradition }
       );
       if (data.error) throw new Error(data.error as string);
       const session = mapPipelineResult(data as Record<string, unknown>, emotionText);
       set({ currentSession: session, isLoading: false });
     } catch (err) {
-      // Pipeline unavailable — clear session so page falls back to mock data
       set({
         currentSession: null,
         isLoading: false,
@@ -143,12 +142,12 @@ export const useLectioStore = create<LectioState & LectioActions>((set, get) => 
     }
   },
 
-  startSession: async (userId: string, tradition: SpiritualTradition) => {
+  startSession: async (tradition: SpiritualTradition) => {
     set({ isLoading: true, error: null });
     try {
       const session = await api.post<LectioDivinaSession>(
         "/api/v1/lectio-divina/session",
-        { user_id: userId, tradition }
+        { tradition }
       );
       set({ currentSession: session, isLoading: false, emotionAnalysis: null });
     } catch (err) {
@@ -164,7 +163,7 @@ export const useLectioStore = create<LectioState & LectioActions>((set, get) => 
     try {
       const analysis = await api.post<EmotionAnalysis>(
         "/api/v1/lectio-divina/emotion",
-        { text, session_id: sessionId, user_id: "anonymous" }
+        { text, session_id: sessionId }
       );
       set({ emotionAnalysis: analysis, isLoading: false });
       return analysis;
@@ -182,7 +181,7 @@ export const useLectioStore = create<LectioState & LectioActions>((set, get) => 
     try {
       await api.post(
         "/api/v1/lectio-divina/reflection",
-        { session_id: sessionId, user_id: "anonymous", stage, reflection_text: text }
+        { session_id: sessionId, stage, reflection_text: text }
       );
       set({ isLoading: false });
     } catch (err) {
@@ -193,11 +192,11 @@ export const useLectioStore = create<LectioState & LectioActions>((set, get) => 
     }
   },
 
-  getHistory: async (userId: string) => {
+  getHistory: async () => {
     set({ isLoading: true, error: null });
     try {
       const history = await api.get<LectioDivinaSession[]>(
-        `/api/v1/lectio-divina/history/${userId}`
+        "/api/v1/lectio-divina/history/me"
       );
       set({ history, isLoading: false });
     } catch (err) {
