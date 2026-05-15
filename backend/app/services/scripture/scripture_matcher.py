@@ -18,6 +18,67 @@ from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Static fallback corpus — used when Qdrant is unavailable
+# Curated passages mapped to primary spiritual/emotional categories
+# ---------------------------------------------------------------------------
+
+_FALLBACK_CORPUS: list[dict] = [
+    # joy / gratitude / consolation
+    {"book": "Flp", "chapter": 4, "verse": 4, "content": "Radujcie się zawsze w Panu; jeszcze raz powtarzam: radujcie się!", "emotion_tags": ["joy", "gratitude", "consolation"]},
+    {"book": "Ps", "chapter": 34, "verse": 9, "content": "Skosztujcie i zobaczcie, jak dobry jest Pan; szczęśliwy człowiek, który się do Niego ucieka.", "emotion_tags": ["joy", "trust", "hope", "consolation"]},
+    {"book": "Rz", "chapter": 8, "verse": 28, "content": "Wiemy też, że Bóg z tymi, którzy Go miłują, współdziała we wszystkim dla ich dobra.", "emotion_tags": ["hope", "trust", "consolation", "gratitude"]},
+    {"book": "1 Tes", "chapter": 5, "verse": 18, "content": "W każdym położeniu dziękujcie, taka jest bowiem wola Boża w Jezusie Chrystusie względem was.", "emotion_tags": ["gratitude", "joy", "consolation"]},
+    # sadness / desolation / grief
+    {"book": "Ps", "chapter": 34, "verse": 19, "content": "Pan jest blisko ludzi ze złamanym sercem i ocala tych, których duch jest zgnębiony.", "emotion_tags": ["sadness", "grief", "loneliness", "desolation"]},
+    {"book": "Mt", "chapter": 5, "verse": 4, "content": "Błogosławieni, którzy się smucą, albowiem oni będą pocieszeni.", "emotion_tags": ["sadness", "grief", "desolation"]},
+    {"book": "Ps", "chapter": 22, "verse": 25, "content": "Bo On nie gardzi ani się nie brzydzi nędzą biedaka, ani nie ukrywa przed nim swego oblicza, ale wysłuchuje go, gdy ten woła do Niego.", "emotion_tags": ["sadness", "loneliness", "desolation", "dark_night"]},
+    {"book": "Lm", "chapter": 3, "verse": 25, "content": "Dobry jest Pan dla tych, co w Nim ufają, dla duszy, która Go szuka.", "emotion_tags": ["sadness", "desolation", "seeking", "hope"]},
+    # fear / anxiety
+    {"book": "Iz", "chapter": 41, "verse": 10, "content": "Nie lękaj się, bo Ja jestem z tobą; nie trwóż się, bom Ja twoim Bogiem.", "emotion_tags": ["fear", "anxiety", "dread"]},
+    {"book": "J", "chapter": 14, "verse": 27, "content": "Pokój zostawiam wam, pokój mój daję wam. Nie tak jak daje świat, Ja wam daję. Niech się nie trwoży serce wasze ani się lęka.", "emotion_tags": ["fear", "anxiety", "peace", "serenity"]},
+    {"book": "Flp", "chapter": 4, "verse": 7, "content": "A pokój Boży, który przewyższa wszelki umysł, będzie strzegł waszych serc i myśli w Chrystusie Jezusie.", "emotion_tags": ["anxiety", "fear", "peace", "serenity"]},
+    {"book": "Ps", "chapter": 23, "verse": 4, "content": "Chociażby chodził ciemną doliną, zła się nie ulęknę, bo Ty jesteś ze mną.", "emotion_tags": ["fear", "dark_night", "trust", "consolation"]},
+    # guilt / shame / remorse
+    {"book": "1 J", "chapter": 1, "verse": 9, "content": "Jeśli wyznajemy nasze grzechy, Bóg jest wierny i sprawiedliwy, aby nam przebaczyć grzechy.", "emotion_tags": ["guilt", "shame", "remorse"]},
+    {"book": "Rz", "chapter": 8, "verse": 1, "content": "Teraz jednak dla tych, którzy są w Chrystusie Jezusie, nie ma już potępienia.", "emotion_tags": ["guilt", "shame", "remorse", "forgiveness"]},
+    {"book": "Iz", "chapter": 43, "verse": 25, "content": "Ja, jedynie Ja, przekreślam twe przestępstwa przez wzgląd na siebie i nie wspominam twoich grzechów.", "emotion_tags": ["guilt", "remorse", "forgiveness"]},
+    {"book": "Łk", "chapter": 15, "verse": 20, "content": "Jeszcze był daleko, gdy ojciec go ujrzał i wzruszył się głęboko; wybiegł naprzeciw niego, rzucił mu się na szyję i ucałował go.", "emotion_tags": ["guilt", "remorse", "forgiveness", "love"]},
+    # longing / seeking
+    {"book": "Ps", "chapter": 42, "verse": 2, "content": "Jak łania pragnie wody ze strumieni, tak dusza moja pragnie Ciebie, Boże.", "emotion_tags": ["longing", "seeking", "awe", "reverence"]},
+    {"book": "Mt", "chapter": 7, "verse": 7, "content": "Proście, a będzie wam dane; szukajcie, a znajdziecie; kołaczcie, a otworzą wam.", "emotion_tags": ["longing", "hope", "seeking", "trust"]},
+    {"book": "Ap", "chapter": 3, "verse": 20, "content": "Oto stoję u drzwi i kołaczę: jeśli kto posłyszy mój głos i drzwi otworzy, wejdę do niego i będę z nim wieczerzał, a on ze Mną.", "emotion_tags": ["longing", "seeking", "love", "consolation"]},
+    # peace / serenity / contemplation
+    {"book": "J", "chapter": 15, "verse": 5, "content": "Ja jestem krzewem winnym, wy - latoroślami. Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity.", "emotion_tags": ["peace", "serenity", "consolation", "love"]},
+    {"book": "Mt", "chapter": 11, "verse": 28, "content": "Przyjdźcie do Mnie wszyscy, którzy utrudzeni i obciążeni jesteście, a Ja was pokrzepię.", "emotion_tags": ["peace", "serenity", "sadness", "exhaustion"]},
+    {"book": "Ps", "chapter": 46, "verse": 11, "content": "Zatrzymajcie się i wiedzcie, że Ja jestem Bogiem.", "emotion_tags": ["peace", "serenity", "awe", "contemplation"]},
+    {"book": "Ps", "chapter": 131, "verse": 2, "content": "Spokojne i ciche jest moje serce, jak niemowlę u matki swojej, jak niemowlę — takie jest moje serce.", "emotion_tags": ["peace", "serenity", "consolation", "humility"]},
+    # love / compassion
+    {"book": "J", "chapter": 3, "verse": 16, "content": "Tak bowiem Bóg umiłował świat, że Syna swego Jednorodzonego dał.", "emotion_tags": ["love", "awe", "gratitude", "consolation"]},
+    {"book": "Rz", "chapter": 8, "verse": 38, "content": "I jestem pewien, że ani śmierć, ani życie, ani aniołowie... nie zdoła nas odłączyć od miłości Boga.", "emotion_tags": ["love", "consolation", "fear", "hope"]},
+    {"book": "1 Kor", "chapter": 13, "verse": 8, "content": "Miłość nigdy nie ustaje.", "emotion_tags": ["love", "hope", "consolation"]},
+    # hope / dark night
+    {"book": "Jr", "chapter": 29, "verse": 11, "content": "Bo Ja wiem, jakie mam względem was zamiary — mówi Pan — zamiary pełne pokoju, a nie zguby, by zapewnić wam przyszłość i nadzieję.", "emotion_tags": ["hope", "desolation", "dark_night", "seeking"]},
+    {"book": "Rz", "chapter": 5, "verse": 5, "content": "A nadzieja nie hańbi, bo miłość Boża rozlana jest w sercach naszych przez Ducha Świętego.", "emotion_tags": ["hope", "love", "consolation"]},
+    {"book": "Iz", "chapter": 40, "verse": 31, "content": "Lecz ci, co zaufali Panu, odzyskują siły, otrzymują skrzydła jak orły.", "emotion_tags": ["hope", "desolation", "dark_night", "trust"]},
+    # doubt / confusion
+    {"book": "Mk", "chapter": 9, "verse": 24, "content": "Wierzę, zaradź memu niedowiarstwu!", "emotion_tags": ["doubt", "confusion", "seeking", "trust"]},
+    {"book": "J", "chapter": 20, "verse": 27, "content": "Podnieś tutaj swój palec i patrz na moje ręce. Podnieś rękę i włóż w mój bok, i nie bądź niedowiarkiem, lecz wierzącym!", "emotion_tags": ["doubt", "confusion", "trust"]},
+]
+
+
+def _build_fallback_index() -> dict[str, list[dict]]:
+    """Build an inverted index from emotion tag to passage list."""
+    index: dict[str, list[dict]] = {}
+    for passage in _FALLBACK_CORPUS:
+        for tag in passage["emotion_tags"]:
+            index.setdefault(tag, []).append(passage)
+    return index
+
+
+_FALLBACK_INDEX: dict[str, list[dict]] = _build_fallback_index()
+
+
+# ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
@@ -154,6 +215,11 @@ class ScriptureMatcher:
         # 2. Nearest-neighbour search
         candidates = self._retrieve_candidates(query_text, emotion_vector)
 
+        # Fallback when Qdrant is offline or collection is empty
+        if not candidates:
+            logger.info("No Qdrant results — using static fallback corpus.")
+            return self._fallback_match(emotion_vector, context)
+
         # 3. Re-rank
         ranked = self._rerank(candidates, emotion_vector, context)
 
@@ -174,6 +240,53 @@ class ScriptureMatcher:
     # ------------------------------------------------------------------
     # Pipeline steps
     # ------------------------------------------------------------------
+
+    def _fallback_match(
+        self,
+        emotion_vector: dict[str, float],
+        context: MatchContext,
+    ) -> list[ScriptureMatch]:
+        """Return passages from the static corpus when Qdrant is offline.
+
+        Scores each passage by summing the emotion intensities for its tags,
+        picks the top-3 without repetition.
+        """
+        scored: list[tuple[float, dict]] = []
+        seen_refs: set[str] = set()
+
+        for passage in _FALLBACK_CORPUS:
+            score = sum(emotion_vector.get(tag, 0.0) for tag in passage["emotion_tags"])
+            ref = f"{passage['book']} {passage['chapter']},{passage['verse']}"
+            scored.append((score, passage))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        results: list[ScriptureMatch] = []
+        for score, passage in scored:
+            ref = f"{passage['book']} {passage['chapter']},{passage['verse']}"
+            if ref in seen_refs:
+                continue
+            seen_refs.add(ref)
+
+            primary = max(emotion_vector, key=emotion_vector.get) if emotion_vector else "peace"
+            match = ScriptureMatch(
+                passage=passage["content"],
+                reference=ref,
+                score=round(score, 4),
+                explanation=(
+                    f"Fragment wybrany na podstawie dominującego stanu: '{primary}'. "
+                    f"Kontekst: {context.liturgical_season or self._calendar.get_season()}."
+                ),
+                theological_note="",
+                book=passage["book"],
+                chapter=passage["chapter"],
+                verse=passage["verse"],
+            )
+            results.append(match)
+            if len(results) == 3:
+                break
+
+        return results
 
     def _emotion_to_query(self, emotion_vector: dict[str, float]) -> str:
         """Translate an emotion vector into a natural-language search query."""
