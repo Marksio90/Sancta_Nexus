@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
+import { api } from "@/lib/api";
 
 // Zapisywane w localStorage pod kluczem "onboarding_prefs"
 interface OnboardingPrefs {
@@ -11,6 +12,15 @@ interface OnboardingPrefs {
   reminderTime: string;
   completedAt: string;
 }
+
+// Mapa praktyki → tradycja duchowa (backend: ignatian, benedictine, franciscan...)
+const PRACTICE_TO_TRADITION: Record<string, string> = {
+  "/lectio-divina":     "benedictine",
+  "/rozaniec":          "dominican",
+  "/rachunek-sumienia": "ignatian",
+  "/dziennik":          "ignatian",
+  "/dzisiaj":           "ignatian",
+};
 
 const PRAYER_TIMES = [
   { value: "morning", label: "Rano", description: "Zaczynam dzień od modlitwy", icon: "🌅" },
@@ -49,7 +59,7 @@ export default function OnboardingPage() {
 
   const name = user?.displayName?.split(" ")[0] ?? "Witaj";
 
-  const finish = (practice = primaryPractice) => {
+  const finish = async (practice = primaryPractice) => {
     const prefs: OnboardingPrefs = {
       prayerTime,
       primaryPractice: practice,
@@ -57,6 +67,27 @@ export default function OnboardingPage() {
       completedAt: new Date().toISOString(),
     };
     localStorage.setItem("onboarding_prefs", JSON.stringify(prefs));
+
+    // Sync preferences to backend (fire-and-forget — don't block navigation)
+    const tradition = PRACTICE_TO_TRADITION[practice] ?? "ignatian";
+    const effectiveTime =
+      prayerTime === "evening" ? "20:00" : reminderTime;
+
+    Promise.allSettled([
+      // Save spiritual tradition to privacy settings
+      api.put("/api/v1/users/me/privacy", { spiritual_tradition: tradition }),
+      // Register notification time preference (requires existing push subscription)
+      (async () => {
+        const endpoint = localStorage.getItem("push_endpoint");
+        if (endpoint) {
+          await api.post("/api/v1/notifications/daily-reminder", {
+            endpoint,
+            time: effectiveTime,
+          });
+        }
+      })(),
+    ]).catch(() => {});
+
     setLeaving(true);
     setTimeout(() => router.push(practice), 400);
   };

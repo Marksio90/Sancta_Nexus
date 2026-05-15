@@ -14,6 +14,9 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.core.rbac import require_authenticated
+from app.models.database import User
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -22,7 +25,6 @@ router = APIRouter()
 class OrchestrateRequest(BaseModel):
     """Request body for orchestrating a spiritual guidance session."""
 
-    user_id: str = "anonymous"
     emotion_vector: dict[str, float] = Field(default_factory=dict)
     spiritual_state: dict[str, Any] = Field(default_factory=dict)
     intent: str | None = None  # if set, intent routing is skipped
@@ -33,7 +35,6 @@ class OrchestrateRequest(BaseModel):
 class OrchestrateResponse(BaseModel):
     """Response from the OrchestratorSupremus pipeline."""
 
-    user_id: str
     intent: str = ""
     scripture: dict[str, Any] | None = None
     meditation: dict[str, Any] | None = None
@@ -45,7 +46,10 @@ class OrchestrateResponse(BaseModel):
 
 
 @router.post("", response_model=OrchestrateResponse, status_code=status.HTTP_200_OK)
-async def orchestrate(request: OrchestrateRequest) -> OrchestrateResponse:
+async def orchestrate(
+    request: OrchestrateRequest,
+    current_user: User = require_authenticated,
+) -> OrchestrateResponse:
     """Run the full OrchestratorSupremus (A-001) pipeline.
 
     The orchestrator classifies user intent via LLM and dispatches to the
@@ -61,7 +65,7 @@ async def orchestrate(request: OrchestrateRequest) -> OrchestrateResponse:
     orchestrator = OrchestratorSupremus()
 
     initial_state: dict[str, Any] = {
-        "user_id": request.user_id,
+        "user_id": current_user.id,
         "emotion_vector": request.emotion_vector,
         "spiritual_state": request.spiritual_state,
         "session_history": request.session_history,
@@ -73,7 +77,7 @@ async def orchestrate(request: OrchestrateRequest) -> OrchestrateResponse:
         result = await orchestrator.run(initial_state)
     except Exception as exc:
         logger.exception(
-            "OrchestratorSupremus failed for user=%s", request.user_id
+            "OrchestratorSupremus failed for user=%s", current_user.id
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -82,12 +86,11 @@ async def orchestrate(request: OrchestrateRequest) -> OrchestrateResponse:
 
     logger.info(
         "Orchestration complete: user=%s intent=%s",
-        request.user_id,
+        current_user.id,
         result.get("intent", "unknown"),
     )
 
     return OrchestrateResponse(
-        user_id=request.user_id,
         intent=result.get("intent", ""),
         scripture=result.get("scripture"),
         meditation=result.get("meditation"),

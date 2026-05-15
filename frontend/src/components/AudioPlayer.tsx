@@ -137,8 +137,6 @@ export function PremiumAudioButton({ mysteryType, mysteryNumber, isPremium }: Pr
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
   const loadAudio = async () => {
     if (!isPremium) return;
     setFetching(true);
@@ -147,7 +145,7 @@ export function PremiumAudioButton({ mysteryType, mysteryNumber, isPremium }: Pr
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
     try {
-      const res = await fetch(`${API}/api/v1/voice/meditate`, {
+      const res = await fetch("/api/v1/voice/meditate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
