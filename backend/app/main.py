@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.dependencies import close_all_connections, create_tables
 from app.middleware.timing import TimingMiddleware
+from app.core.middleware import RateLimitMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +132,21 @@ app = FastAPI(
 
 app.add_middleware(TimingMiddleware)
 
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=settings.RATE_LIMIT_REQUESTS,
+    window_seconds=settings.RATE_LIMIT_WINDOW,
+)
+
 # ── CORS ─────────────────────────────────────────────────────────────────────
+
+_allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production via env var
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

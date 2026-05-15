@@ -89,6 +89,15 @@ class Settings(BaseSettings):
     THEOLOGY_VALIDATION_THRESHOLD: float = 0.85
     EMOTION_DIMENSIONS: int = 36
 
+    # ── CORS ─────────────────────────────────────────────────────────────
+    # Comma-separated list of allowed origins. In production set to your
+    # actual domain(s). Defaults to localhost only.
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+
+    # ── Rate limiting ─────────────────────────────────────────────────────
+    RATE_LIMIT_REQUESTS: int = 120   # max requests per window per IP
+    RATE_LIMIT_WINDOW: int = 60      # sliding window in seconds
+
     # ── Stripe / Billing ──────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
