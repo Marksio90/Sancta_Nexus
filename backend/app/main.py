@@ -101,6 +101,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
     # WebSocket — Różaniec Wspólnotowy real-time sync
     ("app.api.routes.ws_rosary", "/ws", ["websocket"]),
+    # Billing — Stripe subskrypcje
+    ("app.api.routes.billing", "/api/v1/billing", ["billing"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
