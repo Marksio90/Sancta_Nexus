@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
@@ -105,24 +104,9 @@ class SpiritualStateClassifier:
     AGENT_ID = "A-025"
     AGENT_NAME = "SpiritualStateClassifier"
 
-    def __init__(
-        self,
-        *,
-        model: str = "gpt-4o",
-        temperature: float = 0.2,
-        max_tokens: int = 1024,
-    ) -> None:
-        """
-        Args:
-            model: OpenAI model identifier.
-            temperature: Low temperature for consistent classification.
-            max_tokens: Maximum tokens for response.
-        """
-        self._llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+    def __init__(self) -> None:
+        from app.core.llm import get_llm_fast
+        self._llm = get_llm_fast(temperature=0.2, max_tokens=1024)
 
     async def classify(
         self,

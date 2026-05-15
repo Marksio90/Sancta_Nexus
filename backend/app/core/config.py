@@ -70,15 +70,15 @@ class Settings(BaseSettings):
 
     # Primary models (theology, exegesis, spiritual direction)
     LLM_PRIMARY_MODEL: str = "gpt-4o"
-    LLM_PRIMARY_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    LLM_PRIMARY_ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
 
     # Fast models (emotion detection, classification, quick checks)
     LLM_FAST_MODEL: str = "gpt-4o-mini"
-    LLM_FAST_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    LLM_FAST_ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
 
     # Creative models (prayer generation, reflections)
     LLM_CREATIVE_MODEL: str = "gpt-4o"
-    LLM_CREATIVE_ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    LLM_CREATIVE_ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
 
     # ── Authentication / JWT ─────────────────────────────────────────────
     SECRET_KEY: str = "CHANGE-ME-IN-PRODUCTION"
