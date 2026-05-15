@@ -99,6 +99,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.knowledge", "/api/v1/knowledge", ["knowledge"]),
     # voice — experimental, behind feature flag
     ("app.api.routes.voice", "/api/v1/voice", ["voice"]),
+    # WebSocket — Różaniec Wspólnotowy real-time sync
+    ("app.api.routes.ws_rosary", "/ws", ["websocket"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:

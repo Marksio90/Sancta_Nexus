@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRosarySocket } from "@/hooks/useRosarySocket";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 type MysteryType = "radosne" | "bolesne" | "chwalebne" | "swietlne";
-type AppState = "menu" | "mysteries" | "decade" | "community";
+type AppState = "menu" | "mysteries" | "decade" | "community" | "live";
 
 const MYSTERY_META: Record<MysteryType, { label: string; days: string; color: string; border: string; icon: string }> = {
   radosne:  { label: "Tajemnice radosne",  days: "Pon · Sob", color: "from-sky-900/60 to-sky-800/30",    border: "border-sky-700/40",    icon: "🌟" },
@@ -28,8 +29,12 @@ export default function RozaniecPage() {
   const [communitySessions, setCommunitySessions] = useState<any[]>([]);
   const [newIntention, setNewIntention] = useState("");
   const [creatingSession, setCreatingSession] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeMysteryType, setActiveMysteryType] = useState<MysteryType>("radosne");
   const streamRef = useRef<AbortController | null>(null);
   const meditationRef = useRef<HTMLDivElement>(null);
+
+  const ws = useRosarySocket(activeSessionId);
 
   useEffect(() => {
     fetch(`${API}/api/v1/community/rosary/mysteries`)
@@ -119,6 +124,22 @@ export default function RozaniecPage() {
     }
   };
 
+  const joinSession = async (session: any) => {
+    try {
+      await fetch(`${API}/api/v1/community/rosary/community/${session.id}/join`, { method: "POST" });
+    } catch {}
+    setActiveMysteryType(session.mystery_type as MysteryType);
+    setActiveSessionId(session.id);
+    setAppState("live");
+  };
+
+  const leaveSession = () => {
+    ws.disconnect();
+    setActiveSessionId(null);
+    setAppState("community");
+    loadCommunity();
+  };
+
   // ── Menu ──────────────────────────────────────────────────────────────────
   if (appState === "menu") {
     return (
@@ -130,7 +151,6 @@ export default function RozaniecPage() {
             <p className="text-gray-400 text-sm">20 tajemnic · Medytacja AI · Wspólnota</p>
           </div>
 
-          {/* Today's recommendation */}
           {todayMystery && (
             <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-4 mb-6">
               <div className="text-xs text-[#d4af37] mb-1">Dzisiaj modlimy się nad:</div>
@@ -139,7 +159,6 @@ export default function RozaniecPage() {
             </div>
           )}
 
-          {/* Mystery type selection */}
           <div className="space-y-3 mb-6">
             {(Object.keys(MYSTERY_META) as MysteryType[]).map((type) => {
               const meta = MYSTERY_META[type];
@@ -201,7 +220,6 @@ export default function RozaniecPage() {
             </div>
           </div>
 
-          {/* Decade progress */}
           <div className="flex gap-2 mb-6">
             {[1, 2, 3, 4, 5].map((n) => (
               <div
@@ -271,7 +289,6 @@ export default function RozaniecPage() {
             </div>
           </div>
 
-          {/* Mystery info */}
           <div className="bg-white/5 rounded-2xl p-5 mb-4">
             <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
               <div>
@@ -288,7 +305,6 @@ export default function RozaniecPage() {
             </p>
           </div>
 
-          {/* AI Meditation */}
           {!meditation && !streamingMeditation && (
             <button
               onClick={() => streamMeditation(selectedType, selectedMysteryNum)}
@@ -309,7 +325,6 @@ export default function RozaniecPage() {
             </div>
           )}
 
-          {/* Decade prayers note */}
           <div className="bg-white/5 rounded-xl p-4 mb-4 text-xs text-gray-400">
             <p className="font-medium text-gray-300 mb-1">Modlitwa dziesiątki:</p>
             <p>1× Ojcze Nasz → 10× Zdrowaś Maryjo → 1× Chwała Ojcu → Fatimska (O mój Jezu…)</p>
@@ -345,7 +360,6 @@ export default function RozaniecPage() {
             <h1 className="text-xl font-bold text-[#d4af37]">Różaniec wspólnotowy</h1>
           </div>
 
-          {/* Create new session */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
             <p className="text-sm font-medium text-gray-200 mb-3">Rozpocznij nową sesję</p>
             <div className="flex gap-2 mb-3">
@@ -379,7 +393,6 @@ export default function RozaniecPage() {
             </button>
           </div>
 
-          {/* Open sessions */}
           <h3 className="text-sm font-semibold text-gray-400 mb-3">
             Otwarte sesje ({communitySessions.length})
           </h3>
@@ -399,11 +412,7 @@ export default function RozaniecPage() {
                     </div>
                     {s.intention && <p className="text-xs text-gray-400 mb-2">{s.intention}</p>}
                     <button
-                      onClick={async () => {
-                        await fetch(`${API}/api/v1/community/rosary/community/${s.id}/join`, { method: "POST" });
-                        await loadCommunity();
-                        selectMysteryType(s.mystery_type as MysteryType);
-                      }}
+                      onClick={() => joinSession(s)}
                       className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Dołącz i módl się
@@ -411,6 +420,140 @@ export default function RozaniecPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // ── Live community session ─────────────────────────────────────────────────
+  if (appState === "live") {
+    const meta = MYSTERY_META[activeMysteryType] || MYSTERY_META.radosne;
+    const wsDecades = new Set(ws.decadesCompleted);
+    const allDone = ws.decadesCompleted.length === 5;
+
+    return (
+      <main className="min-h-screen bg-[#0d0b1a] text-white">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={leaveSession} className="text-gray-400 hover:text-white">←</button>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-[#d4af37]">{meta.label}</h1>
+              <div className="text-xs text-gray-500">Sesja wspólnotowa</div>
+            </div>
+            {/* Connection indicator */}
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  ws.connected ? "bg-green-400 animate-pulse" : "bg-gray-600"
+                }`}
+              />
+              <span className="text-xs text-gray-500">
+                {ws.connected ? "Online" : "Łączenie…"}
+              </span>
+            </div>
+          </div>
+
+          {/* Participants counter */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">👥</span>
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  {ws.participants} {ws.participants === 1 ? "uczestnik" : ws.participants < 5 ? "uczestników" : "uczestników"}
+                </div>
+                <div className="text-xs text-gray-500">modli się teraz</div>
+              </div>
+            </div>
+            {ws.lastDecadeBy && (
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Ostatnio odmówił</div>
+                <div className="text-xs text-[#d4af37] font-mono truncate max-w-[100px]">
+                  {ws.lastDecadeBy.slice(0, 8)}…
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Error banner */}
+          {ws.error && (
+            <div className="bg-red-900/30 border border-red-700/40 rounded-xl p-3 mb-4 text-xs text-red-300">
+              {ws.error}
+            </div>
+          )}
+
+          {/* Progress bar */}
+          <div className="flex gap-2 mb-4">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div
+                key={n}
+                className={`flex-1 h-1.5 rounded-full transition-colors duration-500 ${
+                  wsDecades.has(n) ? "bg-[#d4af37]" : "bg-white/10"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Decade buttons */}
+          <div className="space-y-3 mb-6">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const done = wsDecades.has(n);
+              return (
+                <button
+                  key={n}
+                  disabled={done || !ws.connected}
+                  onClick={() => ws.sendDecade(n)}
+                  className={`w-full rounded-xl border p-4 text-left transition-all ${
+                    done
+                      ? "bg-[#d4af37]/10 border-[#d4af37]/30 cursor-default"
+                      : ws.connected
+                        ? "bg-white/5 border-white/10 hover:border-[#d4af37]/40 hover:bg-white/10"
+                        : "bg-white/5 border-white/5 opacity-50 cursor-not-allowed"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                        done ? "bg-[#d4af37] text-black" : "bg-white/10 text-gray-400"
+                      }`}
+                    >
+                      {done ? "✓" : n}
+                    </div>
+                    <div className="flex-1">
+                      <div className={`text-sm font-medium ${done ? "text-[#d4af37]" : "text-white"}`}>
+                        {n}. dziesiątka
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {done ? "Odmówiona przez wspólnotę" : "Dotknij, gdy odmówisz"}
+                      </div>
+                    </div>
+                    {!done && ws.connected && (
+                      <span className="text-xs text-gray-600">📿</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Completion message */}
+          {allDone && (
+            <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-5 text-center">
+              <div className="text-4xl mb-2">🙏</div>
+              <p className="text-[#d4af37] font-semibold text-lg">Wspólnotowy Różaniec ukończony!</p>
+              <p className="text-xs text-gray-400 mt-2">
+                «Gdziekolwiek dwaj albo trzej są zebrani w imię moje, tam jestem pośród nich.» — Mt 18,20
+              </p>
+            </div>
+          )}
+
+          {/* Prayer instructions */}
+          {!allDone && (
+            <div className="bg-white/5 rounded-xl p-4 text-xs text-gray-400">
+              <p className="font-medium text-gray-300 mb-1">Modlitwa dziesiątki:</p>
+              <p>1× Ojcze Nasz → 10× Zdrowaś Maryjo → 1× Chwała Ojcu → Fatimska</p>
             </div>
           )}
         </div>
