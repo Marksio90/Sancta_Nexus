@@ -35,7 +35,7 @@ export default function PolitykaPrywatnosciPage() {
         <Section title="1. Administrator danych">
           <p>
             Administratorem Twoich danych osobowych jest operator platformy Sancta Nexus
-            (dalej: „my", „Administrator").
+            (dalej: &bdquo;my&rdquo;, &bdquo;Administrator&rdquo;).
             Kontakt w sprawach prywatności: <strong className="text-white">{CONTACT_EMAIL}</strong>
           </p>
         </Section>

@@ -40,12 +40,11 @@ const TOTAL_STEPS = 5;
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, isAuthenticated, loadFromStorage } = useAuthStore();
+  const { user, loadFromStorage } = useAuthStore();
   const [step, setStep] = useState(1);
   const [prayerTime, setPrayerTime] = useState<"morning" | "evening" | "both">("morning");
   const [primaryPractice, setPrimaryPractice] = useState("/dzisiaj");
   const [reminderTime, setReminderTime] = useState("07:00");
-  const [notifSetup, setNotifSetup] = useState<"idle" | "done" | "skipped">("idle");
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {

@@ -20,6 +20,7 @@ export function AudioPlayer({ src, title, autoPlay = false, onEnded }: AudioPlay
   useEffect(() => {
     const audio = new Audio(src);
     audioRef.current = audio;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setPlaying(false);
     setProgress(0);
@@ -167,8 +168,8 @@ export function PremiumAudioButton({ mysteryType, mysteryNumber, isPremium }: Pr
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
-    } catch (e: any) {
-      setError(e.message ?? "Błąd.");
+    } catch (e: unknown) {
+      setError((e as Error).message ?? "Błąd.");
     } finally {
       setFetching(false);
     }

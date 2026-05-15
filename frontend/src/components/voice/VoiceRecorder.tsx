@@ -76,6 +76,7 @@ export function VoiceRecorder({
   useEffect(() => {
     const hasSR = !!getSpeechRecognition();
     const hasMR = typeof window !== "undefined" && !!window.MediaRecorder;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!hasSR && !hasMR) setAvailable(false);
   }, []);
 

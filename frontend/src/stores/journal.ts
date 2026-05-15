@@ -43,7 +43,7 @@ interface JournalStore {
   clearError: () => void;
 }
 
-export const useJournalStore = create<JournalStore>((set, get) => ({
+export const useJournalStore = create<JournalStore>((set) => ({
   entries: [],
   total: 0,
   currentPage: 1,

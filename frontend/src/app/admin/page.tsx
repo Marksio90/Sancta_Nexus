@@ -9,9 +9,9 @@ import {
   Activity,
   CheckCircle,
   XCircle,
-  ChevronRight,
   RefreshCw,
 } from "lucide-react";
+import Link from "next/link";
 
 // ── Typy ─────────────────────────────────────────────────────────────────────
 
@@ -111,6 +111,7 @@ function UsersPanel() {
     }
   }, [page, roleFilter]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const changeRole = async (userId: string, newRole: string) => {
@@ -248,6 +249,7 @@ function IntentionsPanel() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const approve = async (id: string) => {
@@ -382,6 +384,7 @@ function SafetyPanel() {
     }
   }, [filterModified]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const modified = interactions.filter((i) => i.was_modified).length;
@@ -482,6 +485,7 @@ function LogsPanel() {
     }
   }, [page]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const EVENT_COLOR: Record<string, string> = {
@@ -580,7 +584,7 @@ export default function AdminPage() {
           <p className="text-gray-500 text-sm mb-6">
             Ta strona jest dostępna wyłącznie dla administratorów Sancta Nexus.
           </p>
-          <a href="/" className="text-[#d4af37] text-sm underline">← Wróć do strony głównej</a>
+          <Link href="/" className="text-[#d4af37] text-sm underline">← Wróć do strony głównej</Link>
         </div>
       </main>
     );

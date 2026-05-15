@@ -53,8 +53,8 @@ export const useBillingStore = create<BillingState & BillingActions>((set) => ({
         price_id: priceId,
       });
       window.location.href = data.checkout_url;
-    } catch (e: any) {
-      set({ error: e?.message ?? "Błąd inicjowania płatności.", loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error)?.message ?? "Błąd inicjowania płatności.", loading: false });
     }
   },
 
@@ -63,8 +63,8 @@ export const useBillingStore = create<BillingState & BillingActions>((set) => ({
     try {
       const data = await api.post<{ portal_url: string }>("/api/v1/billing/portal", {});
       window.location.href = data.portal_url;
-    } catch (e: any) {
-      set({ error: e?.message ?? "Błąd otwierania portalu.", loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error)?.message ?? "Błąd otwierania portalu.", loading: false });
     }
   },
 }));

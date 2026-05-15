@@ -9,8 +9,8 @@ type AppState = "loading" | "list" | "session" | "chat" | "reflection";
 
 export default function MalzenstwoPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [program, setProgram] = useState<any[]>([]);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
+  const [program, setProgram] = useState<Record<string, unknown>[]>([]);
+  const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -24,7 +24,7 @@ export default function MalzenstwoPage() {
     if (programLoaded) return;
     setAppState("loading");
     try {
-      const data = await api.get<{ sessions: any[] }>("/api/v1/sacraments/marriage/program");
+      const data = await api.get<{ sessions: Record<string, unknown>[] }>("/api/v1/sacraments/marriage/program");
       setProgram(data.sessions || []);
       setProgramLoaded(true);
     } catch {
@@ -35,7 +35,7 @@ export default function MalzenstwoPage() {
   }, [programLoaded]);
 
   const openSession = useCallback(
-    async (session: any) => {
+    async (session: Record<string, unknown>) => {
       setSelectedSession(session);
       setMessages([
         {

@@ -276,7 +276,7 @@ export default function DziennikPage() {
     try {
       await createEntry(data);
       setViewMode("list");
-    } catch (err) {
+    } catch {
       // Error is set in the store
     } finally {
       setIsSaving(false);
@@ -291,7 +291,7 @@ export default function DziennikPage() {
       await updateEntry(selectedEntry.id, data);
       setViewMode("list");
       setSelectedEntry(null);
-    } catch (err) {
+    } catch {
       // Error is set in the store
     } finally {
       setIsSaving(false);

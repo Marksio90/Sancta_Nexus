@@ -49,6 +49,7 @@ export function InstallPrompt() {
 
   useEffect(() => {
     const p = detectPlatform();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlatform(p);
     if (p === "installed") return;
 

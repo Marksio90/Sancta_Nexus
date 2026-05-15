@@ -33,7 +33,7 @@ type AppState = "list" | "new";
 
 export default function IntencjePage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [intentions, setIntentions] = useState<any[]>([]);
+  const [intentions, setIntentions] = useState<Record<string, unknown>[]>([]);
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
@@ -49,7 +49,7 @@ export default function IntencjePage() {
   const loadIntentions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<{ intentions: any[] }>(
+      const data = await api.get<{ intentions: Record<string, unknown>[] }>(
         `/api/v1/community/intentions?category=${category}&limit=40`
       );
       setIntentions(data.intentions || []);
@@ -61,6 +61,7 @@ export default function IntencjePage() {
   }, [category]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadIntentions();
   }, [loadIntentions]);
 

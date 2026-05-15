@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
 
 const STATES = [
@@ -38,7 +38,7 @@ export default function SpowiedzPage() {
   const [stage, setStage] = useState<Stage>("setup");
   const [stateOfLife, setStateOfLife] = useState("single");
   const [selectedCommandment, setSelectedCommandment] = useState<number>(1);
-  const [commandments, setCommandments] = useState<any[]>([]);
+  const [commandments, setCommandments] = useState<Record<string, unknown>[]>([]);
   const [stateQuestions, setStateQuestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [streamedText, setStreamedText] = useState("");
@@ -53,7 +53,7 @@ export default function SpowiedzPage() {
     setLoading(true);
     try {
       const [cmdData, stateData] = await Promise.all([
-        api.get<{ commandments: any[] }>("/api/v1/sacraments/confession/commandments"),
+        api.get<{ commandments: Record<string, unknown>[] }>("/api/v1/sacraments/confession/commandments"),
         api.get<{ questions: string[] }>(`/api/v1/sacraments/confession/state-questions/${stateOfLife}`),
       ]);
       setCommandments(cmdData.commandments || []);
@@ -111,8 +111,8 @@ export default function SpowiedzPage() {
           setStreamedText(accumulated);
           textAreaRef.current?.scrollTo(0, textAreaRef.current.scrollHeight);
         }
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
+      } catch (err: unknown) {
+        if ((err as { name?: string }).name !== "AbortError") {
           setStreamedText("Błąd połączenia z serwerem.");
         }
       }

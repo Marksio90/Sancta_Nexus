@@ -167,6 +167,7 @@ export default function DzisiajPage() {
   useEffect(() => {
     loadFromStorage();
     loadProgress();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedTasks(loadCompletedToday());
 
     // Sprawdź czy notif już ustawione dziś

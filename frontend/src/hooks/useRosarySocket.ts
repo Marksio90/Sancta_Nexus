@@ -75,6 +75,7 @@ export function useRosarySocket(
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempt = useRef(0);
   const isMounted = useRef(true);
+  const connectRef = useRef<(() => void) | null>(null);
 
   const [state, setState] = useState<RosarySocketState>({
     connected: false,
@@ -158,13 +159,15 @@ export function useRosarySocket(
       reconnectAttempt.current += 1;
 
       setTimeout(() => {
-        if (isMounted.current) connect();
+        if (isMounted.current) connectRef.current?.();
       }, delay);
     };
   }, [sessionId]);
 
   useEffect(() => {
+    connectRef.current = connect;
     isMounted.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     connect();
 
     // Ping co 30s żeby utrzymać połączenie

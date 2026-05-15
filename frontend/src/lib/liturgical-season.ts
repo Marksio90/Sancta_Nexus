@@ -85,9 +85,7 @@ export function getLiturgicalInfo(today: Date = new Date()): LiturgicalInfo {
   const baptismMs = dayOnly(new Date(year, 0, 13));
 
   // Previous Advent (year-1) and Pentecost to handle Jan–early Feb
-  const adventPrevMs = dayOnly(adventStart(year - 1));
   const christmasPrevMs = dayOnly(new Date(year - 1, 11, 25));
-  const baptismPrevMs = dayOnly(new Date(year, 0, 13)); // same year Jan
 
   // ── Determine season ──────────────────────────────────────────────────────
 
@@ -97,10 +95,6 @@ export function getLiturgicalInfo(today: Date = new Date()): LiturgicalInfo {
   }
 
   // Christmas: Dec 25 – Baptism of Lord (~Jan 13)
-  const christmasEndMs = todayMs <= baptismMs && todayMs >= christmasMs
-    ? baptismMs
-    : dayOnly(new Date(year, 0, 13));
-
   if (
     todayMs >= christmasMs ||
     (todayMs >= christmasPrevMs && todayMs < baptismMs && todayMs < adventMs)
@@ -112,7 +106,6 @@ export function getLiturgicalInfo(today: Date = new Date()): LiturgicalInfo {
   }
 
   // Lent: Ash Wednesday – Holy Thursday (eve of Easter)
-  const holyThursdayMs = easterMs - 3 * 86400000;
   if (todayMs >= ashMs && todayMs < easterMs) {
     return { season: "lent", color: "#6a1b9a", label: "Wielki Post", latin: "Quadragesima" };
   }
