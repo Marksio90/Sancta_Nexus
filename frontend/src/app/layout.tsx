@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 import { ToastContainer } from "@/components/ui/toast";
 import { LiturgicalSeasonProvider } from "@/components/providers/LiturgicalSeasonProvider";
 import { ServiceWorkerProvider } from "@/components/providers/ServiceWorkerProvider";
@@ -8,16 +9,12 @@ import { BottomNav } from "@/components/mobile/BottomNav";
 import { InstallPrompt } from "@/components/mobile/InstallPrompt";
 
 export const metadata: Metadata = {
-  title: "Sancta Nexus — AI Lectio Divina",
+  title: "Sancta Nexus — Modlitwa i formacja duchowa",
   description:
-    "Platforma duchowego wzrostu łącząca starożytną tradycję Lectio Divina z nowoczesną sztuczną inteligencją. Odkryj głębię Pisma Świętego w sposób osobisty i transformujący.",
+    "Katolicka platforma modlitwy i formacji duchowej. Lectio Divina, Różaniec, Rachunek Sumienia, Brewiarz i Asystent refleksji AI — zawsze pod ręką.",
   keywords: [
-    "Lectio Divina",
-    "Biblia",
-    "modlitwa",
-    "duchowość",
-    "AI",
-    "kierownictwo duchowe",
+    "Lectio Divina", "Różaniec", "Rachunek Sumienia", "Brewiarz",
+    "modlitwa katolicka", "formacja duchowa", "AI", "Catholic app",
   ],
   manifest: "/manifest.json",
   appleWebApp: {
@@ -86,6 +83,8 @@ export default function RootLayout({
 
           {/* PWA / native app install prompt */}
           <InstallPrompt />
+
+          <Footer />
         </body>
       </LiturgicalSeasonProvider>
     </html>

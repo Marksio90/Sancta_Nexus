@@ -1,8 +1,8 @@
 {
-  "name": "Sancta Nexus — Lectio Divina",
+  "name": "Sancta Nexus — Modlitwa i formacja",
   "short_name": "Sancta Nexus",
-  "description": "Platforma duchowego wzrostu łącząca tradycję Lectio Divina z AI. Modlitwa, kierownictwo duchowe i Pismo Święte — zawsze pod ręką.",
-  "start_url": "/?source=pwa",
+  "description": "Katolicka platforma modlitwy i formacji duchowej. Lectio Divina, Różaniec, Rachunek Sumienia, Brewiarz i Asystent refleksji AI — zawsze pod ręką.",
+  "start_url": "/dzisiaj?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser"],
@@ -11,70 +11,74 @@
   "orientation": "any",
   "lang": "pl",
   "dir": "ltr",
-  "categories": ["lifestyle", "education", "books", "spirituality"],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "prefer_related_applications": false,
+  "categories": ["lifestyle", "education", "books"],
 
   "icons": [
     {
-      "src": "/icons/icon-192.svg",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.svg",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512.svg",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.svg",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
 
   "shortcuts": [
     {
+      "name": "Dzisiaj — liturgia dnia",
+      "short_name": "Dzisiaj",
+      "description": "Patron dnia, liturgia, poranna modlitwa",
+      "url": "/dzisiaj",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "any" }]
+    },
+    {
       "name": "Lectio Divina",
       "short_name": "Lectio",
-      "description": "Rozpocznij codzienną Lectio Divina",
+      "description": "Modlitewne czytanie Pisma Świętego z AI",
       "url": "/lectio-divina",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "any" }]
     },
     {
-      "name": "Kierownik Duchowy",
-      "short_name": "Kierownik",
-      "description": "Rozmowa z AI kierownikiem duchowym",
-      "url": "/spiritual-director",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+      "name": "Różaniec",
+      "short_name": "Różaniec",
+      "description": "20 tajemnic z medytacją AI",
+      "url": "/rozaniec",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "any" }]
     },
     {
-      "name": "Brewiarz",
-      "short_name": "Brewiarz",
-      "description": "Liturgia Godzin",
-      "url": "/breviary",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
-    },
-    {
-      "name": "Biblia",
-      "short_name": "Biblia",
-      "description": "Pismo Święte z kontekstem teologicznym",
-      "url": "/bible",
-      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+      "name": "Rachunek Sumienia",
+      "short_name": "Examen",
+      "description": "Ignacjański Examen wieczorny",
+      "url": "/rachunek-sumienia",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "any" }]
     }
   ],
 
   "share_target": {
-    "action": "/share-target",
+    "action": "/dziennik",
     "method": "GET",
     "params": {
       "title": "title",
@@ -83,27 +87,6 @@
     }
   },
 
-  "protocol_handlers": [
-    {
-      "protocol": "web+prayer",
-      "url": "/prayer?text=%s"
-    }
-  ],
-
-  "screenshots": [
-    {
-      "src": "/screenshots/lectio-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Lectio Divina na telefonie"
-    },
-    {
-      "src": "/screenshots/director-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Kierownik Duchowy AI"
-    }
-  ]
+  "related_applications": [],
+  "prefer_related_applications": false
 }

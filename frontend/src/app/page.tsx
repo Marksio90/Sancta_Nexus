@@ -131,7 +131,7 @@ const features = [
     latin: "Crescit cum Legente",
     description:
       "Śledź swoją podróż przez osiem filarów kerygmatycznych. Odkrywaj powtarzające się tematy i obserwuj wzrost w wierze — dzień po dniu, krok po kroku.",
-    href: "/dashboard",
+    href: "/dzisiaj",
     color: "from-emerald-900/20 to-emerald-800/5",
     border: "hover:border-emerald-600/40",
   },
@@ -326,6 +326,17 @@ export default async function HomePage() {
         <p className="mt-2 text-xs text-[--color-sacred-text-muted]/20">
           73 księgi &middot; 7 tradycji duchowych &middot; 8 filarów kerygmatycznych
         </p>
+        <div className="mt-6 flex justify-center gap-6 text-xs text-[--color-sacred-text-muted]/30">
+          <Link href="/polityka-prywatnosci" className="hover:text-[--color-gold] transition-colors">
+            Polityka prywatności
+          </Link>
+          <Link href="/regulamin" className="hover:text-[--color-gold] transition-colors">
+            Regulamin
+          </Link>
+          <Link href="/cennik" className="hover:text-[--color-gold] transition-colors">
+            Premium
+          </Link>
+        </div>
       </footer>
     </div>
   );
