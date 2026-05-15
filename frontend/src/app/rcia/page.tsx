@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 const STAGE_META: Record<
   string,
@@ -53,8 +52,7 @@ export default function RCIAPage() {
   const [loadingReflection, setLoadingReflection] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/v1/sacraments/rcia/curriculum`)
-      .then((r) => r.json())
+    api.get<{ stages: any[] }>("/api/v1/sacraments/rcia/curriculum")
       .then((d) => setCurriculum(d.stages || []))
       .catch(() => setCurriculum([]));
   }, []);
@@ -81,19 +79,14 @@ export default function RCIAPage() {
     setMessages(newMessages);
 
     try {
-      const res = await fetch(`${API}/api/v1/sacraments/rcia/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: userMsg,
-          session_id: selectedSession?.session_id,
-          conversation_history: newMessages.slice(-6).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const data = await api.post<{ answer?: string }>("/api/v1/sacraments/rcia/ask", {
+        question: userMsg,
+        session_id: selectedSession?.session_id,
+        conversation_history: newMessages.slice(-6).map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
-      const data = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.answer || "..." }]);
     } catch {
       setMessages([...newMessages, { role: "assistant", content: "Przepraszam, błąd połączenia." }]);
@@ -107,10 +100,9 @@ export default function RCIAPage() {
     setLoadingReflection(true);
     setAppState("reflection");
     try {
-      const res = await fetch(
-        `${API}/api/v1/sacraments/rcia/reflection/${selectedSession.session_id}`
+      const data = await api.get<{ reflection?: string }>(
+        `/api/v1/sacraments/rcia/reflection/${selectedSession.session_id}`
       );
-      const data = await res.json();
       setReflection(data.reflection || "");
     } catch {
       setReflection("Nie udało się załadować refleksji.");

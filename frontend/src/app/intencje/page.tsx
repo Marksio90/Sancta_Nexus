@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { api } from "@/lib/api";
 
 const CATEGORIES = [
   { id: "all", label: "Wszystkie" },
@@ -50,10 +49,9 @@ export default function IntencjePage() {
   const loadIntentions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/api/v1/community/intentions?category=${category}&limit=40`
+      const data = await api.get<{ intentions: any[] }>(
+        `/api/v1/community/intentions?category=${category}&limit=40`
       );
-      const data = await res.json();
       setIntentions(data.intentions || []);
     } catch {
       setIntentions([]);
@@ -70,9 +68,7 @@ export default function IntencjePage() {
     if (prayedIds.has(id)) return;
     setPrayedIds((prev) => new Set([...prev, id]));
     try {
-      await fetch(`${API}/api/v1/community/intentions/${id}/pray`, {
-        method: "POST",
-      });
+      await api.post(`/api/v1/community/intentions/${id}/pray`, {});
       setIntentions((prev) =>
         prev.map((i) =>
           i.id === id ? { ...i, prayer_count: i.prayer_count + 1 } : i
@@ -91,15 +87,11 @@ export default function IntencjePage() {
     if (!content.trim() || submitting) return;
     setSubmitting(true);
     try {
-      await fetch(`${API}/api/v1/community/intentions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: content.trim(),
-          is_public: isPublic,
-          category: newCategory,
-          author_display: authorDisplay.trim() || "Anonim",
-        }),
+      await api.post("/api/v1/community/intentions", {
+        content: content.trim(),
+        is_public: isPublic,
+        category: newCategory,
+        author_display: authorDisplay.trim() || "Anonim",
       });
       setSubmitted(true);
       setContent("");
