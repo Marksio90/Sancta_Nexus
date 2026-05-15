@@ -61,6 +61,17 @@ class PipelineResult:
     total_duration_ms: float = 0.0
 
 
+@dataclass(frozen=True, slots=True)
+class ScripturePassage:
+    """Parsed scripture reference used internally by the pipeline."""
+
+    book: str
+    chapter: int
+    verse_start: int
+    text: str
+    verse_end: int | None = None
+
+
 # Default safe fallback content when validation fails.
 _DEFAULT_FALLBACK = (
     "We are unable to provide a validated response at this time. "
