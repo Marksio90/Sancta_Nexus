@@ -5,22 +5,58 @@ import { api } from "@/lib/api";
 
 type AppState = "library" | "detail" | "day" | "tracking";
 
+interface NovenaItem {
+  id: string;
+  title: string;
+  patron: string;
+  patron_icon: string;
+  description: string;
+  days: number;
+  scripture: string;
+  ccc: string;
+  color?: string;
+  border?: string;
+}
+
+interface NovenaFull extends NovenaItem {
+  daily_intentions: string[];
+  origin: string;
+}
+
+interface DayContent {
+  title: string;
+  prayer: string;
+}
+
+interface NovenaTracking {
+  id: string;
+  novena_id: string;
+  novena_title: string;
+  patron_icon: string;
+  intention: string | null;
+  is_complete: boolean;
+  total_days: number;
+  completed_days: number[];
+  progress_percent: number;
+  started_at: string;
+}
+
 export default function NowennaPage() {
   const [appState, setAppState] = useState<AppState>("library");
-  const [novenas, setNovenas] = useState<any[]>([]);
-  const [selected, setSelected] = useState<any>(null);
-  const [selectedFull, setSelectedFull] = useState<any>(null);
+  const [novenas, setNovenas] = useState<NovenaItem[]>([]);
+  const [selected, setSelected] = useState<NovenaItem | null>(null);
+  const [selectedFull, setSelectedFull] = useState<NovenaFull | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
-  const [dayContent, setDayContent] = useState<any>(null);
+  const [dayContent, setDayContent] = useState<DayContent | null>(null);
   const [meditation, setMeditation] = useState("");
   const [loadingMeditation, setLoadingMeditation] = useState(false);
-  const [myNovenas, setMyNovenas] = useState<any[]>([]);
+  const [myNovenas, setMyNovenas] = useState<NovenaTracking[]>([]);
   const [loadingMy, setLoadingMy] = useState(false);
   const [intention, setIntention] = useState("");
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
-    api.get<{ novenas: any[] }>("/api/v1/community/novenas")
+    api.get<{ novenas: NovenaItem[] }>("/api/v1/community/novenas")
       .then((d) => setNovenas(d.novenas || []))
       .catch(() => {});
   }, []);
@@ -28,7 +64,7 @@ export default function NowennaPage() {
   const loadMyNovenas = useCallback(async () => {
     setLoadingMy(true);
     try {
-      const data = await api.get<{ novenas: any[] }>("/api/v1/community/novenas/my");
+      const data = await api.get<{ novenas: NovenaTracking[] }>("/api/v1/community/novenas/my");
       setMyNovenas(data.novenas || []);
     } catch {
       setMyNovenas([]);
@@ -37,13 +73,13 @@ export default function NowennaPage() {
     }
   }, []);
 
-  const openNovena = async (novena: any) => {
+  const openNovena = async (novena: NovenaItem) => {
     setSelected(novena);
     setSelectedFull(null);
     setMeditation("");
     setAppState("detail");
     try {
-      const data = await api.get<any>(`/api/v1/community/novenas/${novena.id}`);
+      const data = await api.get<NovenaFull>(`/api/v1/community/novenas/${novena.id}`);
       setSelectedFull(data);
     } catch {}
   };
@@ -54,7 +90,7 @@ export default function NowennaPage() {
     setMeditation("");
     setAppState("day");
     try {
-      const data = await api.get<any>(`/api/v1/community/novenas/${novenaId}/day/${day}`);
+      const data = await api.get<DayContent>(`/api/v1/community/novenas/${novenaId}/day/${day}`);
       setDayContent(data);
     } catch {}
   };
@@ -62,7 +98,7 @@ export default function NowennaPage() {
   const loadMeditation = async (novenaId: string, day: number) => {
     setLoadingMeditation(true);
     try {
-      const data = await api.get<any>(`/api/v1/community/novenas/${novenaId}/meditation/${day}`);
+      const data = await api.get<{ meditation: string }>(`/api/v1/community/novenas/${novenaId}/meditation/${day}`);
       setMeditation(data.meditation || "");
     } catch {
       setMeditation("Nie udało się załadować medytacji.");
