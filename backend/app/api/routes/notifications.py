@@ -143,6 +143,76 @@ async def unsubscribe(body: UnsubscribeRequest) -> dict[str, str]:
     return {"status": "unsubscribed"}
 
 
+@router.post("/daily-reminder", summary="Ustaw/aktualizuj codzienne powiadomienie poranne")
+async def set_daily_reminder(request: Request) -> dict[str, str]:
+    """Rejestruje preferencje codziennego przypomnienia.
+
+    Przechowuje endpoint + czas powiadomienia w pamięci.
+    W produkcji: zapisać do Redis/DB z TTL i harmonogramem (Celery beat / APScheduler).
+    """
+    try:
+        data = await request.json()
+        endpoint = data.get("endpoint", "")
+        preferred_time = data.get("time", "07:00")  # format HH:MM
+
+        if not endpoint:
+            raise HTTPException(status_code=400, detail="Brak endpoint'u subskrypcji.")
+
+        # Walidacja formatu czasu
+        parts = preferred_time.split(":")
+        if len(parts) != 2 or not all(p.isdigit() for p in parts):
+            raise HTTPException(status_code=400, detail="Nieprawidłowy format czasu (HH:MM).")
+
+        hour, minute = int(parts[0]), int(parts[1])
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise HTTPException(status_code=400, detail="Czas poza zakresem.")
+
+        # Zapisz preferencję (in-memory; w prod → Redis HSET)
+        if endpoint in _subscriptions:
+            # Przechowaj czas jako atrybut runtime — nie modyfikujemy modelu
+            _subscriptions[endpoint].__dict__["_reminder_time"] = preferred_time
+
+        return {"status": "ok", "time": preferred_time}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("daily-reminder error: %s", exc)
+        raise HTTPException(status_code=500, detail="Błąd ustawiania przypomnienia.")
+
+
+@router.post("/send-morning", summary="Wyślij poranne powiadomienie (cron/scheduler)")
+async def send_morning_notifications() -> dict[str, int]:
+    """Wyślij poranne powiadomienia do wszystkich subskrybentów.
+
+    Docelowo wywoływany przez cron job o 07:00 (lub przez APScheduler).
+    W tej wersji wysyła do wszystkich aktywnych subskrypcji.
+    """
+    from app.services.scripture.saints_calendar import get_saint_today
+    from datetime import date
+
+    saint = get_saint_today(date.today())
+    payload = PushPayload(
+        title=f"Dzień dobry! {saint['icon']} {saint['name']}",
+        body=f"Módlmy się dzisiaj przez wstawiennictwo patrona dnia. Niech Pan błogosławi Twój dzień!",
+        icon="/icons/icon-192x192.png",
+        url="/dzisiaj",
+    )
+
+    sent = 0
+    dead_endpoints: list[str] = []
+    for endpoint, sub in list(_subscriptions.items()):
+        try:
+            await push_service.send(sub, payload)
+            sent += 1
+        except Exception:
+            dead_endpoints.append(endpoint)
+
+    for ep in dead_endpoints:
+        _subscriptions.pop(ep, None)
+
+    return {"sent": sent, "removed_dead": len(dead_endpoints)}
+
+
 @router.get("/stats", summary="Subscription statistics (admin)")
 async def stats() -> dict[str, int]:
     return {
