@@ -15,21 +15,29 @@
  *   Web reminders          — scheduled local notifications via setTimeout
  */
 
-const CACHE_SHELL = "sancta-nexus-shell-v2";
+const CACHE_SHELL = "sancta-nexus-shell-v3";
 const CACHE_FONTS = "sancta-nexus-fonts-v1";
 const CACHE_SCRIPTURE = "sancta-nexus-scripture-v1";
 
 const PRECACHE_URLS = [
   "/",
+  "/dzisiaj",
   "/lectio-divina",
+  "/rozaniec",
+  "/rachunek-sumienia",
   "/breviary",
   "/bible",
-  "/spiritual-director",
-  "/dashboard",
+  "/dziennik",
+  "/konto",
+  "/cennik",
   "/offline",
+  "/polityka-prywatnosci",
+  "/regulamin",
   "/manifest.json",
   "/icons/icon-192.svg",
   "/icons/icon-512.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
 ];
 
 // API routes worth caching for offline prayer
