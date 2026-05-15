@@ -15,6 +15,7 @@ Endpoints:
     GET    /journal/entries/{id}      — pojedynczy wpis
     PUT    /journal/entries/{id}      — aktualizuj wpis
     DELETE /journal/entries/{id}      — soft-delete wpisu
+    GET    /journal/insights          — analiza drogi duchowej (AI, opt-in)
 """
 
 from __future__ import annotations
@@ -28,8 +29,9 @@ from sqlalchemy import or_, select
 
 from app.core.dependencies import DbSession
 from app.core.rbac import require_authenticated
-from app.models.database import AuditEventType, JournalEntry, User
+from app.models.database import AuditEventType, JournalEntry, User, UserPrivacySettings
 from app.services.audit.audit_service import audit
+from app.services.memory.journal_insights_service import JournalInsightsService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -321,3 +323,99 @@ async def delete_entry(
         payload={"entry_id": entry_id},
     )
     await db.flush()
+
+
+# ── GET /journal/insights ─────────────────────────────────────────────────────
+
+
+class InsightsResponse(BaseModel):
+    model_config = ConfigDict(strict=True)
+
+    journey: dict
+    patterns: list[dict]
+    entry_count: int
+    generated_at: str
+    disclaimer: str
+    ai_enabled: bool
+
+
+@router.get(
+    "/insights",
+    response_model=InsightsResponse,
+    summary="Analiza drogi duchowej na podstawie dziennika",
+)
+async def get_insights(
+    db: DbSession,
+    current_user: User = require_authenticated,
+    entries_limit: int = Query(default=30, ge=5, le=100, description="Liczba ostatnich wpisów do analizy"),
+) -> InsightsResponse:
+    """
+    Analizuje ostatnie wpisy w dzienniku przez JourneyTrackerAgent i PatternDiscoveryAgent.
+
+    Wymaga: privacy_settings.ai_can_read_journal == True.
+    Jeśli zgoda nie jest udzielona, zwraca ai_enabled=False bez analizy.
+    """
+    # Check privacy consent
+    privacy_result = await db.execute(
+        select(UserPrivacySettings).where(UserPrivacySettings.user_id == current_user.id)
+    )
+    privacy = privacy_result.scalar_one_or_none()
+    ai_enabled = privacy.ai_can_read_journal if privacy else True
+
+    if not ai_enabled:
+        return InsightsResponse(
+            journey={
+                "current_stage": "unknown",
+                "stage_name_pl": "Analiza wyłączona",
+                "stage_description": "Włącz analizę AI w ustawieniach prywatności.",
+                "progress_percentage": 0,
+                "milestones": [],
+                "next_growth_area": "",
+            },
+            patterns=[],
+            entry_count=0,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            disclaimer=(
+                "Analiza AI dziennika jest wyłączona w ustawieniach prywatności. "
+                "Możesz ją włączyć w sekcji Ustawienia → Prywatność."
+            ),
+            ai_enabled=False,
+        )
+
+    # Fetch recent entries
+    entries_result = await db.execute(
+        _get_active_entries_query(current_user.id)
+        .order_by(JournalEntry.created_at.desc())
+        .limit(entries_limit)
+    )
+    entries = list(entries_result.scalars().all())
+
+    if not entries:
+        from app.services.memory.journal_insights_service import DISCLAIMER
+        return InsightsResponse(
+            journey={
+                "current_stage": "purgation",
+                "stage_name_pl": "Oczyszczenie",
+                "stage_description": "Dodaj pierwsze wpisy do dziennika, aby zobaczyć analizę.",
+                "progress_percentage": 0,
+                "milestones": [],
+                "next_growth_area": "Zacznij od codziennego wpisu po modlitwie lub Lectio Divina.",
+            },
+            patterns=[],
+            entry_count=0,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+            disclaimer=DISCLAIMER,
+            ai_enabled=True,
+        )
+
+    service = JournalInsightsService()
+    result = await service.generate(current_user.id, entries)
+
+    return InsightsResponse(
+        journey=result["journey"],
+        patterns=result["patterns"],
+        entry_count=result["entry_count"],
+        generated_at=result["generated_at"],
+        disclaimer=result["disclaimer"],
+        ai_enabled=True,
+    )
