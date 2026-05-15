@@ -16,6 +16,14 @@ interface FullProfile {
   created_at?: string;
 }
 
+interface PrivacySettings {
+  journal_is_private: boolean;
+  ai_can_read_journal: boolean;
+  ai_history_enabled: boolean;
+  preferred_language: string;
+  spiritual_tradition: string;
+}
+
 const TIER_LABEL: Record<string, string> = {
   free:     "Bezpłatny",
   pilgrim:  "Pielgrzym (miesięczny)",
@@ -49,6 +57,9 @@ export default function KontoPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
@@ -59,6 +70,9 @@ export default function KontoPage() {
       api.get<FullProfile>("/api/v1/users/me/profile")
         .then((p) => { setProfile(p); setEditName(p.display_name); setProfileLoading(false); })
         .catch(() => setProfileLoading(false)),
+      api.get<PrivacySettings>("/api/v1/users/me/privacy")
+        .then(setPrivacy)
+        .catch(() => {}),
       fetchStatus(),
     ]);
   }, [isAuthenticated, router, fetchStatus]);
@@ -71,6 +85,21 @@ export default function KontoPage() {
       setProfile(updated);
       setEditingName(false);
     } catch { /* ignore */ } finally { setSavingName(false); }
+  };
+
+  const updatePrivacy = async (patch: Partial<PrivacySettings>) => {
+    if (!privacy) return;
+    const optimistic = { ...privacy, ...patch };
+    setPrivacy(optimistic);
+    setSavingPrivacy(true);
+    try {
+      const updated = await api.put<PrivacySettings>("/api/v1/users/me/privacy", patch);
+      setPrivacy(updated);
+    } catch {
+      setPrivacy(privacy);
+    } finally {
+      setSavingPrivacy(false);
+    }
   };
 
   const handleLogout = () => { logout(); router.push("/"); };
@@ -207,9 +236,90 @@ export default function KontoPage() {
           ))}
         </div>
 
-        {/* Privacy / Data */}
+        {/* Privacy settings */}
+        {privacy && (
+          <div className="mb-6">
+            <h3 className="text-xs text-gray-600 uppercase tracking-wider mb-3">
+              Prywatność i AI
+              {savingPrivacy && <span className="ml-2 text-[#d4af37] animate-pulse">…</span>}
+            </h3>
+            <div className="space-y-2">
+              {[
+                {
+                  key: "journal_is_private" as const,
+                  label: "Dziennik prywatny",
+                  desc: "Wpisy widoczne tylko dla Ciebie",
+                  icon: "🔒",
+                },
+                {
+                  key: "ai_can_read_journal" as const,
+                  label: "AI może czytać dziennik",
+                  desc: "Umożliwia personalizowane wskazówki i spostrzeżenia",
+                  icon: "🤖",
+                },
+                {
+                  key: "ai_history_enabled" as const,
+                  label: "Historia interakcji z AI",
+                  desc: "Zapisuje metadane do analizy wzorców",
+                  icon: "📊",
+                },
+              ].map(({ key, label, desc, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => updatePrivacy({ [key]: !privacy[key] })}
+                  disabled={savingPrivacy}
+                  className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl p-3 text-left transition-all disabled:opacity-60"
+                >
+                  <span className="text-xl">{icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white">{label}</div>
+                    <div className="text-xs text-gray-500">{desc}</div>
+                  </div>
+                  <div className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 ${privacy[key] ? "bg-[#d4af37]" : "bg-white/10"}`}>
+                    <div className={`w-4 h-4 rounded-full bg-white shadow m-0.5 transition-transform ${privacy[key] ? "translate-x-5" : "translate-x-0"}`} />
+                  </div>
+                </button>
+              ))}
+
+              {/* Spiritual tradition */}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-xl">⛪</span>
+                  <div>
+                    <div className="text-sm font-medium text-white">Tradycja duchowa</div>
+                    <div className="text-xs text-gray-500">Dostosowuje styl medytacji i modlitwy</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "ignatian", label: "Ignacjańska" },
+                    { id: "benedictine", label: "Benedyktyńska" },
+                    { id: "carmelite", label: "Karmelitańska" },
+                    { id: "franciscan", label: "Franciszkańska" },
+                    { id: "dominican", label: "Dominikańska" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => updatePrivacy({ spiritual_tradition: t.id })}
+                      disabled={savingPrivacy}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                        privacy.spiritual_tradition === t.id
+                          ? "bg-[#d4af37] border-[#d4af37] text-black font-semibold"
+                          : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Data export */}
         <div className="space-y-2 mb-6">
-          <h3 className="text-xs text-gray-600 uppercase tracking-wider mb-2">Prywatność i dane</h3>
+          <h3 className="text-xs text-gray-600 uppercase tracking-wider mb-2">Moje dane (RODO)</h3>
           <a
             href="/api/v1/users/me/export"
             className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all"

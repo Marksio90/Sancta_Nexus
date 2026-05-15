@@ -19,7 +19,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Play, Pause, Square, Volume2, Loader2 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type VoiceProfileId =
   | "narrator_male"
@@ -62,9 +61,13 @@ export function VoicePlayer({
 
   const fetchAudio = useCallback(async (): Promise<string | null> => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/voice/tts`, {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch("/api/v1/voice/tts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ text, profile, speed }),
       });
       if (!res.ok) {

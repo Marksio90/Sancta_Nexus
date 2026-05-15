@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 
 from app.core.dependencies import DbSession
+from app.core.rbac import require_authenticated
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -186,6 +187,11 @@ async def login(request: LoginRequest, db: DbSession) -> LoginResponse:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Konto zostało dezaktywowane.",
+        )
 
     token_data = {"sub": user.id}
     access_token = create_access_token(token_data)
@@ -218,10 +224,10 @@ async def refresh(request: RefreshRequest, db: DbSession) -> RefreshResponse:
     # Ensure the user still exists
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    if user is None:
+    if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found.",
+            detail="User not found or deactivated.",
         )
 
     token_data = {"sub": user.id}
@@ -247,7 +253,7 @@ async def refresh(request: RefreshRequest, db: DbSession) -> RefreshResponse:
     summary="Get the current authenticated user's profile",
 )
 async def get_me(
-    current_user: User = Depends(get_current_user),
+    current_user: User = require_authenticated,
 ) -> UserProfile:
     """Return the profile of the currently authenticated user.
 

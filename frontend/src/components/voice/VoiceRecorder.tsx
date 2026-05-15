@@ -19,7 +19,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface VoiceRecorderProps {
   onTranscript: (text: string) => void;
@@ -159,8 +158,10 @@ export function VoiceRecorder({
       formData.append("language", language.split("-")[0]);
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/voice/stt`, {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const res = await fetch("/api/v1/voice/stt", {
           method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
         });
         if (res.ok) {
