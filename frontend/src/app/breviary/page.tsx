@@ -265,8 +265,8 @@ export default function BreviaryPage() {
 
         {/* Links */}
         <div className="mt-6 flex justify-center gap-4">
-          <Link href="/dashboard" className="text-sm text-[--color-sacred-text-muted]/50 transition-colors hover:text-[--color-gold]">
-            Panel Duchowy
+          <Link href="/dzisiaj" className="text-sm text-[--color-sacred-text-muted]/50 transition-colors hover:text-[--color-gold]">
+            Dzisiaj
           </Link>
           <span className="text-[--color-sacred-border]">·</span>
           <Link href="/lectio-divina" className="text-sm text-[--color-sacred-text-muted]/50 transition-colors hover:text-[--color-gold]">
