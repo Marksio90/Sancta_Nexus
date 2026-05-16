@@ -174,7 +174,7 @@ async def set_daily_reminder(request: Request) -> dict[str, str]:
         raise
     except Exception as exc:
         logger.error("daily-reminder error: %s", exc)
-        raise HTTPException(status_code=500, detail="Błąd ustawiania przypomnienia.")
+        raise HTTPException(status_code=500, detail="Błąd ustawiania przypomnienia.") from exc
 
 
 @router.post("/send-morning", summary="Wyślij poranne powiadomienie (cron/scheduler)")

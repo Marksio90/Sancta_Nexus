@@ -713,11 +713,11 @@ async def add_favorite(
     try:
         await db.flush()
         await db.refresh(passage)
-    except IntegrityError:
+    except IntegrityError as err:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ten fragment jest już w ulubionych.",
-        )
+        ) from err
     return FavoritePassageResponse(
         id=passage.id,
         book=passage.book,

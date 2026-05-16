@@ -113,16 +113,16 @@ async def speech_to_text(
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
-    _MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10 MB — matches nginx client_max_body_size
-    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+    _max_audio_bytes = 10 * 1024 * 1024  # 10 MB — matches nginx client_max_body_size
+    if len(audio_bytes) > _max_audio_bytes:
         raise HTTPException(status_code=413, detail="Plik audio jest za duży (max 10 MB).")
 
-    _ALLOWED_AUDIO_TYPES = {
+    _allowed_audio_types = {
         "audio/webm", "audio/ogg", "audio/mp4", "audio/wav",
         "audio/mpeg", "audio/x-m4a", "video/webm",
     }
     content_type = (file.content_type or "audio/webm").split(";")[0].strip().lower()
-    if content_type not in _ALLOWED_AUDIO_TYPES:
+    if content_type not in _allowed_audio_types:
         raise HTTPException(
             status_code=415,
             detail=f"Nieobsługiwany typ pliku: {content_type}. Wymagany format audio.",
@@ -212,13 +212,13 @@ async def meditate_audio(
     try:
         from app.core.llm import get_llm_fast
         llm = get_llm_fast(temperature=0.7)
-        _MYSTERY_TITLES: dict[str, list[str]] = {
+        _mystery_titles: dict[str, list[str]] = {
             "radosne":   ["Zwiastowanie", "Nawiedzenie", "Narodzenie Jezusa", "Ofiarowanie", "Znalezienie w Świątyni"],
             "bolesne":   ["Modlitwa w Ogrójcu", "Biczowanie", "Cierniem Ukoronowanie", "Droga Krzyżowa", "Ukrzyżowanie"],
             "chwalebne": ["Zmartwychwstanie", "Wniebowstąpienie", "Zesłanie Ducha Świętego", "Wniebowzięcie", "Ukoronowanie"],
             "swietlne":  ["Chrzest Jezusa", "Wesele w Kanie", "Głoszenie Królestwa", "Przemienienie", "Ustanowienie Eucharystii"],
         }
-        title = _MYSTERY_TITLES.get(body.mystery_type, ["Tajemnica"])[body.mystery_number - 1]
+        title = _mystery_titles.get(body.mystery_type, ["Tajemnica"])[body.mystery_number - 1]
         prompt = (
             f"Napisz po polsku medytację różańcową (ok. 120 słów) na tajemnicę: "
             f"'{title}'. Styl: spokojny, kontemplacyjny, prowadzący do modlitwy. "
@@ -228,7 +228,7 @@ async def meditate_audio(
         meditation_text = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
         logger.error("Meditation text generation failed: %s", exc)
-        raise HTTPException(status_code=503, detail="Błąd generowania tekstu medytacji.")
+        raise HTTPException(status_code=503, detail="Błąd generowania tekstu medytacji.") from exc
 
     # Syntezuj audio
     try:

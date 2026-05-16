@@ -303,10 +303,9 @@ class TestMoodValidation:
         for node in ast.walk(TREE):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "_VALID_MOODS":
-                        if isinstance(node.value, ast.Set):
-                            assert len(node.value.elts) >= 8
-                            return
+                    if isinstance(target, ast.Name) and target.id == "_VALID_MOODS" and isinstance(node.value, ast.Set):
+                        assert len(node.value.elts) >= 8
+                        return
         # If not found as Set literal, just check the string count in source
         assert SRC.count('"') >= 16  # at least 8 quoted mood strings
 

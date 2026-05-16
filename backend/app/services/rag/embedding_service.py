@@ -35,6 +35,13 @@ _E5_QUERY_PREFIX = "query: "
 _E5_PASSAGE_PREFIX = "passage: "
 
 
+@lru_cache(maxsize=2048)
+def _cached_local_embed(model: Any, text: str) -> list[float]:
+    """Module-level cached embedding to avoid per-instance lru_cache memory leak."""
+    vector = model.encode(text, normalize_embeddings=True)
+    return vector.tolist()
+
+
 class EmbeddingService:
     """Generates text embeddings via OpenAI API or local sentence-transformers.
 
@@ -126,11 +133,11 @@ class EmbeddingService:
                     "Local embedding model loaded (dim=%d)",
                     self._local_model.get_sentence_embedding_dimension(),
                 )
-            except ImportError:
+            except ImportError as err:
                 raise ImportError(
                     "sentence-transformers is not installed. "
                     "Install with: pip install sentence-transformers torch"
-                )
+                ) from err
         return self._local_model
 
     # ------------------------------------------------------------------
@@ -198,8 +205,6 @@ class EmbeddingService:
                 return f"{prefix}{text}"
         return text
 
-    @lru_cache(maxsize=2048)
     def _cached_local_embed(self, text: str) -> list[float]:
         model = self._load_local_model()
-        vector = model.encode(text, normalize_embeddings=True)
-        return vector.tolist()
+        return _cached_local_embed(model, text)

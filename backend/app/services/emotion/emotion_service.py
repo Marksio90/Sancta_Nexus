@@ -216,7 +216,7 @@ class EmotionService:
         return EmotionAnalysis(
             vector=vector,
             primary_emotion=primary,
-            secondary_emotions=sorted(secondary, key=lambda l: vector[l], reverse=True),
+            secondary_emotions=sorted(secondary, key=lambda lbl: vector[lbl], reverse=True),
             confidence=round(confidence, 4),
             spiritual_state=spiritual_state_type,
         )
@@ -275,7 +275,7 @@ class EmotionService:
         return EmotionAnalysis(
             vector=vector,
             primary_emotion=primary,
-            secondary_emotions=sorted(secondary, key=lambda l: vector[l], reverse=True),
+            secondary_emotions=sorted(secondary, key=lambda lbl: vector[lbl], reverse=True),
             confidence=confidence,
             spiritual_state=spiritual,
         )

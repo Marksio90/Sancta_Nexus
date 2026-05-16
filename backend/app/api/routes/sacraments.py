@@ -105,11 +105,11 @@ async def get_state_questions(state_of_life: str) -> dict[str, Any]:
     from app.services.sacraments.examination_service import StateOfLife
     try:
         state = StateOfLife(state_of_life)
-    except ValueError:
+    except ValueError as err:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid state: '{state_of_life}'. Valid: {[s.value for s in StateOfLife]}",
-        )
+        ) from err
     svc = _get_examination()
     return {
         "state_of_life": state_of_life,
@@ -123,8 +123,8 @@ async def generate_examination(req: ExaminationRequest) -> dict[str, Any]:
     from app.services.sacraments.examination_service import StateOfLife
     try:
         state = StateOfLife(req.state_of_life)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}") from err
 
     try:
         svc = _get_examination()
@@ -140,7 +140,7 @@ async def generate_examination(req: ExaminationRequest) -> dict[str, Any]:
         }
     except Exception as exc:
         logger.error("Examination generation error: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/confession/reflection/stream")
@@ -150,8 +150,8 @@ async def stream_commandment_reflection(req: ReflectionStreamRequest) -> Streami
 
     try:
         state = StateOfLife(req.state_of_life)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}") from err
 
     async def _generate() -> AsyncIterator[bytes]:
         try:
@@ -179,8 +179,8 @@ async def generate_act_of_contrition(req: ContritionRequest) -> dict[str, Any]:
     from app.services.sacraments.examination_service import StateOfLife
     try:
         state = StateOfLife(req.state_of_life)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}") from err
 
     try:
         svc = _get_examination()
@@ -190,7 +190,7 @@ async def generate_act_of_contrition(req: ContritionRequest) -> dict[str, Any]:
         )
         return {"act_of_contrition": text}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/confession/resolution")
@@ -199,8 +199,8 @@ async def generate_resolution(req: ResolutionRequest) -> dict[str, Any]:
     from app.services.sacraments.examination_service import StateOfLife
     try:
         state = StateOfLife(req.state_of_life)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}")
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {req.state_of_life}") from err
 
     try:
         svc = _get_examination()
@@ -210,7 +210,7 @@ async def generate_resolution(req: ResolutionRequest) -> dict[str, Any]:
         )
         return {"resolution": text, "focus_area": req.focus_area}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ async def ask_rcia_question(req: RCIAQuestionRequest) -> dict[str, Any]:
         )
         return {"question": req.question, "answer": answer}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/rcia/reflection/{session_id}")
@@ -270,7 +270,7 @@ async def get_rcia_reflection(session_id: str) -> dict[str, Any]:
         reflection = await svc.generate_reflection(session_id)
         return {"session_id": session_id, "reflection": reflection}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +315,7 @@ async def discuss_marriage_topic(req: MarriageQuestionRequest) -> dict[str, Any]
         )
         return {"response": response}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/marriage/reflection/{session_id}")
@@ -326,7 +326,7 @@ async def get_marriage_reflection(session_id: str) -> dict[str, Any]:
         reflection = await svc.generate_session_reflection(session_id)
         return {"session_id": session_id, "reflection": reflection}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -389,7 +389,7 @@ async def ask_confirmation_question(req: ConfirmationQuestionRequest) -> dict[st
         )
         return {"question": req.question, "answer": answer}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/confirmation/patron")
@@ -403,7 +403,7 @@ async def suggest_patron_saint(req: PatronRequest) -> dict[str, Any]:
         )
         return {"suggestions": suggestions}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

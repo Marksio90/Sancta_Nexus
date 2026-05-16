@@ -213,10 +213,12 @@ class TestSTTFileValidation:
         assert "415" in _stt_func_source()
 
     def test_stt_defines_max_audio_bytes(self):
-        assert "_MAX_AUDIO_BYTES" in VOICE_PATH.read_text()
+        src = VOICE_PATH.read_text()
+        assert "_max_audio_bytes" in src or "_MAX_AUDIO_BYTES" in src
 
     def test_stt_defines_allowed_audio_types(self):
-        assert "_ALLOWED_AUDIO_TYPES" in VOICE_PATH.read_text()
+        src = VOICE_PATH.read_text()
+        assert "_allowed_audio_types" in src or "_ALLOWED_AUDIO_TYPES" in src
 
     def test_stt_checks_empty_file(self):
         src = _stt_func_source()

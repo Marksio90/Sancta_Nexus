@@ -79,10 +79,9 @@ class TestNovenaSecurityNoUserIdInBody:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "complete_novena_day":
-                    func_source = ast.unparse(node)
-                    assert "current_user" in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "complete_novena_day":
+                func_source = ast.unparse(node)
+                assert "current_user" in func_source
 
 
 # ── Struktura endpointów nowenn ───────────────────────────────────────────────
@@ -176,10 +175,9 @@ class TestIntentionEndpoints:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "get_my_intentions":
-                    func_source = ast.unparse(node)
-                    assert "current_user" in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "get_my_intentions":
+                func_source = ast.unparse(node)
+                assert "current_user" in func_source
 
 
 # ── Różaniec ─────────────────────────────────────────────────────────────────

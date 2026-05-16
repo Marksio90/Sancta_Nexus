@@ -139,7 +139,7 @@ async def create_tables() -> None:
 
     from app.models.database import Base  # noqa: F401 — ensure all models loaded
 
-    _ENUM_TYPES = [
+    _enum_types = [
         "subscription_tier", "session_type", "user_role",
         "audit_event_type", "intention_status",
     ]
@@ -151,7 +151,7 @@ async def create_tables() -> None:
         except Exception:
             # Likely stale enum types — drop all and retry
             await conn.run_sync(Base.metadata.drop_all)
-            for enum_name in _ENUM_TYPES:
+            for enum_name in _enum_types:
                 await conn.execute(text(f"DROP TYPE IF EXISTS {enum_name} CASCADE"))
             await conn.run_sync(Base.metadata.create_all)
 

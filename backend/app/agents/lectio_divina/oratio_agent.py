@@ -306,10 +306,10 @@ class OratioAgent:
             return dict(FALLBACK_PRAYER)
 
         # --- A-028: PrayerGeneratorAgent delegation (ignatian/carmelite/franciscan/benedictine/charismatic) ---
-        _PRAYER_GENERATOR_TRADITIONS = frozenset(
+        _prayer_generator_traditions = frozenset(
             {"ignatian", "carmelite", "franciscan", "benedictine", "charismatic"}
         )
-        if tradition in _PRAYER_GENERATOR_TRADITIONS:
+        if tradition in _prayer_generator_traditions:
             try:
                 from app.agents.generative.prayer_generator import PrayerGeneratorAgent
                 prayer_agent = PrayerGeneratorAgent()

@@ -111,8 +111,8 @@ def verify_token(token: str, *, expected_type: str = "access") -> dict[str, Any]
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
-    except JWTError:
-        raise credentials_exception
+    except JWTError as err:
+        raise credentials_exception from err
 
     if payload.get("type") != expected_type:
         raise credentials_exception

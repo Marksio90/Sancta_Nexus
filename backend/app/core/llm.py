@@ -20,6 +20,7 @@ Usage::
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any, Literal
 
@@ -225,10 +226,8 @@ class LLMClientAdapter:
         if max_tokens is not None:
             bind_kwargs["max_tokens"] = max_tokens
         if bind_kwargs:
-            try:
-                llm = llm.bind(**bind_kwargs)
-            except Exception:
-                pass  # some models do not support per-call binding
+            with contextlib.suppress(Exception):
+                llm = llm.bind(**bind_kwargs)  # some models do not support per-call binding
 
         return await llm.ainvoke(lc_messages)
 

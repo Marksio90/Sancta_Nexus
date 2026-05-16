@@ -73,9 +73,8 @@ def _uses_require_authenticated(func_name: str) -> bool:
             if isinstance(d, ast.Name) and d.id == "require_authenticated":
                 return True
         for arg in node.args.args + node.args.kwonlyargs:
-            if arg.annotation and isinstance(arg.annotation, ast.Name):
-                if arg.annotation.id == "require_authenticated":
-                    return True
+            if arg.annotation and isinstance(arg.annotation, ast.Name) and arg.annotation.id == "require_authenticated":
+                return True
         # Check default values against require_authenticated
         all_args = node.args.args
         all_defaults = ([None] * (len(all_args) - len(node.args.defaults))) + node.args.defaults

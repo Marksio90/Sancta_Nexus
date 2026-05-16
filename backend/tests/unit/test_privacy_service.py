@@ -79,10 +79,12 @@ class TestRequestDeletion:
 
         # Mock get_or_create_privacy_settings
         ps = _make_privacy_settings(user.id)
-        with patch.object(svc, "get_or_create_privacy_settings", return_value=ps):
-            with patch("app.services.privacy.privacy_service.audit") as mock_audit:
-                mock_audit.log = AsyncMock()
-                await svc.request_deletion(db, user, actor_id=user.id)
+        with (
+            patch.object(svc, "get_or_create_privacy_settings", return_value=ps),
+            patch("app.services.privacy.privacy_service.audit") as mock_audit,
+        ):
+            mock_audit.log = AsyncMock()
+            await svc.request_deletion(db, user, actor_id=user.id)
 
         assert user.is_active is False
         assert user.deleted_at is not None
@@ -94,13 +96,15 @@ class TestRequestDeletion:
         db = AsyncMock()
         ps = _make_privacy_settings(user.id)
 
-        with patch.object(svc, "get_or_create_privacy_settings", return_value=ps):
-            with patch("app.services.privacy.privacy_service.audit") as mock_audit:
-                mock_audit.log = AsyncMock()
-                await svc.request_deletion(db, user, actor_id=user.id)
-                mock_audit.log.assert_called_once()
-                call_kwargs = mock_audit.log.call_args
-                assert "account_deletion_requested" in str(call_kwargs)
+        with (
+            patch.object(svc, "get_or_create_privacy_settings", return_value=ps),
+            patch("app.services.privacy.privacy_service.audit") as mock_audit,
+        ):
+            mock_audit.log = AsyncMock()
+            await svc.request_deletion(db, user, actor_id=user.id)
+            mock_audit.log.assert_called_once()
+            call_kwargs = mock_audit.log.call_args
+            assert "account_deletion_requested" in str(call_kwargs)
 
 
 class TestExportUserData:

@@ -79,11 +79,13 @@ async def test_oratio_does_not_delegate_for_own_traditions(tradition: str):
     content = f'{{"prayer_text": "Przez Chrystusa Prawdę Wcieloną. Amen.", "tradition": "{tradition}", "elements": []}}'
     mock_llm = _make_llm(content)
 
-    with patch("app.agents.lectio_divina.oratio_agent.get_llm_creative", return_value=mock_llm):
-        with patch("app.agents.generative.prayer_generator.PrayerGeneratorAgent") as MockA028:
-            agent = OratioAgent()
-            await agent.pray(SCRIPTURE, EMOTION_VECTOR, tradition=tradition)
-            MockA028.assert_not_called()
+    with (
+        patch("app.agents.lectio_divina.oratio_agent.get_llm_creative", return_value=mock_llm),
+        patch("app.agents.generative.prayer_generator.PrayerGeneratorAgent") as MockA028,
+    ):
+        agent = OratioAgent()
+        await agent.pray(SCRIPTURE, EMOTION_VECTOR, tradition=tradition)
+        MockA028.assert_not_called()
 
 
 async def test_oratio_returns_fallback_when_llm_is_none():
@@ -96,13 +98,15 @@ async def test_oratio_returns_fallback_when_llm_is_none():
 
 async def test_oratio_normalizes_unknown_tradition():
     mock_llm = _make_llm('{"prayer_text": "Prayer.", "tradition": "ignatian", "elements": []}')
-    with patch("app.agents.lectio_divina.oratio_agent.get_llm_creative", return_value=mock_llm):
-        with patch("app.agents.generative.prayer_generator.PrayerGeneratorAgent") as MockA028:
-            instance = MockA028.return_value
-            instance.generate = AsyncMock(return_value={
-                "prayer_text": "Prayer fallback.", "tradition": "ignatian", "elements": []
-            })
-            agent = OratioAgent()
-            result = await agent.pray(SCRIPTURE, EMOTION_VECTOR, tradition="buddhist")
+    with (
+        patch("app.agents.lectio_divina.oratio_agent.get_llm_creative", return_value=mock_llm),
+        patch("app.agents.generative.prayer_generator.PrayerGeneratorAgent") as MockA028,
+    ):
+        instance = MockA028.return_value
+        instance.generate = AsyncMock(return_value={
+            "prayer_text": "Prayer fallback.", "tradition": "ignatian", "elements": []
+        })
+        agent = OratioAgent()
+        result = await agent.pray(SCRIPTURE, EMOTION_VECTOR, tradition="buddhist")
 
     assert "prayer_text" in result
