@@ -52,5 +52,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...novenaEntries];
+  // English landing page
+  const englishEntries: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/en`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/en/guest`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    },
+  ];
+
+  return [...staticEntries, ...novenaEntries, ...englishEntries];
 }

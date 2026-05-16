@@ -42,6 +42,13 @@ export const metadata: Metadata = {
     "modlitwa katolicka", "formacja duchowa", "AI", "Catholic app",
   ],
   manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://sanctanexus.pl",
+    languages: {
+      pl: "https://sanctanexus.pl",
+      en: "https://sanctanexus.pl/en",
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

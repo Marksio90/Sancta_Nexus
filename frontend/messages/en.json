@@ -1,0 +1,113 @@
+{
+  "common": {
+    "appName": "Sancta Nexus",
+    "tagline": "Prayer and Spiritual Formation",
+    "startPraying": "Start Praying",
+    "learnMore": "Learn More",
+    "login": "Sign In",
+    "register": "Create Account",
+    "free": "Free",
+    "premium": "Premium",
+    "loading": "Loading…",
+    "back": "Back",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "home": "Home",
+    "lectio": "Lectio Divina",
+    "assistant": "Reflection Assistant",
+    "breviary": "Divine Office",
+    "today": "Today",
+    "bible": "Bible",
+    "rosary": "Rosary",
+    "novenas": "Novenas",
+    "community": "Community",
+    "pricing": "Pricing",
+    "dashboard": "Spiritual Dashboard",
+    "account": "Account"
+  },
+  "home": {
+    "hero": {
+      "title": "Prayer and Spiritual Formation",
+      "subtitle": "Lectio Divina, Rosary, Examination of Conscience, Divine Office, and an AI Reflection Assistant — always at hand.",
+      "cta": "Start for Free",
+      "guestCta": "Try Without Registration"
+    },
+    "features": {
+      "lectio": {
+        "title": "Lectio Divina",
+        "description": "A five-stage Scripture meditation guided by an AI assistant."
+      },
+      "examen": {
+        "title": "Examination of Conscience",
+        "description": "The Ignatian Examen guided step by step."
+      },
+      "breviary": {
+        "title": "Divine Office",
+        "description": "Liturgy of the Hours — Lauds, Vespers, Compline."
+      },
+      "community": {
+        "title": "Community",
+        "description": "Praying for shared intentions and the communal Rosary."
+      }
+    },
+    "disclaimer": "The reflection assistant helps you organize your thoughts and return to prayer. It does not replace a priest, confessor, spiritual director, or therapist."
+  },
+  "lectio": {
+    "start": "Begin Lectio Divina",
+    "stages": {
+      "lectio": "Lectio",
+      "meditatio": "Meditatio",
+      "oratio": "Oratio",
+      "contemplatio": "Contemplatio",
+      "actio": "Actio"
+    },
+    "emotion": {
+      "placeholder": "How are you feeling right now? What is on your heart?",
+      "submit": "Continue"
+    }
+  },
+  "crisis": {
+    "buttonLabel": "I Need Help",
+    "title": "You are not alone.",
+    "phone": "Crisis Line: 116 123",
+    "chat": "Online Chat: 116123.pl",
+    "note": "You can also speak with a priest, spiritual director, or therapist. Your life has value.",
+    "scripture": "\"The Lord is near to the brokenhearted and saves the crushed in spirit.\" — Ps 34:18"
+  },
+  "journey": {
+    "purgativa": "Via Purgativa — Purgation",
+    "illuminativa": "Via Illuminativa — Illumination",
+    "unitiva": "Via Unitiva — Union"
+  },
+  "feedback": {
+    "good": "Good response",
+    "bad": "Poor response",
+    "flag": "Report issue",
+    "reasons": {
+      "theologically_incorrect": "Theologically incorrect",
+      "repetitive_or_generic": "Repetitive or too generic",
+      "other": "Other"
+    },
+    "thanks": "Thank you for your feedback — it helps us improve content quality."
+  },
+  "pricing": {
+    "free": {
+      "name": "Pilgrim",
+      "description": "Essential prayer tools"
+    },
+    "pilgrim": {
+      "name": "Disciple",
+      "description": "Full access to spiritual formation"
+    },
+    "disciple": {
+      "name": "Mystic",
+      "description": "Unlimited access and support"
+    }
+  }
+}
