@@ -97,6 +97,8 @@ class Settings(BaseSettings):
     # ── Rate limiting ─────────────────────────────────────────────────────
     RATE_LIMIT_REQUESTS: int = 120   # max requests per window per IP
     RATE_LIMIT_WINDOW: int = 60      # sliding window in seconds
+    AI_RATE_LIMIT_REQUESTS: int = 20  # stricter limit for LLM endpoints
+    AI_RATE_LIMIT_WINDOW: int = 60    # window for AI tier (seconds)
 
     # ── Stripe / Billing ──────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""

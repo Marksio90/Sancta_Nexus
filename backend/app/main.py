@@ -139,6 +139,8 @@ app.add_middleware(
     RateLimitMiddleware,
     max_requests=settings.RATE_LIMIT_REQUESTS,
     window_seconds=settings.RATE_LIMIT_WINDOW,
+    ai_max_requests=settings.AI_RATE_LIMIT_REQUESTS,
+    ai_window_seconds=settings.AI_RATE_LIMIT_WINDOW,
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
