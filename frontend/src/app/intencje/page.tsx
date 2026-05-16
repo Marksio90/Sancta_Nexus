@@ -3,6 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 
+interface PrayerIntention {
+  id: string;
+  content?: string;
+  category?: string;
+  author_display?: string;
+  status?: string;
+  prayer_count?: number;
+}
+
 const CATEGORIES = [
   { id: "all", label: "Wszystkie" },
   { id: "general", label: "Ogólne" },
@@ -33,7 +42,7 @@ type AppState = "list" | "new";
 
 export default function IntencjePage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [intentions, setIntentions] = useState<Record<string, unknown>[]>([]);
+  const [intentions, setIntentions] = useState<PrayerIntention[]>([]);
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
@@ -49,7 +58,7 @@ export default function IntencjePage() {
   const loadIntentions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<{ intentions: Record<string, unknown>[] }>(
+      const data = await api.get<{ intentions: PrayerIntention[] }>(
         `/api/v1/community/intentions?category=${category}&limit=40`
       );
       setIntentions(data.intentions || []);
@@ -72,7 +81,7 @@ export default function IntencjePage() {
       await api.post(`/api/v1/community/intentions/${id}/pray`, {});
       setIntentions((prev) =>
         prev.map((i) =>
-          i.id === id ? { ...i, prayer_count: i.prayer_count + 1 } : i
+          i.id === id ? { ...i, prayer_count: (i.prayer_count ?? 0) + 1 } : i
         )
       );
     } catch {
@@ -285,7 +294,7 @@ export default function IntencjePage() {
         ) : (
           <div className="space-y-3">
             {intentions.map((intention) => {
-              const prayed = prayedIds.has(intention.id);
+              const prayed = prayedIds.has(intention.id ?? "");
               return (
                 <div
                   key={intention.id}
@@ -293,7 +302,7 @@ export default function IntencjePage() {
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">
-                      {CATEGORY_ICONS[intention.category] || "🙏"}
+                      {CATEGORY_ICONS[intention.category ?? ""] || "🙏"}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-200 leading-relaxed mb-2">
@@ -307,7 +316,7 @@ export default function IntencjePage() {
                           )}
                         </div>
                         <button
-                          onClick={() => pray(intention.id)}
+                          onClick={() => pray(intention.id ?? "")}
                           disabled={prayed}
                           className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all ${
                             prayed

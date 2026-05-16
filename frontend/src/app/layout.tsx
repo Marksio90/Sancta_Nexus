@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Cinzel, Crimson_Text, Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -7,6 +8,28 @@ import { LiturgicalSeasonProvider } from "@/components/providers/LiturgicalSeaso
 import { ServiceWorkerProvider } from "@/components/providers/ServiceWorkerProvider";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { InstallPrompt } from "@/components/mobile/InstallPrompt";
+
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "900"],
+  variable: "--font-cinzel",
+  display: "swap",
+});
+
+const crimsonText = Crimson_Text({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-crimson",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Sancta Nexus — Modlitwa i formacja duchowa",
@@ -48,18 +71,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pl">
+    <html lang="pl" className={`${cinzel.variable} ${crimsonText.variable} ${inter.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         {/* Apple touch icons */}
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.svg" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512.svg" />

@@ -5,6 +5,28 @@ import { api } from "@/lib/api";
 
 type AppState = "list" | "session" | "gifts" | "patron" | "chat";
 
+interface ConfirmationSession {
+  session_id?: string;
+  number?: number | string;
+  title?: string;
+  subtitle?: string;
+  key_question?: string;
+  holy_spirit_gift?: string;
+  scripture?: string[];
+  ccc_refs?: string[];
+  personal_challenge?: string;
+  prayer?: string;
+}
+
+interface SpiritGift {
+  gift?: string;
+  latin?: string;
+  description?: string;
+  scripture?: string;
+  ccc?: string | number;
+  fruit?: string;
+}
+
 const GIFT_ICONS: Record<string, string> = {
   Mądrość: "✨",
   Rozum: "💡",
@@ -17,9 +39,9 @@ const GIFT_ICONS: Record<string, string> = {
 
 export default function BierzmowaniePage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [program, setProgram] = useState<Record<string, unknown>[]>([]);
-  const [gifts, setGifts] = useState<Record<string, unknown>[]>([]);
-  const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
+  const [program, setProgram] = useState<ConfirmationSession[]>([]);
+  const [gifts, setGifts] = useState<SpiritGift[]>([]);
+  const [selectedSession, setSelectedSession] = useState<ConfirmationSession | null>(null);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -33,7 +55,7 @@ export default function BierzmowaniePage() {
   const [loadingPatron, setLoadingPatron] = useState(false);
 
   useEffect(() => {
-    api.get<{ sessions: Record<string, unknown>[]; gifts_of_spirit: Record<string, unknown>[] }>("/api/v1/sacraments/confirmation/program")
+    api.get<{ sessions: ConfirmationSession[]; gifts_of_spirit: SpiritGift[] }>("/api/v1/sacraments/confirmation/program")
       .then((d) => {
         setProgram(d.sessions || []);
         setGifts(d.gifts_of_spirit || []);
@@ -41,7 +63,7 @@ export default function BierzmowaniePage() {
       .catch(() => {});
   }, []);
 
-  const openSession = (session: Record<string, unknown>) => {
+  const openSession = (session: ConfirmationSession) => {
     setSelectedSession(session);
     setMessages([
       {
@@ -175,14 +197,14 @@ export default function BierzmowaniePage() {
           <p className="text-xs text-gray-500 mb-6">Iz 11,2-3 · KKK §§ 1830-1832</p>
 
           <div className="space-y-3">
-            {gifts.map((gift: Record<string, unknown>) => (
+            {gifts.map((gift) => (
               <div
                 key={gift.gift}
                 className="bg-white/5 border border-white/10 rounded-xl p-4"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">
-                    {GIFT_ICONS[gift.gift] || "✨"}
+                    {(gift.gift ? GIFT_ICONS[gift.gift] : undefined) || "✨"}
                   </span>
                   <div>
                     <div className="font-semibold text-[#d4af37]">{gift.gift}</div>

@@ -9,6 +9,22 @@ import { api } from "@/lib/api";
 type MysteryType = "radosne" | "bolesne" | "chwalebne" | "swietlne";
 type AppState = "menu" | "mysteries" | "decade" | "community" | "live";
 
+interface RosaryMystery {
+  number: number;
+  title?: string;
+  description?: string;
+  scripture?: string;
+  fruit?: string;
+  meditation?: string;
+}
+
+interface CommunitySession {
+  id: string;
+  mystery_type: string;
+  participant_count: number;
+  intention?: string;
+}
+
 const MYSTERY_META: Record<MysteryType, { label: string; days: string; color: string; border: string; icon: string }> = {
   radosne:  { label: "Tajemnice radosne",  days: "Pon · Sob", color: "from-sky-900/60 to-sky-800/30",    border: "border-sky-700/40",    icon: "🌟" },
   bolesne:  { label: "Tajemnice bolesne",  days: "Wt · Pt",   color: "from-red-900/60 to-red-800/30",    border: "border-red-700/40",    icon: "✝" },
@@ -20,14 +36,14 @@ export default function RozaniecPage() {
   const [appState, setAppState] = useState<AppState>("menu");
   const [todayMystery, setTodayMystery] = useState<MysteryType>("radosne");
   const [selectedType, setSelectedType] = useState<MysteryType>("radosne");
-  const [mysteries, setMysteries] = useState<Record<string, unknown>[]>([]);
-  const [allData, setAllData] = useState<Record<string, unknown> | null>(null);
-  const [selectedMystery, setSelectedMystery] = useState<Record<string, unknown> | null>(null);
+  const [mysteries, setMysteries] = useState<RosaryMystery[]>([]);
+  const [allData, setAllData] = useState<Record<string, { mysteries: RosaryMystery[] }> | null>(null);
+  const [selectedMystery, setSelectedMystery] = useState<RosaryMystery | null>(null);
   const [selectedMysteryNum, setSelectedMysteryNum] = useState(1);
   const [meditation, setMeditation] = useState("");
   const [streamingMeditation, setStreamingMeditation] = useState(false);
   const [completedDecades, setCompletedDecades] = useState<Set<number>>(new Set());
-  const [communitySessions, setCommunitySessions] = useState<Record<string, unknown>[]>([]);
+  const [communitySessions, setCommunitySessions] = useState<CommunitySession[]>([]);
   const [newIntention, setNewIntention] = useState("");
   const [creatingSession, setCreatingSession] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -41,7 +57,7 @@ export default function RozaniecPage() {
   useEffect(() => { fetchBilling(); }, [fetchBilling]);
 
   useEffect(() => {
-    api.get<{ mystery_types: Record<string, unknown>; today: string }>("/api/v1/community/rosary/mysteries")
+    api.get<{ mystery_types: Record<string, { mysteries: RosaryMystery[] }>; today: string }>("/api/v1/community/rosary/mysteries")
       .then((d) => {
         setAllData(d.mystery_types);
         const today = d.today as MysteryType;
@@ -54,7 +70,7 @@ export default function RozaniecPage() {
 
   const loadCommunity = useCallback(async () => {
     try {
-      const data = await api.get<{ sessions: Record<string, unknown>[] }>("/api/v1/community/rosary/community");
+      const data = await api.get<{ sessions: CommunitySession[] }>("/api/v1/community/rosary/community");
       setCommunitySessions(data.sessions || []);
     } catch {}
   }, []);
@@ -104,7 +120,7 @@ export default function RozaniecPage() {
     }
   };
 
-  const openMystery = (mystery: Record<string, unknown>) => {
+  const openMystery = (mystery: RosaryMystery) => {
     setSelectedMystery(mystery);
     setSelectedMysteryNum(mystery.number);
     setMeditation("");
@@ -129,7 +145,7 @@ export default function RozaniecPage() {
     }
   };
 
-  const joinSession = async (session: Record<string, unknown>) => {
+  const joinSession = async (session: CommunitySession) => {
     try {
       await api.post(`/api/v1/community/rosary/community/${session.id}/join`, {});
     } catch {}

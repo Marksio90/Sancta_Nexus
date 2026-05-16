@@ -45,8 +45,11 @@ export function BreathingTimer({
   const [isComplete, setIsComplete] = useState(false);
   const [showJesusPrayer, setShowJesusPrayer] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundEnabledRef = useRef(soundEnabled);
   const phaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPhaseRef = useRef<BreathPhase | null>(null);
+
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
 
   const totalSeconds = durationMinutes * 60;
 
@@ -81,7 +84,7 @@ export function BreathingTimer({
         if (prev <= 1) {
           setIsComplete(true);
           setIsRunning(false);
-          if (soundEnabled) playSilenceBell();
+          if (soundEnabledRef.current) playSilenceBell();
           return 0;
         }
         return prev - 1;
