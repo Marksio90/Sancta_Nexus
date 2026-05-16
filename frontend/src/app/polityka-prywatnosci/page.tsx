@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 };
 
 const LAST_UPDATED = "15 maja 2026";
-const CONTACT_EMAIL = "prywatnosc@sanctanexus.org";
+const CONTACT_EMAIL = "marks.mateusz@wp.pl";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

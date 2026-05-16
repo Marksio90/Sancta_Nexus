@@ -13,7 +13,7 @@ export function Footer() {
             Regulamin
           </Link>
           <a
-            href="mailto:kontakt@sanctanexus.org"
+            href="mailto:marks.mateusz@wp.pl"
             className="hover:text-sacred-gold transition-colors"
           >
             Kontakt

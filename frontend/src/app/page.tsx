@@ -239,8 +239,7 @@ export default async function HomePage() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[--color-sacred-text-muted]/30">
-          <p className="text-xs tracking-widest uppercase">Odkryj</p>
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-[--color-sacred-text-muted]/20 pointer-events-none">
           <ChevronRight className="h-4 w-4 rotate-90 animate-bounce" />
         </div>
       </section>

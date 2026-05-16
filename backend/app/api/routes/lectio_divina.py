@@ -777,3 +777,36 @@ async def remove_favorite(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ulubiony fragment nie istnieje.")
     await db.delete(passage)
     await db.flush()
+
+
+@router.get("/liturgical-context")
+async def get_liturgical_context(date: str | None = None) -> dict:
+    """Zwróć kontekst liturgiczny dla podanej daty (YYYY-MM-DD). Endpoint publiczny."""
+    import datetime as dt
+    from app.services.scripture.liturgical_calendar import LiturgicalCalendar
+
+    try:
+        parsed = dt.date.fromisoformat(date) if date else dt.date.today()
+    except ValueError:
+        parsed = dt.date.today()
+
+    calendar = LiturgicalCalendar()
+    day = calendar.get_today(today=parsed)
+
+    return {
+        "date": parsed.isoformat(),
+        "season": day.season,
+        "feast": day.feast,
+        "rank": getattr(day, "rank", None),
+        "readings": [
+            {
+                "label": r.label,
+                "reference": str(r),
+                "book": r.book,
+                "chapter": r.chapter,
+                "verse_start": r.verse_start,
+                "verse_end": r.verse_end,
+            }
+            for r in day.readings
+        ],
+    }
