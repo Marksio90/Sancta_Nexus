@@ -652,7 +652,7 @@ export default function DziennikPage() {
           <select
             value={moodFilter}
             onChange={(e) => setMoodFilter(e.target.value)}
-            className="rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-surface] px-4 py-2.5 text-sm text-[--color-sacred-text] focus:border-[--color-gold]/50 focus:outline-none"
+            className="rounded-lg border border-white/10 bg-[#0d0b1a] px-4 py-2.5 text-sm text-gray-300 focus:border-[#d4af37]/50 focus:outline-none"
           >
             <option value="">Wszystkie nastroje</option>
             {MOODS.map((m) => (

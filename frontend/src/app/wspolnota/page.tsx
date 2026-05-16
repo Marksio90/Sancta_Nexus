@@ -68,8 +68,8 @@ export default function WspolnotaPage() {
             Wspólnota
           </h1>
           <p className="text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
-            «Gdzie dwóch lub trzech zbiera się w imię moje, tam jestem pośród
-            nich» (Mt 18,20)
+            „Gdzie dwóch lub trzech zbiera się w imię moje, tam jestem pośród
+            nich” (Mt 18,20)
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function WspolnotaPage() {
         </div>
 
         <div className="mt-10 text-center text-xs text-gray-600">
-          «Miłujcie się wzajemnie, tak jak Ja was umiłowałem» — J 15,12
+          „Miłujcie się wzajemnie, tak jak Ja was umiłowałem” — J 15,12
         </div>
       </div>
     </main>

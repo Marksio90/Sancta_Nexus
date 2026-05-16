@@ -69,7 +69,7 @@ const HOURS: HourData[] = [
     opening: "Boże, wejrzyj ku wspomożeniu memu. Panie, pospiesz ku ratunkowi memu.",
     psalmRef: "Ps 91,1-4",
     psalmText:
-      "Kto przebywa w pieczy Najwyższego\ni mieszka w cieniu Wszechmocnego,\nmówi do Pana: «Ucieczko moja i twierdzo,\nmój Boże, któremu zaufałem».\n\nOn sam wyzwoli cię z sideł myśliwego\ni od słowa zatrutego.\nSwoim piórami cię okryje,\npod Jego skrzydłami znajdziesz schronienie.",
+      "Kto przebywa w pieczy Najwyższego\ni mieszka w cieniu Wszechmocnego,\nmówi do Pana: „Ucieczko moja i twierdzo,\nmój Boże, któremu zaufałem”.\n\nOn sam wyzwoli cię z sideł myśliwego\ni od słowa zatrutego.\nSwoim piórami cię okryje,\npod Jego skrzydłami znajdziesz schronienie.",
     reading: "Bądźcie trzeźwi i czuwajcie! Przeciwnik wasz, diabeł, jak lew ryczący krąży szukając kogo pożreć.",
     readingRef: "1 P 5,8",
     responsory: "W ręce Twoje, Panie, oddaję ducha mego. — Ty nas odkupiłeś, Panie, Boże wierny.",

@@ -270,8 +270,8 @@ export default function OnboardingPage() {
             </div>
 
             <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl p-4 mb-8 text-sm text-gray-400 italic text-center leading-relaxed">
-              «Będziesz miłował Pana Boga swego z całego serca swego,
-              z całej duszy swojej i ze wszystkich sił swoich.»
+              „Będziesz miłował Pana Boga swego z całego serca swego,
+              z całej duszy swojej i ze wszystkich sił swoich.”
               <div className="text-xs text-gray-600 mt-1 not-italic">Pwt 6,5</div>
             </div>
 

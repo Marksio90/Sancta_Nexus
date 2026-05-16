@@ -175,7 +175,7 @@ export default function SpowiedzPage() {
               Rachunek sumienia
             </h1>
             <p className="text-gray-400 text-sm">
-              «Podejdźmy z prawdziwym sercem» (Hbr 10,22)
+              „Podejdźmy z prawdziwym sercem” (Hbr 10,22)
             </p>
           </div>
 

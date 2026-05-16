@@ -347,7 +347,7 @@ export default function NowennaPage() {
                       <div className="font-semibold text-sm text-white">{n.novena_title}</div>
                       {n.intention && (
                         <div className="text-xs text-gray-500 mt-0.5 italic">
-                          «{n.intention}»
+                          „{n.intention}”
                         </div>
                       )}
                     </div>

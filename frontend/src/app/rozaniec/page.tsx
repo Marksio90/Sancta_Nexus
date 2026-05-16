@@ -289,7 +289,7 @@ export default function RozaniecPage() {
             <div className="mt-6 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-4 text-center">
               <div className="text-3xl mb-2">🙏</div>
               <p className="text-[#d4af37] font-semibold">Różaniec ukończony!</p>
-              <p className="text-xs text-gray-400 mt-1">«Różaniec jest modlitwą i rozważaniem» — Jan Paweł II</p>
+              <p className="text-xs text-gray-400 mt-1">„Różaniec jest modlitwą i rozważaniem” — Jan Paweł II</p>
             </div>
           )}
         </div>
@@ -574,7 +574,7 @@ export default function RozaniecPage() {
               <div className="text-4xl mb-2">🙏</div>
               <p className="text-[#d4af37] font-semibold text-lg">Wspólnotowy Różaniec ukończony!</p>
               <p className="text-xs text-gray-400 mt-2">
-                «Gdziekolwiek dwaj albo trzej są zebrani w imię moje, tam jestem pośród nich.» — Mt 18,20
+                „Gdziekolwiek dwaj albo trzej są zebrani w imię moje, tam jestem pośród nich.” — Mt 18,20
               </p>
             </div>
           )}
