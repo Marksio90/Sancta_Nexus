@@ -124,8 +124,8 @@ class TestSessionType:
 
 
 class TestAuditEventType:
-    def test_exactly_15_types(self):
-        assert len(AuditEventType) == 15
+    def test_exactly_16_types(self):
+        assert len(AuditEventType) == 16
 
     # User lifecycle events
     def test_user_registered(self):
@@ -194,8 +194,8 @@ class TestAuditEventType:
     def test_all_expected_present(self):
         expected = {
             "user_registered", "user_role_changed", "user_deleted",
-            "user_data_exported", "ai_response_generated",
-            "ai_response_rewritten", "ai_crisis_detected",
+            "user_data_exported", "login_failed",
+            "ai_response_generated", "ai_response_rewritten", "ai_crisis_detected",
             "content_created", "content_published", "content_archived",
             "intention_moderated", "module_toggled",
             "role_permission_denied", "journal_entry_deleted",

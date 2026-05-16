@@ -13,16 +13,19 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.core.dependencies import DbSession
+from app.core.dependencies import DbSession, RedisDep
 from app.core.rbac import require_authenticated
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     hash_password,
+    is_refresh_token_revoked,
+    revoke_refresh_token,
     verify_password,
     verify_token,
 )
-from app.models.database import User
+from app.models.database import AuditEventType, User
+from app.services.audit.audit_service import audit
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +184,13 @@ async def login(request: LoginRequest, db: DbSession) -> LoginResponse:
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(request.password, user.hashed_password):
+        await audit.log(
+            db,
+            event_type=AuditEventType.LOGIN_FAILED,
+            description=f"Failed login attempt for email: {request.email}",
+            user_id=user.id if user else None,
+            payload={"email": request.email},
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
@@ -214,12 +224,36 @@ async def login(request: LoginRequest, db: DbSession) -> LoginResponse:
     response_model=RefreshResponse,
     summary="Refresh an access token",
 )
-async def refresh(request: RefreshRequest, db: DbSession) -> RefreshResponse:
-    """Exchange a valid refresh token for a new access + refresh token pair."""
+async def refresh(request: RefreshRequest, db: DbSession, redis: RedisDep) -> RefreshResponse:
+    """Exchange a valid refresh token for a new access + refresh token pair.
+
+    Each refresh token carries a unique ``jti`` (JWT ID).  On use the old jti
+    is written to a Redis blocklist (TTL = remaining token lifetime) so it cannot
+    be replayed.  This prevents session hijacking via stolen refresh tokens.
+    """
+    from datetime import UTC, datetime
+
     payload = verify_token(request.refresh_token, expected_type="refresh")
     user_id: str = payload["sub"]
+    jti: str | None = payload.get("jti")
 
-    # Ensure the user still exists
+    # Check revocation blocklist (tokens issued before jti was added won't have it)
+    if jti:
+        try:
+            if await is_refresh_token_revoked(redis, jti):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh token has already been used.",
+                )
+        except Exception as redis_err:
+            # Redis unavailable — fail safe (deny the request)
+            logger.warning("Redis unavailable during token revocation check: %s", redis_err)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Token validation service temporarily unavailable.",
+            ) from redis_err
+
+    # Ensure the user still exists and is active
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
@@ -227,6 +261,15 @@ async def refresh(request: RefreshRequest, db: DbSession) -> RefreshResponse:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or deactivated.",
         )
+
+    # Revoke the used refresh token jti
+    if jti:
+        try:
+            exp_ts = payload.get("exp")
+            expires_at = datetime.fromtimestamp(exp_ts, tz=UTC) if exp_ts else datetime.now(UTC)
+            await revoke_refresh_token(redis, jti, expires_at)
+        except Exception as redis_err:
+            logger.warning("Could not revoke old refresh token jti=%s: %s", jti, redis_err)
 
     token_data = {"sub": user.id}
     access_token = create_access_token(token_data)

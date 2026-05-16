@@ -13,13 +13,16 @@ Nowe w Phase 3:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -180,6 +183,14 @@ class RunPipelineResponse(BaseModel):
     kerygmatic_theme: str = ""
     journey: dict[str, Any] | None = None
     error: str | None = None
+
+
+class EnqueuedTaskResponse(BaseModel):
+    """Returned by POST /run/async — client polls GET /api/v1/tasks/{task_id}."""
+
+    task_id: str
+    status: str = "queued"
+    poll_url: str
 
 
 _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
@@ -687,6 +698,185 @@ async def run_lectio_pipeline(
         journey=journey,
         error=result.get("error"),
     )
+
+
+# ── Streaming pipeline (SSE) ─────────────────────────────────────────────────
+
+# Maps LangGraph node names → human-readable Polish labels shown to the user.
+_NODE_LABELS: dict[str, str] = {
+    "emotion_analysis": "Analizuję Twój stan ducha…",
+    "scripture_selection": "Wybieram fragment Pisma Świętego…",
+    "lectio": "Przygotowuję kontekst biblijny…",
+    "meditatio": "Tworzę rozważanie (meditatio)…",
+    "oratio": "Komponuję modlitwę (oratio)…",
+    "contemplatio": "Przygotowuję kontemplację…",
+    "actio": "Formułuję wyzwanie na dziś (actio)…",
+    "crisis_handler": "Wykryto sytuację kryzysową — przygotowuję odpowiedź…",
+}
+
+# Which state keys carry the user-visible content for each completed node.
+_NODE_RESULT_KEYS: dict[str, list[str]] = {
+    "scripture_selection": ["scripture"],
+    "lectio": ["scripture"],
+    "meditatio": ["meditation"],
+    "oratio": ["prayer"],
+    "contemplatio": ["contemplation"],
+    "actio": ["action"],
+    "crisis_handler": ["scripture", "prayer", "action"],
+}
+
+
+def _sse_event(event: str, data: Any) -> str:
+    """Format a single Server-Sent Event frame."""
+    payload = json.dumps(data, ensure_ascii=False, default=str)
+    return f"event: {event}\ndata: {payload}\n\n"
+
+
+async def _stream_pipeline(user_id: str, emotion_text: str, tradition: str) -> AsyncGenerator[str, None]:
+    """Run the Lectio Divina LangGraph and yield SSE events per completed node."""
+    from app.agents.lectio_divina.lectio_divina_graph import _supervisor
+
+    initial_state = {
+        "user_id": user_id,
+        "raw_input": emotion_text,
+        "emotion_vector": {},
+        "liturgical_context": None,
+        "user_history": None,
+        "tradition": tradition,
+    }
+
+    # Emit a start event so the client can show a spinner immediately.
+    yield _sse_event("start", {"message": "Rozpoczynam Lectio Divina…", "stages": list(_NODE_LABELS.keys())})
+
+    accumulated_state: dict[str, Any] = {}
+    has_error = False
+
+    try:
+        async for chunk in _supervisor.graph.astream(initial_state, stream_mode="updates"):
+            # chunk is {node_name: {state_updates}} for each completed node
+            for node_name, state_updates in chunk.items():
+                accumulated_state.update(state_updates)
+
+                label = _NODE_LABELS.get(node_name, node_name)
+                result_keys = _NODE_RESULT_KEYS.get(node_name, [])
+                partial: dict[str, Any] = {"stage": node_name, "label": label}
+                for key in result_keys:
+                    if key in state_updates:
+                        partial[key] = state_updates[key]
+
+                yield _sse_event("stage", partial)
+
+                # Small yield point so the event loop can flush the SSE frame.
+                await asyncio.sleep(0)
+    except Exception as exc:
+        logger.error("Streaming Lectio Divina pipeline failed: %s", exc, exc_info=True)
+        has_error = True
+        yield _sse_event("error", {"detail": "Błąd przetwarzania. Spróbuj ponownie."})
+
+    if not has_error:
+        # Emit the full final result so the client can render the complete session.
+        final: dict[str, Any] = {
+            "scripture": accumulated_state.get("scripture"),
+            "meditation": accumulated_state.get("meditation"),
+            "prayer": accumulated_state.get("prayer"),
+            "contemplation": accumulated_state.get("contemplation"),
+            "action": accumulated_state.get("action"),
+            "tradition": accumulated_state.get("tradition", ""),
+            "kerygmatic_theme": accumulated_state.get("kerygmatic_theme", ""),
+            "error": accumulated_state.get("error"),
+        }
+        yield _sse_event("complete", final)
+
+    # SSE: close signal
+    yield _sse_event("done", {})
+
+
+@router.post(
+    "/run/stream",
+    summary="Uruchom pipeline Lectio Divina z strumieniowaniem SSE",
+    response_class=StreamingResponse,
+)
+async def run_lectio_pipeline_stream(
+    request: RunPipelineRequest,
+    current_user: User = require_authenticated,
+) -> StreamingResponse:
+    """Run the Lectio Divina pipeline and stream results stage-by-stage via SSE.
+
+    Each completed LangGraph node emits a ``stage`` event with its partial result.
+    When all nodes finish, a ``complete`` event carries the full session output.
+
+    The client should listen for these event types::
+
+        start    — pipeline started, lists expected stages
+        stage    — one node finished; contains partial result (scripture/meditation/…)
+        complete — all nodes done; contains full RunPipelineResponse payload
+        error    — unrecoverable pipeline error
+        done     — stream closed (always last)
+
+    Frontend usage (EventSource is GET-only — use fetchEventSource or a POST + ReadableStream)::
+
+        const resp = await fetch('/api/v1/lectio-divina/run/stream', {method:'POST', ...});
+        const reader = resp.body.getReader();
+        // parse SSE frames from reader
+    """
+    return StreamingResponse(
+        _stream_pipeline(current_user.id, request.emotion_text, request.tradition),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disable nginx buffering for SSE
+        },
+    )
+
+
+# ── Async pipeline via ARQ (mobile-friendly, no SSE required) ────────────────
+
+
+@router.post(
+    "/run/async",
+    response_model=EnqueuedTaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Enqueue Lectio Divina pipeline — returns task_id immediately",
+)
+async def run_lectio_pipeline_async(
+    request: RunPipelineRequest,
+    current_user: User = require_authenticated,
+) -> EnqueuedTaskResponse:
+    """Enqueue the Lectio Divina LangGraph pipeline as a background task.
+
+    Returns immediately (< 100 ms) with a ``task_id``.
+    Poll ``GET /api/v1/tasks/{task_id}`` for status and result.
+
+    Preferred on mobile / Capacitor where SSE connections may be dropped
+    by the OS when the app enters the background.
+    """
+    try:
+        from app.workers.pool import enqueue
+
+        job = await enqueue(
+            "run_lectio_pipeline",
+            user_id=current_user.id,
+            emotion_text=request.emotion_text,
+            tradition=request.tradition,
+        )
+        if job is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Task queue unavailable — use POST /run or /run/stream instead.",
+            )
+        return EnqueuedTaskResponse(
+            task_id=job.job_id,
+            status="queued",
+            poll_url=f"/api/v1/tasks/{job.job_id}",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to enqueue Lectio Divina pipeline: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Task queue unavailable — use POST /run or /run/stream instead.",
+        )
 
 
 # ── Ulubione fragmenty ────────────────────────────────────────────────────────

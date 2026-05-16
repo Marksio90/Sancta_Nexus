@@ -84,6 +84,7 @@ class AuditEventType(enum.StrEnum):
     USER_ROLE_CHANGED = "user_role_changed"
     USER_DELETED = "user_deleted"
     USER_DATA_EXPORTED = "user_data_exported"
+    LOGIN_FAILED = "login_failed"
     AI_RESPONSE_GENERATED = "ai_response_generated"
     AI_RESPONSE_REWRITTEN = "ai_response_rewritten"
     AI_CRISIS_DETECTED = "ai_crisis_detected"
@@ -98,6 +99,38 @@ class AuditEventType(enum.StrEnum):
 
 
 # ── Models ───────────────────────────────────────────────────────────────────
+
+
+class DioceseLicense(Base):
+    """Diocese-level B2B license for Sancta Nexus.
+
+    A diocese can license the platform for all their parishes.
+    Members of the diocese get a ``DISCIPLE`` subscription tier automatically.
+
+    Migration: alembic revision --autogenerate -m "add diocese_licenses table"
+    """
+
+    __tablename__ = "diocese_licenses"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    country: Mapped[str] = mapped_column(String(2), nullable=False, default="PL")
+    diocese_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    contact_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    # Stripe subscription ID for the diocese contract
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Maximum users covered by this license (0 = unlimited)
+    max_users: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    license_starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    license_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class User(Base):
@@ -146,6 +179,14 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+    # Diocese license link — NULL for individual users, set for diocese members.
+    # Migration: alembic revision --autogenerate -m "add diocese_id to users"
+    diocese_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("diocese_licenses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     # Relationships
@@ -505,6 +546,11 @@ class PrayerGroup(Base):
     schedule: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     member_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Short alphanumeric invite code (e.g. "ABCD1234") — NULL until generated.
+    # Migration: alembic revision --autogenerate -m "add invite_code to prayer_groups"
+    invite_code: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, unique=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

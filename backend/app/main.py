@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.dependencies import close_all_connections, create_tables
 from app.core.middleware import RateLimitMiddleware
+from app.middleware.langsmith_context import LangSmithContextMiddleware
 from app.middleware.timing import TimingMiddleware
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         settings.APP_NAME,
         settings.VERSION,
     )
+
+    # ── LangSmith tracing ────────────────────────────────────────────────
+    # LangChain reads LANGCHAIN_* env vars automatically. We set them here
+    # from our Settings object so the app works even if env vars are not
+    # exported directly (e.g. in Docker when injected via config files).
+    if settings.LANGCHAIN_TRACING_V2 and settings.LANGCHAIN_API_KEY:
+        import os
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+        os.environ.setdefault("LANGCHAIN_API_KEY", settings.LANGCHAIN_API_KEY)
+        os.environ.setdefault("LANGCHAIN_PROJECT", settings.LANGCHAIN_PROJECT)
+        os.environ.setdefault("LANGCHAIN_ENDPOINT", settings.LANGCHAIN_ENDPOINT)
+        logger.info(
+            "LangSmith tracing enabled — project=%s endpoint=%s",
+            settings.LANGCHAIN_PROJECT,
+            settings.LANGCHAIN_ENDPOINT,
+        )
+    else:
+        logger.info("LangSmith tracing disabled (set LANGCHAIN_TRACING_V2=true + LANGCHAIN_API_KEY to enable)")
+
     # Create database tables if they don't exist yet
     try:
         await create_tables()
@@ -112,6 +132,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if scheduler is not None:
         scheduler.shutdown(wait=False)
         logger.info("Background scheduler stopped")
+
+    # Close ARQ pool if it was opened during this process lifetime
+    try:
+        from app.workers.pool import close_pool
+        await close_pool()
+    except Exception:
+        pass
+
     logger.info("Shutting down -- releasing infrastructure connections")
     await close_all_connections()
 
@@ -132,6 +160,7 @@ app = FastAPI(
 # ── Observability ────────────────────────────────────────────────────────────
 
 app.add_middleware(TimingMiddleware)
+app.add_middleware(LangSmithContextMiddleware)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 
@@ -186,6 +215,19 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.ws_rosary", "/ws", ["websocket"]),
     # Billing — Stripe subskrypcje
     ("app.api.routes.billing", "/api/v1/billing", ["billing"]),
+    # User data sync — replaces localStorage-only stores
+    ("app.api.routes.notes", "/api/v1/notes", ["notes"]),
+    ("app.api.routes.progress", "/api/v1/progress", ["progress"]),
+    # AI response quality feedback
+    ("app.api.routes.feedback", "/api/v1/feedback", ["feedback"]),
+    # Background task status polling (ARQ)
+    ("app.api.routes.tasks", "/api/v1/tasks", ["tasks"]),
+    # Guest mode — one free Lectio Divina without registration
+    ("app.api.routes.guest", "/api/v1/guest", ["guest"]),
+    # Doctrinal review — imprimatur support infrastructure
+    ("app.api.routes.doctrinal_review", "/api/v1/doctrinal-review", ["doctrinal-review"]),
+    # Diocese licensing — B2B SaaS for dioceses
+    ("app.api.routes.diocese", "/api/v1/diocese", ["diocese"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
@@ -212,4 +254,28 @@ async def health_check() -> dict[str, str]:
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.VERSION,
+    }
+
+
+@app.get("/health/llm", tags=["system"])
+async def llm_health() -> dict[str, object]:
+    """LLM observability status — reports LangSmith tracing configuration.
+
+    Does NOT make a live LangSmith API call (avoids latency in health checks).
+    Use this to verify tracing is configured correctly in each environment.
+    """
+    import os
+
+    tracing_active = bool(
+        os.environ.get("LANGCHAIN_TRACING_V2") == "true"
+        and os.environ.get("LANGCHAIN_API_KEY")
+    )
+    return {
+        "status": "healthy",
+        "langsmith_tracing": tracing_active,
+        "langsmith_project": os.environ.get("LANGCHAIN_PROJECT", settings.LANGCHAIN_PROJECT),
+        "langsmith_endpoint": os.environ.get("LANGCHAIN_ENDPOINT", settings.LANGCHAIN_ENDPOINT),
+        "llm_provider": settings.LLM_PROVIDER,
+        "llm_primary_model": settings.LLM_PRIMARY_MODEL,
+        "llm_fast_model": settings.LLM_FAST_MODEL,
     }

@@ -9,6 +9,7 @@ import { ServiceWorkerProvider } from "@/components/providers/ServiceWorkerProvi
 import { ErrorBoundary } from "@/components/providers/ErrorBoundary";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { InstallPrompt } from "@/components/mobile/InstallPrompt";
+import { CrisisButton } from "@/components/CrisisButton";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
@@ -41,6 +42,13 @@ export const metadata: Metadata = {
     "modlitwa katolicka", "formacja duchowa", "AI", "Catholic app",
   ],
   manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://sanctanexus.pl",
+    languages: {
+      pl: "https://sanctanexus.pl",
+      en: "https://sanctanexus.pl/en",
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -99,6 +107,9 @@ export default function RootLayout({
 
           {/* PWA / native app install prompt */}
           <InstallPrompt />
+
+          {/* Always-visible crisis support button (bottom-right) */}
+          <CrisisButton />
 
           <Footer />
         </body>

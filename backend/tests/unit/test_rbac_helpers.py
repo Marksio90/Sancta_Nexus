@@ -24,8 +24,11 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
-for _mod in ["neo4j", "qdrant_client", "qdrant_client.models",
-             "jose", "jose.jwt", "jose.exceptions"]:
+for _mod in [
+    "neo4j", "qdrant_client", "qdrant_client.models",
+    "jose", "jose.jwt", "jose.exceptions",
+    "redis", "redis.asyncio",
+]:
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 

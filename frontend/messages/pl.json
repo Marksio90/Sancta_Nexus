@@ -1,0 +1,113 @@
+{
+  "common": {
+    "appName": "Sancta Nexus",
+    "tagline": "Modlitwa i formacja duchowa",
+    "startPraying": "Rozpocznij modlitwę",
+    "learnMore": "Dowiedz się więcej",
+    "login": "Zaloguj się",
+    "register": "Utwórz konto",
+    "free": "Bezpłatnie",
+    "premium": "Premium",
+    "loading": "Ładowanie…",
+    "back": "Wróć",
+    "close": "Zamknij",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "yes": "Tak",
+    "no": "Nie"
+  },
+  "nav": {
+    "home": "Główna",
+    "lectio": "Lectio Divina",
+    "assistant": "Asystent refleksji",
+    "breviary": "Brewiarz",
+    "today": "Dzisiaj",
+    "bible": "Biblia",
+    "rosary": "Różaniec",
+    "novenas": "Nowenny",
+    "community": "Wspólnota",
+    "pricing": "Cennik",
+    "dashboard": "Panel duchowy",
+    "account": "Konto"
+  },
+  "home": {
+    "hero": {
+      "title": "Modlitwa i formacja duchowa",
+      "subtitle": "Lectio Divina, Różaniec, Rachunek Sumienia, Brewiarz i Asystent refleksji AI — zawsze pod ręką.",
+      "cta": "Zacznij bezpłatnie",
+      "guestCta": "Wypróbuj bez rejestracji"
+    },
+    "features": {
+      "lectio": {
+        "title": "Lectio Divina",
+        "description": "Pięcioetapowe rozważanie Pisma Świętego z asystentem AI."
+      },
+      "examen": {
+        "title": "Rachunek Sumienia",
+        "description": "Ignacjański rachunek sumienia prowadzony krok po kroku."
+      },
+      "breviary": {
+        "title": "Brewiarz",
+        "description": "Liturgia Godzin — Jutrznia, Nieszpory, Kompleta."
+      },
+      "community": {
+        "title": "Wspólnota",
+        "description": "Modlitwa za wspólne intencje i Różaniec wspólnotowy."
+      }
+    },
+    "disclaimer": "Asystent refleksji pomaga uporządkować myśli i wrócić do modlitwy. Nie zastępuje kapłana, spowiednika, kierownika duchowego ani terapeuty."
+  },
+  "lectio": {
+    "start": "Rozpocznij Lectio Divina",
+    "stages": {
+      "lectio": "Lectio",
+      "meditatio": "Meditatio",
+      "oratio": "Oratio",
+      "contemplatio": "Contemplatio",
+      "actio": "Actio"
+    },
+    "emotion": {
+      "placeholder": "Jak się teraz czujesz? Co jest na Twoim sercu?",
+      "submit": "Kontynuuj"
+    }
+  },
+  "crisis": {
+    "buttonLabel": "Potrzebuję pomocy",
+    "title": "Nie jesteś sam/sama.",
+    "phone": "Telefon Zaufania: 116 123",
+    "chat": "Czat online: 116123.pl",
+    "note": "Możesz też porozmawiać z kapłanem, kierownikiem duchowym lub terapeutą. Twoje życie ma wartość.",
+    "scripture": "„Pan jest blisko ludzi skruszonych w sercu, ocala złamanych na duchu." — Ps 34,19"
+  },
+  "journey": {
+    "purgativa": "Via Purgativa — Oczyszczenie",
+    "illuminativa": "Via Illuminativa — Oświecenie",
+    "unitiva": "Via Unitiva — Zjednoczenie"
+  },
+  "feedback": {
+    "good": "Dobra odpowiedź",
+    "bad": "Słaba odpowiedź",
+    "flag": "Zgłoś problem",
+    "reasons": {
+      "theologically_incorrect": "Teologicznie błędne",
+      "repetitive_or_generic": "Powtarzające się / zbyt ogólne",
+      "other": "Inne"
+    },
+    "thanks": "Dziękujemy za opinię — pomaga nam poprawiać jakość treści."
+  },
+  "pricing": {
+    "free": {
+      "name": "Pielgrzym",
+      "description": "Podstawowe narzędzia modlitwy"
+    },
+    "pilgrim": {
+      "name": "Uczeń",
+      "description": "Pełny dostęp do formacji duchowej"
+    },
+    "disciple": {
+      "name": "Mistyk",
+      "description": "Nieograniczony dostęp i wsparcie"
+    }
+  }
+}

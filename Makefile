@@ -9,7 +9,7 @@ help:
 	@echo "  make dev          Uruchom infrastrukturę deweloperską (Postgres + Redis)"
 	@echo "  make dev-stop     Zatrzymaj infrastrukturę deweloperską"
 	@echo "  make test         Uruchom wszystkie testy jednostkowe"
-	@echo "  make test-unit    Testy jednostkowe (bez test_rbac.py)"
+	@echo "  make test-unit    Testy jednostkowe"
 	@echo "  make test-int     Testy integracyjne"
 	@echo "  make lint         Sprawdź styl kodu (ruff)"
 	@echo "  make fmt          Automatyczne formatowanie (ruff format)"
@@ -33,13 +33,13 @@ dev-stop:
 test: test-unit
 
 test-unit:
-	cd backend && python -m pytest tests/unit/ -q --ignore=tests/unit/test_rbac.py
+	cd backend && python -m pytest tests/unit/ -q
 
 test-integration:
 	cd backend && python -m pytest tests/integration/ -v
 
 test-watch:
-	cd backend && python -m pytest tests/unit/ -q --ignore=tests/unit/test_rbac.py -f
+	cd backend && python -m pytest tests/unit/ -q -f
 
 # ── Jakość kodu ───────────────────────────────────────────────────────────────
 

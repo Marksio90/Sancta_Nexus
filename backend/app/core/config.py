@@ -100,6 +100,14 @@ class Settings(BaseSettings):
     AI_RATE_LIMIT_REQUESTS: int = 20  # stricter limit for LLM endpoints
     AI_RATE_LIMIT_WINDOW: int = 60    # window for AI tier (seconds)
 
+    # ── LangSmith observability ───────────────────────────────────────────
+    # Set LANGCHAIN_TRACING_V2=true and LANGCHAIN_API_KEY to enable.
+    # LangChain auto-picks these up — no code changes needed in agents.
+    LANGCHAIN_TRACING_V2: bool = False
+    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_PROJECT: str = "sancta-nexus"
+    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
+
     # ── Stripe / Billing ──────────────────────────────────────────────────
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""

@@ -86,13 +86,22 @@ export default function DashboardPage() {
         </Link>
 
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="font-heading mb-2 text-4xl text-gold md:text-5xl">
-            Panel Duchowy
-          </h1>
-          <p className="text-[--color-sacred-text-muted]/70">
-            Twoja duchowa podróż — każde spotkanie ze Słowem zapisane lokalnie
-          </p>
+        <div className="mb-10 flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="font-heading mb-2 text-4xl text-gold md:text-5xl">
+              Panel Duchowy
+            </h1>
+            <p className="text-[--color-sacred-text-muted]/70">
+              Twoja duchowa podróż — każde spotkanie ze Słowem zapisane lokalnie
+            </p>
+          </div>
+          <Link
+            href="/moja-droga"
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-400 hover:bg-amber-500/20 transition-colors"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Moja Droga duchowa
+          </Link>
         </div>
 
         {/* ── Stats row ── */}

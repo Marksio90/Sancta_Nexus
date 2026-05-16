@@ -75,7 +75,6 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit/ \
-            --ignore=tests/unit/test_rbac.py \
             -v \
             --tb=short \
             --cov=app \
