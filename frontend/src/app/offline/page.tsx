@@ -1,3 +1,5 @@
+"use client";
+
 export default function OfflinePage() {
   return (
     <main className="min-h-screen bg-[#0d0b1a] text-white flex flex-col items-center justify-center px-6 text-center">
