@@ -1,0 +1,637 @@
+"""Static Catholic Bible service — all 73 canonical books.
+
+Serves a curated corpus of key verses covering every book of the Catholic canon
+(46 OT + 27 NT), including the 7 deuterocanonical books absent from Protestant
+editions.  Used as a fast, infra-free fallback when Qdrant is unavailable.
+
+Translation style: Biblia Tysiąclecia (BT5), standard Polish Catholic version.
+"""
+
+from __future__ import annotations
+
+import random
+import re
+from dataclasses import dataclass
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class BibleVerse:
+    book: str
+    book_name: str
+    chapter: int
+    verse: int
+    text: str
+    testament: str  # "OT" | "NT"
+
+
+# ---------------------------------------------------------------------------
+# All 73 Catholic books — key verses in Polish (BT5 style)
+# ---------------------------------------------------------------------------
+
+_CORPUS_RAW: list[tuple[str, str, str, int, int, str]] = [
+    # (book_abbr, book_name, testament, chapter, verse, text)
+
+    # ── STARY TESTAMENT ────────────────────────────────────────────────────
+
+    # Rdz – Księga Rodzaju (50 rozdziałów)
+    ("Rdz", "Księga Rodzaju", "OT", 1, 1, "Na początku Bóg stworzył niebo i ziemię."),
+    ("Rdz", "Księga Rodzaju", "OT", 1, 27, "Stworzył więc Bóg człowieka na swój obraz, na obraz Boży go stworzył, stworzył mężczyznę i niewiastę."),
+    ("Rdz", "Księga Rodzaju", "OT", 1, 31, "A Bóg widział, że wszystko, co uczynił, było bardzo dobre."),
+    ("Rdz", "Księga Rodzaju", "OT", 3, 15, "Wprowadzam nieprzyjaźń między ciebie i niewiastę, pomiędzy potomstwo twoje a potomstwo jej: ono zmiażdży ci głowę, a ty zmiażdżysz mu piętę."),
+    ("Rdz", "Księga Rodzaju", "OT", 12, 1, "Pan rzekł do Abrama: Wyjdź z twojej ziemi rodzinnej i z domu twego ojca do kraju, który ci ukażę."),
+    ("Rdz", "Księga Rodzaju", "OT", 15, 6, "Uwierzył Abram Panu i Pan poczytał mu to za zasługę."),
+    ("Rdz", "Księga Rodzaju", "OT", 22, 14, "Abraham dał temu miejscu nazwę Pan widzi."),
+    ("Rdz", "Księga Rodzaju", "OT", 28, 16, "Jakub zbudził się ze snu i rzekł: Prawdziwie Pan jest na tym miejscu, a ja nie wiedziałem."),
+    ("Rdz", "Księga Rodzaju", "OT", 50, 20, "Wy knuliście zło przeciwko mnie, lecz Bóg zamierzył to jako dobro."),
+
+    # Wj – Księga Wyjścia (40 rozdziałów)
+    ("Wj", "Księga Wyjścia", "OT", 3, 14, "Odpowiedział Bóg Mojżeszowi: Jestem, który jestem."),
+    ("Wj", "Księga Wyjścia", "OT", 14, 14, "Pan będzie walczył za was, a wy spokojnie czekajcie."),
+    ("Wj", "Księga Wyjścia", "OT", 15, 11, "Któż jest równy Tobie wśród bogów, Panie? Któż jest równy Tobie, obleczony w świętość, straszliwy w czynach, czyniący cuda?"),
+    ("Wj", "Księga Wyjścia", "OT", 19, 5, "Jeśli pilnie słuchać będziecie głosu mego i strzec mego przymierza, będziecie szczególną moją własnością pośród wszystkich narodów."),
+    ("Wj", "Księga Wyjścia", "OT", 20, 2, "Ja jestem Pan, twój Bóg, który cię wywiódł z ziemi egipskiej, z domu niewoli."),
+    ("Wj", "Księga Wyjścia", "OT", 20, 3, "Nie będziesz miał cudzych bogów obok Mnie."),
+    ("Wj", "Księga Wyjścia", "OT", 33, 14, "Pan odpowiedział: Moja obecność będzie ci towarzyszyć i dam ci odpoczynek."),
+    ("Wj", "Księga Wyjścia", "OT", 34, 6, "Pan, Pan, Bóg miłosierny i łagodny, nieskory do gniewu, bogaty w łaskę i wierność."),
+
+    # Kpł – Księga Kapłańska (27 rozdziałów)
+    ("Kpł", "Księga Kapłańska", "OT", 19, 2, "Bądźcie świętymi, bo Ja jestem święty, Pan, Bóg wasz!"),
+    ("Kpł", "Księga Kapłańska", "OT", 19, 18, "Będziesz miłował bliźniego jak siebie samego."),
+    ("Kpł", "Księga Kapłańska", "OT", 20, 26, "Będziecie dla Mnie świętymi, bo Ja jestem święty, Pan, i odłączyłem was od innych narodów, abyście byli moimi."),
+    ("Kpł", "Księga Kapłańska", "OT", 26, 12, "Będę chodził pośród was i będę waszym Bogiem, a wy będziecie moim ludem."),
+
+    # Lb – Księga Liczb (36 rozdziałów)
+    ("Lb", "Księga Liczb", "OT", 6, 24, "Niech Pan cię błogosławi i strzeże."),
+    ("Lb", "Księga Liczb", "OT", 6, 25, "Niech Pan rozpromieni oblicze swoje nad tobą, niech cię obdarzy swą łaską."),
+    ("Lb", "Księga Liczb", "OT", 6, 26, "Niech zwróci ku tobie swoje oblicze i niech cię obdarzy pokojem."),
+    ("Lb", "Księga Liczb", "OT", 23, 19, "Bóg nie jest człowiekiem, by kłamał, ani synem człowieczym, by się wahał. Czy On rzecze coś, czego nie spełni, lub powie coś, czego nie wypełni?"),
+
+    # Pwt – Księga Powtórzonego Prawa (34 rozdziały)
+    ("Pwt", "Powtórzone Prawo", "OT", 4, 29, "Będziecie tam szukać Pana, Boga waszego, i znajdziecie Go, jeśli będziecie Go szukać z całego serca i całej duszy."),
+    ("Pwt", "Powtórzone Prawo", "OT", 6, 4, "Słuchaj, Izraelu, Pan jest naszym Bogiem — Panem jedynym."),
+    ("Pwt", "Powtórzone Prawo", "OT", 6, 5, "Będziesz miłował Pana, Boga twojego, z całego swego serca, z całej duszy swojej, ze wszystkich swych sił."),
+    ("Pwt", "Powtórzone Prawo", "OT", 8, 3, "Nie samym chlebem żyje człowiek, lecz człowiek żyje wszystkim, co pochodzi z ust Pana."),
+    ("Pwt", "Powtórzone Prawo", "OT", 30, 14, "Słowo to bowiem jest bardzo blisko ciebie: w twoich ustach i w twoim sercu, byś je mógł wypełnić."),
+    ("Pwt", "Powtórzone Prawo", "OT", 31, 8, "Sam Pan będzie szedł przed tobą, On będzie z tobą, nie opuści cię i nie porzuci. Nie bój się i nie lękaj!"),
+
+    # Joz – Księga Jozuego (24 rozdziały)
+    ("Joz", "Księga Jozuego", "OT", 1, 9, "Czy nie przykazałem ci: Bądź mocny i mężny? Nie bój się i nie lękaj się, bo Pan, Bóg twój, jest z tobą wszędzie, gdziekolwiek pójdziesz."),
+    ("Joz", "Księga Jozuego", "OT", 24, 15, "Jeśli zaś wam się nie podoba służyć Panu, to dziś rozstrzygnijcie, komu chcecie służyć. Ja zaś i mój dom służyć chcemy Panu."),
+
+    # Sdz – Księga Sędziów (21 rozdziałów)
+    ("Sdz", "Księga Sędziów", "OT", 6, 12, "Pan jest z tobą, dzielny wojowniku!"),
+    ("Sdz", "Księga Sędziów", "OT", 21, 25, "W owym czasie nie było króla w Izraelu, każdy czynił to, co słuszne w jego oczach."),
+
+    # Rt – Księga Rut (4 rozdziały)
+    ("Rt", "Księga Rut", "OT", 1, 16, "Dokąd ty pójdziesz, tam ja pójdę, gdzie ty zamieszkasz, tam ja zamieszkam. Twój lud będzie moim ludem, a twój Bóg będzie moim Bogiem."),
+    ("Rt", "Księga Rut", "OT", 2, 12, "Niech Pan wynagrodzi twój czyn i niech będzie pełna twoja zapłata od Pana, Boga Izraela, pod którego skrzydła przyszłaś się schronić."),
+
+    # 1Sm – 1 Księga Samuela (31 rozdziałów)
+    ("1Sm", "1 Księga Samuela", "OT", 3, 9, "Mów, Panie, bo sługa Twój słucha."),
+    ("1Sm", "1 Księga Samuela", "OT", 16, 7, "Człowiek patrzy na to, co widoczne dla oczu, Pan natomiast patrzy na serce."),
+
+    # 2Sm – 2 Księga Samuela (24 rozdziały)
+    ("2Sm", "2 Księga Samuela", "OT", 7, 12, "Kiedy wypełnią się twoje dni i spoczniesz obok swych przodków, wtedy wzbudzę po tobie twojego potomka."),
+    ("2Sm", "2 Księga Samuela", "OT", 22, 2, "Pan jest moją skałą i twierdzą, i wybawicielem moim."),
+    ("2Sm", "2 Księga Samuela", "OT", 22, 7, "W moim ucisku wzywałem Pana, wołałem do swego Boga. Usłyszał z przybytku swego głos mój, moje wołanie dotarło do Jego uszu."),
+
+    # 1Krl – 1 Księga Królewska (22 rozdziały)
+    ("1Krl", "1 Księga Królewska", "OT", 8, 27, "Czy jednak naprawdę zamieszka Bóg na ziemi? Przecież niebo i niebiosa najwyższe nie mogą Cię objąć, a tym mniej ta świątynia, którą zbudowałem."),
+    ("1Krl", "1 Księga Królewska", "OT", 19, 12, "Po trzęsieniu ziemi ogień — a w ogniu Pan nie był. A po tym ogniu głos łagodny i cichy."),
+
+    # 2Krl – 2 Księga Królewska (25 rozdziałów)
+    ("2Krl", "2 Księga Królewska", "OT", 2, 9, "Proś, co mam dla ciebie uczynić, zanim zostanę od ciebie wzięty. Eliasz odrzekł: Niechaj na mnie spocznie podwójny duch twój."),
+    ("2Krl", "2 Księga Królewska", "OT", 20, 5, "Słyszałem twoją modlitwę i widziałem twoje łzy. Oto Ja cię uzdrawiam."),
+
+    # 1Krn – 1 Księga Kronik (29 rozdziałów)
+    ("1Krn", "1 Księga Kronik", "OT", 16, 11, "Szukajcie Pana i Jego potęgi, szukajcie zawsze Jego oblicza."),
+    ("1Krn", "1 Księga Kronik", "OT", 29, 11, "Twoja jest, Panie, wielkość, moc, chwała, blask i majestat, bo wszystko, co jest na niebie i na ziemi, jest Twoje."),
+
+    # 2Krn – 2 Księga Kronik (36 rozdziałów)
+    ("2Krn", "2 Księga Kronik", "OT", 7, 14, "Jeśli mój lud, który nosi moje imię, ukorzy się, będzie się modlił i szukał mojego oblicza, to Ja wysłucham z nieba, przebaczę mu grzechy i uleczę jego kraj."),
+    ("2Krn", "2 Księga Kronik", "OT", 15, 7, "Ale wy bądźcie mocni, nie opuszczajcie rąk, bo wasze czyny znajdą wynagrodzenie."),
+
+    # Ezd – Księga Ezdrasza (10 rozdziałów)
+    ("Ezd", "Księga Ezdrasza", "OT", 8, 22, "Dobra ręka naszego Boga jest nad wszystkimi, którzy Go szukają."),
+    ("Ezd", "Księga Ezdrasza", "OT", 10, 4, "Wstań, bo ta sprawa należy do ciebie; jesteśmy z tobą, bądź mężny i działaj."),
+
+    # Ne – Księga Nehemiasza (13 rozdziałów)
+    ("Ne", "Księga Nehemiasza", "OT", 8, 10, "Radość w Panu jest waszą ostoją."),
+    ("Ne", "Księga Nehemiasza", "OT", 9, 17, "Ale Ty jesteś Bogiem przebaczenia, łaski i miłosierdzia, nieskory do gniewu, bogaty w łaskę."),
+
+    # Tb – Księga Tobiasza [deuterokan.] (14 rozdziałów)
+    ("Tb", "Księga Tobiasza", "OT", 4, 15, "Nie czyń nikomu tego, co tobie jest przykre."),
+    ("Tb", "Księga Tobiasza", "OT", 12, 6, "Chwalcie Boga, składajcie Mu dzięki, uznajcie Go za wielkiego przed wszelkim stworzeniem, że okazał wam łaskę."),
+    ("Tb", "Księga Tobiasza", "OT", 13, 6, "Nawróćcie się do Niego całym sercem i całą duszą, postępujcie wobec Niego szczerze, a On zwróci się ku wam i nie zakryje przed wami swego oblicza."),
+
+    # Jdt – Księga Judyty [deuterokan.] (16 rozdziałów)
+    ("Jdt", "Księga Judyty", "OT", 9, 14, "Tak, Boże ojców moich i Boże dziedzictwa Izraela, władco nieba i ziemi, stwórco wód, królu wszelkiego stworzenia — wysłuchaj modlitwy moje."),
+    ("Jdt", "Księga Judyty", "OT", 13, 14, "Wysławiajcie Go wszyscy, bo dobry jest, bo na wieki trwa miłosierdzie Jego."),
+    ("Jdt", "Księga Judyty", "OT", 16, 15, "Góry wzruszą się, a wody zadrżą przed obliczem Twoim, skały zaś jak wosk stopią się przed Tobą."),
+
+    # Est – Księga Estery (10 rozdziałów)
+    ("Est", "Księga Estery", "OT", 4, 14, "Któż wie, czy właśnie nie ze względu na tę chwilę dostąpiłaś godności królewskiej?"),
+    ("Est", "Księga Estery", "OT", 4, 16, "Jeśli mam zginąć, to zginę."),
+
+    # 1Mch – 1 Księga Machabejska [deuterokan.] (16 rozdziałów)
+    ("1Mch", "1 Księga Machabejska", "OT", 2, 64, "Synowie moi, bądźcie mężni i wytrwali w zachowywaniu Prawa, bo ono da wam chwałę."),
+    ("1Mch", "1 Księga Machabejska", "OT", 3, 19, "Nie od liczby wojska zależy zwycięstwo w walce, lecz siła pochodzi z nieba."),
+    ("1Mch", "1 Księga Machabejska", "OT", 13, 42, "Bóg zatriumfował przez rękę Symeona."),
+
+    # 2Mch – 2 Księga Machabejska [deuterokan.] (15 rozdziałów)
+    ("2Mch", "2 Księga Machabejska", "OT", 7, 9, "Ty, zbrodniarzu, odbierasz nam to obecne życie, ale Król świata wskrzesi nas, którzy umieramy za Jego prawa, do życia wiecznego."),
+    ("2Mch", "2 Księga Machabejska", "OT", 12, 46, "Wielka jest moc modlitwy i ofiary za umarłych, aby byli od grzechów uwolnieni."),
+    ("2Mch", "2 Księga Machabejska", "OT", 15, 12, "Modlił się on za cały naród żydowski."),
+
+    # Hi – Księga Hioba (42 rozdziały)
+    ("Hi", "Księga Hioba", "OT", 1, 21, "Pan dał, Pan wziął. Niech imię Pańskie będzie błogosławione."),
+    ("Hi", "Księga Hioba", "OT", 19, 25, "Lecz ja wiem: Wybawca mój żyje, na ziemi wystąpi jako ostatni."),
+    ("Hi", "Księga Hioba", "OT", 23, 10, "On jednak zna drogę, którą przebywam: gdyby mnie poddał próbie, wyszedłbym jak złoto."),
+    ("Hi", "Księga Hioba", "OT", 38, 4, "Gdzieś był, kiedy zakładałem ziemię? Powiedz mi, jeśli masz rozeznanie."),
+    ("Hi", "Księga Hioba", "OT", 42, 2, "Wiem, że Ty wszystko możesz i że żaden Twój zamiar nie jest dla Ciebie niedostępny."),
+
+    # Ps – Psalmy (150 psalmów)
+    ("Ps", "Psalmy", "OT", 1, 1, "Szczęśliwy człowiek, który nie idzie za radą występnych, nie wchodzi na drogę grzeszników i nie zasiada w gronie szyderców."),
+    ("Ps", "Psalmy", "OT", 8, 2, "O Panie, nasz Boże, jak przedziwne Twe imię po wszystkiej ziemi!"),
+    ("Ps", "Psalmy", "OT", 16, 8, "Zawsze stawiam sobie Pana przed oczy, bo gdy On jest po mojej prawicy, nie zachwieję się."),
+    ("Ps", "Psalmy", "OT", 22, 2, "Boże mój, Boże mój, czemuś mnie opuścił?"),
+    ("Ps", "Psalmy", "OT", 23, 1, "Pan jest moim pasterzem, nie brak mi niczego."),
+    ("Ps", "Psalmy", "OT", 23, 4, "Chociażbym chodził ciemną doliną, zła się nie ulęknę, bo Ty jesteś ze mną."),
+    ("Ps", "Psalmy", "OT", 27, 1, "Pan jest moim światłem i zbawieniem moim — kogóż mam się lękać?"),
+    ("Ps", "Psalmy", "OT", 27, 14, "Oczekuj na Pana, bądź mężny, niech się twe serce umocni, oczekuj na Pana!"),
+    ("Ps", "Psalmy", "OT", 34, 9, "Skosztujcie i zobaczcie, jak dobry jest Pan."),
+    ("Ps", "Psalmy", "OT", 37, 4, "Miej upodobanie w Panu, a spełni pragnienia twego serca."),
+    ("Ps", "Psalmy", "OT", 42, 2, "Jak łania pragnie wód z strumienia, tak dusza moja pragnie Ciebie, Boże!"),
+    ("Ps", "Psalmy", "OT", 46, 2, "Bóg jest dla nas ucieczką i mocą: łatwo znaleźć u Niego pomoc w utrapieniu."),
+    ("Ps", "Psalmy", "OT", 51, 3, "Zmiłuj się nade mną, Boże, w łaskawości swojej, w ogromie swej litości wymaż moją nieprawość."),
+    ("Ps", "Psalmy", "OT", 51, 12, "Stwórz, Boże, we mnie serce czyste i odnów w mojej piersi ducha niezwyciężonego."),
+    ("Ps", "Psalmy", "OT", 63, 2, "Boże, Tyś moim Bogiem, szukam Cię i pragnie Ciebie moja dusza."),
+    ("Ps", "Psalmy", "OT", 91, 1, "Kto się w opiekę oddał Najwyższemu i mieszka w cieniu Wszechmocnego."),
+    ("Ps", "Psalmy", "OT", 103, 1, "Błogosław, duszo moja, Pana i całe moje wnętrze — święte imię Jego!"),
+    ("Ps", "Psalmy", "OT", 103, 8, "Pan jest litościwy i łaskawy, nieskory do gniewu i bogaty w łaskę."),
+    ("Ps", "Psalmy", "OT", 119, 105, "Słowo Twoje jest lampą dla moich kroków i światłem na mojej ścieżce."),
+    ("Ps", "Psalmy", "OT", 130, 1, "Z głębokości wołam do Ciebie, Panie!"),
+    ("Ps", "Psalmy", "OT", 136, 1, "Wysławiajcie Pana, bo dobry jest, bo na wieki Jego łaskawość."),
+    ("Ps", "Psalmy", "OT", 139, 1, "Panie, przenikasz mnie i znasz."),
+    ("Ps", "Psalmy", "OT", 139, 14, "Dziękuję Ci, że mnie tak cudownie stworzyłeś, że godne podziwu są Twe dzieła."),
+    ("Ps", "Psalmy", "OT", 145, 18, "Pan jest blisko wszystkich, którzy Go wzywają, wszystkich wzywających Go szczerze."),
+
+    # Prz – Księga Przysłów (31 rozdziałów)
+    ("Prz", "Księga Przysłów", "OT", 1, 7, "Bojaźń Pańska początkiem wiedzy, mądrości i karności głupcy tylko nie cenią."),
+    ("Prz", "Księga Przysłów", "OT", 3, 5, "Zaufaj Panu całym swoim sercem, nie polegaj na swoim rozeznaniu."),
+    ("Prz", "Księga Przysłów", "OT", 3, 6, "Myśl o Nim na wszystkich swych drogach, a On twe ścieżki wyrówna."),
+    ("Prz", "Księga Przysłów", "OT", 4, 7, "Zdobywanie mądrości jest najważniejsze: zdobywaj mądrość, a całym swym mieniem nabywaj rozum."),
+    ("Prz", "Księga Przysłów", "OT", 17, 17, "Przyjaciel w każdym czasie miłuje i staje się bratem w nieszczęściu."),
+    ("Prz", "Księga Przysłów", "OT", 22, 6, "Zaprawiaj chłopca do drogi, po której ma chodzić; nie zboczy z niej, i gdy się zestarzeje."),
+    ("Prz", "Księga Przysłów", "OT", 31, 30, "Powab jest zdradny i piękność ulotna, lecz niewiasta, która boi się Pana, godna jest chwały."),
+
+    # Koh – Księga Koheleta (12 rozdziałów)
+    ("Koh", "Księga Koheleta", "OT", 1, 2, "Marność nad marnościami, powiada Kohelet, marność nad marnościami — wszystko marność."),
+    ("Koh", "Księga Koheleta", "OT", 3, 1, "Wszystko ma swój czas i każda sprawa pod niebem ma swoją chwilę."),
+    ("Koh", "Księga Koheleta", "OT", 12, 13, "Bój się Boga i przykazań Jego przestrzegaj, bo cały w tym człowiek!"),
+
+    # Pnp – Pieśń nad Pieśniami (8 rozdziałów)
+    ("Pnp", "Pieśń nad Pieśniami", "OT", 1, 2, "Niech mnie ucałuje pocałunkami swych ust. Bo miłość twoja słodsza jest niż wino."),
+    ("Pnp", "Pieśń nad Pieśniami", "OT", 2, 4, "Wprowadził mnie do sali biesiadnej i sztandarem jego nade mną jest miłość."),
+    ("Pnp", "Pieśń nad Pieśniami", "OT", 8, 6, "Bo jak śmierć potężna jest miłość, a zazdrość jej nieprzejednana jak Szeol."),
+    ("Pnp", "Pieśń nad Pieśniami", "OT", 8, 7, "Wody wielkie nie mogą ugasić miłości, nie zatopią jej rzeki."),
+
+    # Mdr – Księga Mądrości [deuterokan.] (19 rozdziałów)
+    ("Mdr", "Księga Mądrości", "OT", 1, 1, "Miłujcie sprawiedliwość, wy, którzy sądzicie ziemię, myślcie o Panu dobrze."),
+    ("Mdr", "Księga Mądrości", "OT", 3, 1, "Dusze sprawiedliwych są w ręku Boga i nie dosięgnie ich męka."),
+    ("Mdr", "Księga Mądrości", "OT", 8, 1, "Mądrość roztacza swą moc od końca do końca i włada wszystkim z dobrocią."),
+    ("Mdr", "Księga Mądrości", "OT", 11, 24, "Miłujesz bowiem wszystkie stworzenia, niczym się nie brzydzisz, co uczyniłeś, bo gdybyś miał coś w nienawiści, nie byłbyś tego uczynił."),
+    ("Mdr", "Księga Mądrości", "OT", 16, 20, "Zamiast tego dawałeś swojemu ludowi pokarm aniołów i dostarczyłeś im z nieba chleba gotowego bez ich trudu."),
+
+    # Syr – Mądrość Syracha [deuterokan.] (51 rozdziałów)
+    ("Syr", "Mądrość Syracha", "OT", 1, 14, "Korzeniem mądrości jest bojaźń Pańska, a jej gałęziami — długie życie."),
+    ("Syr", "Mądrość Syracha", "OT", 3, 17, "Synu, w swych sprawach postępuj łagodnie, a zostaniesz umiłowany przez każdego."),
+    ("Syr", "Mądrość Syracha", "OT", 6, 14, "Wierny przyjaciel potężną obroną, kto go znalazł, skarb znalazł."),
+    ("Syr", "Mądrość Syracha", "OT", 17, 29, "Jakże wielkie jest miłosierdzie Pana i Jego przebaczenie dla tych, którzy do Niego się nawracają!"),
+    ("Syr", "Mądrość Syracha", "OT", 24, 21, "Kto mnie pożywa, jeszcze łaknąć będzie; kto mnie pije, jeszcze będzie pragnął."),
+
+    # Iz – Księga Izajasza (66 rozdziałów)
+    ("Iz", "Księga Izajasza", "OT", 6, 3, "Święty, Święty, Święty jest Pan Zastępów. Cała ziemia pełna jest Jego chwały."),
+    ("Iz", "Księga Izajasza", "OT", 7, 14, "Oto Panna pocznie i porodzi Syna, i nazwie Go imieniem Emmanuel."),
+    ("Iz", "Księga Izajasza", "OT", 9, 5, "Albowiem Dziecię nam się narodziło, Syn został nam dany. Na Jego barkach spoczęła władza."),
+    ("Iz", "Księga Izajasza", "OT", 40, 28, "Czyż nie wiesz, czyś nie słyszał? Pan — Bóg wieczny, Stwórca krańców ziemi — nie męczy się, nie ustaje."),
+    ("Iz", "Księga Izajasza", "OT", 40, 31, "Lecz ci, co zaufali Panu, odzyskują siły, dostają skrzydeł jak orły."),
+    ("Iz", "Księga Izajasza", "OT", 41, 10, "Nie bój się, bo ja jestem z tobą; nie lękaj się, bo Ja jestem twoim Bogiem."),
+    ("Iz", "Księga Izajasza", "OT", 43, 1, "A teraz tak mówi Pan, Stworzyciel twój, Jakubie, i Twórca twój, Izraelu: Nie lękaj się, bo cię wykupiłem, wezwałem cię po imieniu; tyś moim."),
+    ("Iz", "Księga Izajasza", "OT", 49, 15, "Czyż kobieta może zapomnieć o swym niemowlęciu? A nawet gdyby ona zapomniała, Ja nie zapomnę o tobie."),
+    ("Iz", "Księga Izajasza", "OT", 53, 5, "Lecz On był przebity za nasze grzechy, zdruzgotany za nasze winy."),
+    ("Iz", "Księga Izajasza", "OT", 55, 8, "Bo myśli moje nie są myślami waszymi ani wasze drogi moimi drogami — wyrocznia Pana."),
+    ("Iz", "Księga Izajasza", "OT", 61, 1, "Duch Pana Boga nade mną, bo Pan mnie namaścił. Posłał mnie, by głosić dobrą nowinę ubogim."),
+
+    # Jr – Księga Jeremiasza (52 rozdziały)
+    ("Jr", "Księga Jeremiasza", "OT", 1, 5, "Zanim ukształtowałem cię w łonie matki, znałem cię, nim przyszedłeś na świat, poświęciłem cię."),
+    ("Jr", "Księga Jeremiasza", "OT", 17, 14, "Uzdrów mnie, Panie, a będę uzdrowiony, zbaw mnie, a będę zbawiony."),
+    ("Jr", "Księga Jeremiasza", "OT", 29, 11, "Bo znam plany, jakie zamyślam co do was — mówi Pan — plany pomyślności, a nie nieszczęścia, plany, by zapewnić wam przyszłość i nadzieję."),
+    ("Jr", "Księga Jeremiasza", "OT", 29, 13, "Będziecie Mnie szukać i znajdziecie Mnie, albowiem będziecie Mnie szukać z całego serca."),
+    ("Jr", "Księga Jeremiasza", "OT", 31, 3, "Umiłowałem cię odwieczną miłością, dlatego też zachowałem dla ciebie łaskawość."),
+    ("Jr", "Księga Jeremiasza", "OT", 31, 33, "Umieszczę swe prawo w głębi ich jestestwa i wypiszę na ich sercu."),
+
+    # Lm – Lamentacje (5 rozdziałów)
+    ("Lm", "Lamentacje", "OT", 3, 22, "Łaski Pana nie wyczerpują się, współczucie Jego nie ustaje."),
+    ("Lm", "Lamentacje", "OT", 3, 23, "Odnawia się każdego ranka — wielka jest Twa wierność."),
+    ("Lm", "Lamentacje", "OT", 3, 25, "Dobry jest Pan dla ufających Mu, dla duszy, która Go szuka."),
+
+    # Ba – Księga Barucha [deuterokan.] (6 rozdziałów)
+    ("Ba", "Księga Barucha", "OT", 3, 38, "Potem ukazał się na ziemi i przebywał wśród ludzi."),
+    ("Ba", "Księga Barucha", "OT", 4, 22, "Pociechę mi daje Wieczny."),
+    ("Ba", "Księga Barucha", "OT", 5, 9, "Bóg bowiem poprowadzi Izraela wśród radości, w chwale swego imienia."),
+
+    # Ez – Księga Ezechiela (48 rozdziałów)
+    ("Ez", "Księga Ezechiela", "OT", 11, 19, "Dam im serce jednolite i nowego ducha tchnę do ich wnętrza."),
+    ("Ez", "Księga Ezechiela", "OT", 18, 23, "Czyż naprawdę pragnę śmierci występnego — mówi Pan Bóg — a nie raczej, aby porzucił swoje drogi i żył?"),
+    ("Ez", "Księga Ezechiela", "OT", 34, 12, "Jak pasterz roztacza opiekę nad swoją trzodą, gdy znajdzie się wśród swoich rozproszonych owiec, tak Ja roztoczyłem opiekę nad moimi owcami."),
+    ("Ez", "Księga Ezechiela", "OT", 36, 26, "Dam wam serce nowe i ducha nowego tchnę do waszego wnętrza."),
+    ("Ez", "Księga Ezechiela", "OT", 37, 14, "Udzielę wam mego ducha, byście ożyli."),
+
+    # Dn – Księga Daniela (14 rozdziałów)
+    ("Dn", "Księga Daniela", "OT", 3, 52, "Błogosławiony jesteś, Panie, Boże naszych ojców, pełen chwały i wywyższony na wieki."),
+    ("Dn", "Księga Daniela", "OT", 3, 86, "Błogosławcie Go, duchy i dusze sprawiedliwych!"),
+    ("Dn", "Księga Daniela", "OT", 6, 11, "Daniel wchodził do swego domu, a jego okna w górnej sali wychodziły ku Jerozolimie; trzy razy na dzień klękał, modlił się i chwalił Boga."),
+    ("Dn", "Księga Daniela", "OT", 12, 3, "Roztropni będą świecić jak blask sklepienia, a ci, którzy nauczyli wielu sprawiedliwości, jak gwiazdy przez wieki i na zawsze."),
+
+    # Oz – Księga Ozeasza (14 rozdziałów)
+    ("Oz", "Księga Ozeasza", "OT", 6, 6, "Miłości pragnę, nie krwawej ofiary, poznania Boga bardziej niż całopaleń."),
+    ("Oz", "Księga Ozeasza", "OT", 14, 2, "Nawróć się, Izraelu, do Pana, Boga twojego."),
+
+    # Jl – Księga Joela (4 rozdziały)
+    ("Jl", "Księga Joela", "OT", 2, 13, "Nawróćcie się do Pana, Boga waszego, bo On jest łaskawy, miłosierny, nieskory do gniewu i bogaty w łaskę."),
+    ("Jl", "Księga Joela", "OT", 3, 1, "Potem wyleję mojego Ducha na wszelkie ciało, a synowie wasi i córki wasze prorokować będą."),
+
+    # Am – Księga Amosa (9 rozdziałów)
+    ("Am", "Księga Amosa", "OT", 5, 14, "Szukajcie dobra, a nie zła, abyście żyli."),
+    ("Am", "Księga Amosa", "OT", 5, 24, "Niech sprawiedliwość potoczna będzie jak woda, prawość jak nieustający strumień."),
+
+    # Ab – Księga Abdiasza (1 rozdział)
+    ("Ab", "Księga Abdiasza", "OT", 1, 4, "Gdybyś się wyniósł jak orzeł, gdybyś między gwiazdami umieścił swe gniazdo — i stamtąd Cię zepchnę."),
+
+    # Jon – Księga Jonasza (4 rozdziały)
+    ("Jon", "Księga Jonasza", "OT", 2, 3, "Zawołałem z mojej niedoli do Pana, a On mi odpowiedział."),
+    ("Jon", "Księga Jonasza", "OT", 4, 2, "Wiem, że jesteś Bogiem łagodnym i miłosiernym, nieskory do gniewu i bogaty w łaskę."),
+
+    # Mi – Księga Micheasza (7 rozdziałów)
+    ("Mi", "Księga Micheasza", "OT", 5, 1, "A ty, Betlejem Efrata, najmniejsze jesteś wśród plemion judzkich! Z ciebie mi wyjdzie Ten, który będzie władał w Izraelu."),
+    ("Mi", "Księga Micheasza", "OT", 6, 8, "Powiedziano ci, człowiecze, co jest dobre. I czego wymaga od ciebie Pan: tylko pełnić sprawiedliwość, umiłować życzliwość i pokornie chodzić ze swoim Bogiem."),
+
+    # Na – Księga Nahuma (3 rozdziały)
+    ("Na", "Księga Nahuma", "OT", 1, 7, "Pan jest dobry, ucieczką jest w dzień nieszczęścia i zna tych, którzy Mu ufają."),
+
+    # Ha – Księga Habakuka (3 rozdziały)
+    ("Ha", "Księga Habakuka", "OT", 2, 4, "Sprawiedliwy żyć będzie dzięki swej wierności."),
+    ("Ha", "Księga Habakuka", "OT", 3, 18, "Lecz ja w Panu będę się radował, weselić się będę w Bogu, moim Zbawcy."),
+
+    # So – Księga Sofoniasza (3 rozdziały)
+    ("So", "Księga Sofoniasza", "OT", 3, 17, "Pan, twój Bóg, jest pośród ciebie — mocarz, który zbawia. Unosi się nad tobą z radością, milczy w swej miłości, rozkoszuje się tobą z weselem."),
+
+    # Ag – Księga Aggeusza (2 rozdziały)
+    ("Ag", "Księga Aggeusza", "OT", 2, 4, "Bądź mocny, cały ludu kraju — wyrocznia Pana — i działajcie, bo Ja jestem z wami — mówi Pan Zastępów."),
+
+    # Za – Księga Zachariasza (14 rozdziałów)
+    ("Za", "Księga Zachariasza", "OT", 4, 6, "Nie dzięki wojsku ani sile, ale dzięki mojemu Duchowi — mówi Pan Zastępów."),
+    ("Za", "Księga Zachariasza", "OT", 9, 9, "Raduj się wielce, Córo Syjonu, wołaj radośnie, Córo Jeruzalem! Oto Król twój idzie do ciebie, sprawiedliwy i zwycięski."),
+    ("Za", "Księga Zachariasza", "OT", 13, 9, "Będą wzywać mego imienia, a Ja ich wysłucham. Powiem: To jest mój lud, a oni powiedzą: Pan jest moim Bogiem."),
+
+    # Ml – Księga Malachiasza (4 rozdziały)
+    ("Ml", "Księga Malachiasza", "OT", 1, 2, "Umiłowałem was, mówi Pan."),
+    ("Ml", "Księga Malachiasza", "OT", 3, 7, "Nawróćcie się do Mnie, a Ja nawrócę się do was — mówi Pan Zastępów."),
+    ("Ml", "Księga Malachiasza", "OT", 4, 2, "Wzejdzie słońce sprawiedliwości i uzdrowienie w jego promieniach."),
+
+    # ── NOWY TESTAMENT ─────────────────────────────────────────────────────
+
+    # Mt – Ewangelia Mateusza (28 rozdziałów)
+    ("Mt", "Ewangelia Mateusza", "NT", 1, 23, "Oto Dziewica pocznie i porodzi Syna, któremu nadadzą imię Emmanuel, to znaczy Bóg z nami."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 3, "Błogosławieni ubodzy w duchu, albowiem do nich należy królestwo niebieskie."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 4, "Błogosławieni, którzy się smucą, albowiem oni będą pocieszeni."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 5, "Błogosławieni cisi, albowiem oni na własność posiądą ziemię."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 6, "Błogosławieni, którzy łakną i pragną sprawiedliwości, albowiem oni będą nasyceni."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 7, "Błogosławieni miłosierni, albowiem oni miłosierdzia dostąpią."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 8, "Błogosławieni czystego serca, albowiem oni Boga oglądać będą."),
+    ("Mt", "Ewangelia Mateusza", "NT", 5, 44, "A Ja wam powiadam: Miłujcie waszych nieprzyjaciół i módlcie się za tych, którzy was prześladują."),
+    ("Mt", "Ewangelia Mateusza", "NT", 6, 6, "Ty zaś, gdy chcesz się modlić, wejdź do swej izdebki, zamknij drzwi i módl się do Ojca twego, który jest w ukryciu."),
+    ("Mt", "Ewangelia Mateusza", "NT", 6, 9, "Ojcze nasz, który jesteś w niebie, niech się święci imię Twoje!"),
+    ("Mt", "Ewangelia Mateusza", "NT", 6, 33, "Starajcie się naprzód o królestwo Boga i o Jego sprawiedliwość, a to wszystko będzie wam dodane."),
+    ("Mt", "Ewangelia Mateusza", "NT", 7, 7, "Proście, a będzie wam dane; szukajcie, a znajdziecie; kołaczcie, a otworzą wam."),
+    ("Mt", "Ewangelia Mateusza", "NT", 11, 28, "Przyjdźcie do Mnie wszyscy, którzy utrudzeni i obciążeni jesteście, a Ja was pokrzepię."),
+    ("Mt", "Ewangelia Mateusza", "NT", 11, 29, "Weźcie moje jarzmo na siebie i uczcie się ode Mnie, bo jestem cichy i pokorny sercem."),
+    ("Mt", "Ewangelia Mateusza", "NT", 16, 18, "Ty jesteś Piotr, czyli Skała, i na tej Skale zbuduję Kościół mój."),
+    ("Mt", "Ewangelia Mateusza", "NT", 22, 37, "Będziesz miłował Pana Boga swego całym swoim sercem, całą swoją duszą i całym swoim umysłem."),
+    ("Mt", "Ewangelia Mateusza", "NT", 28, 20, "A oto Ja jestem z wami przez wszystkie dni, aż do skończenia świata."),
+
+    # Mk – Ewangelia Marka (16 rozdziałów)
+    ("Mk", "Ewangelia Marka", "NT", 1, 15, "Czas się wypełnił i bliskie jest królestwo Boże. Nawracajcie się i wierzcie w Ewangelię!"),
+    ("Mk", "Ewangelia Marka", "NT", 9, 23, "Wszystko możliwe jest dla tego, kto wierzy."),
+    ("Mk", "Ewangelia Marka", "NT", 10, 14, "Pozwólcie dzieciom przychodzić do Mnie, nie przeszkadzajcie im; do takich bowiem należy królestwo Boże."),
+    ("Mk", "Ewangelia Marka", "NT", 10, 45, "Syn Człowieczy nie przyszedł, aby Mu służono, lecz żeby służyć i dać swoje życie jako okup za wielu."),
+    ("Mk", "Ewangelia Marka", "NT", 16, 6, "Nie bójcie się! Szukacie Jezusa z Nazaretu, ukrzyżowanego; powstał z martwych."),
+
+    # Łk – Ewangelia Łukasza (24 rozdziały)
+    ("Łk", "Ewangelia Łukasza", "NT", 1, 28, "Bądź pozdrowiona, pełna łaski, Pan z Tobą."),
+    ("Łk", "Ewangelia Łukasza", "NT", 1, 46, "Wielbi dusza moja Pana."),
+    ("Łk", "Ewangelia Łukasza", "NT", 1, 49, "Wielkie rzeczy uczynił mi Wszechmocny; święte jest Jego imię."),
+    ("Łk", "Ewangelia Łukasza", "NT", 2, 14, "Chwała Bogu na wysokościach, a na ziemi pokój ludziom Jego upodobania."),
+    ("Łk", "Ewangelia Łukasza", "NT", 11, 9, "Proście, a będzie wam dane; szukajcie, a znajdziecie; kołaczcie, a otworzą wam."),
+    ("Łk", "Ewangelia Łukasza", "NT", 15, 7, "Powiadam wam: Tak samo w niebie większa będzie radość z jednego grzesznika, który się nawraca, niż z dziewięćdziesięciu dziewięciu sprawiedliwych."),
+    ("Łk", "Ewangelia Łukasza", "NT", 15, 20, "A gdy był jeszcze daleko, ujrzał go jego ojciec i wzruszył się głęboko; wybiegł naprzeciw niego, rzucił mu się na szyję i ucałował go."),
+    ("Łk", "Ewangelia Łukasza", "NT", 18, 1, "Powiedział im też przypowieść o tym, że zawsze powinni modlić się i nie ustawać."),
+    ("Łk", "Ewangelia Łukasza", "NT", 23, 34, "Ojcze, przebacz im, bo nie wiedzą, co czynią."),
+    ("Łk", "Ewangelia Łukasza", "NT", 24, 5, "Dlaczego szukacie żyjącego wśród umarłych? Nie ma Go tutaj; zmartwychwstał."),
+
+    # J – Ewangelia Jana (21 rozdziałów)
+    ("J", "Ewangelia Jana", "NT", 1, 1, "Na początku było Słowo, a Słowo było u Boga, i Bogiem było Słowo."),
+    ("J", "Ewangelia Jana", "NT", 1, 14, "A Słowo stało się ciałem i zamieszkało wśród nas. I oglądaliśmy Jego chwałę."),
+    ("J", "Ewangelia Jana", "NT", 3, 16, "Tak bowiem Bóg umiłował świat, że Syna swego Jednorodzonego dał, aby każdy, kto w Niego wierzy, nie zginął, ale miał życie wieczne."),
+    ("J", "Ewangelia Jana", "NT", 4, 24, "Bóg jest duchem; potrzeba więc, by czciciele Jego oddawali Mu cześć w Duchu i prawdzie."),
+    ("J", "Ewangelia Jana", "NT", 6, 35, "Ja jestem chlebem życia. Kto do Mnie przychodzi, nie będzie łaknął."),
+    ("J", "Ewangelia Jana", "NT", 6, 47, "Zaprawdę, zaprawdę, powiadam wam: Kto we Mnie wierzy, ma życie wieczne."),
+    ("J", "Ewangelia Jana", "NT", 8, 12, "Ja jestem światłością świata. Kto idzie za Mną, nie będzie chodził w ciemności, lecz będzie miał światło życia."),
+    ("J", "Ewangelia Jana", "NT", 10, 10, "Ja przyszedłem po to, aby owce miały życie i miały je w obfitości."),
+    ("J", "Ewangelia Jana", "NT", 10, 14, "Ja jestem dobrym pasterzem i znam moje owce, a moje Mnie znają."),
+    ("J", "Ewangelia Jana", "NT", 11, 25, "Ja jestem zmartwychwstaniem i życiem. Kto we Mnie wierzy, choćby umarł, żyć będzie."),
+    ("J", "Ewangelia Jana", "NT", 13, 34, "Przykazanie nowe daję wam, abyście się wzajemnie miłowali, tak jak Ja was umiłowałem."),
+    ("J", "Ewangelia Jana", "NT", 14, 6, "Ja jestem drogą i prawdą, i życiem. Nikt nie przychodzi do Ojca inaczej jak tylko przeze Mnie."),
+    ("J", "Ewangelia Jana", "NT", 14, 27, "Pokój zostawiam wam, pokój mój daję wam."),
+    ("J", "Ewangelia Jana", "NT", 15, 5, "Ja jestem krzewem winnym, wy — latoroślami."),
+    ("J", "Ewangelia Jana", "NT", 15, 9, "Jak Mnie umiłował Ojciec, tak i Ja was umiłowałem. Wytrwajcie w miłości mojej!"),
+    ("J", "Ewangelia Jana", "NT", 15, 12, "To jest moje przykazanie, abyście się wzajemnie miłowali, tak jak Ja was umiłowałem."),
+    ("J", "Ewangelia Jana", "NT", 16, 33, "Odwagi! Ja zwyciężyłem świat."),
+    ("J", "Ewangelia Jana", "NT", 17, 3, "A to jest życie wieczne: aby znali Ciebie, jedynego prawdziwego Boga, oraz Tego, którego posłałeś, Jezusa Chrystusa."),
+    ("J", "Ewangelia Jana", "NT", 20, 21, "Jak Ojciec Mnie posłał, tak i Ja was posyłam."),
+    ("J", "Ewangelia Jana", "NT", 20, 29, "Błogosławieni, którzy nie widzieli, a uwierzyli."),
+    ("J", "Ewangelia Jana", "NT", 21, 17, "Panie, Ty wiesz wszystko, Ty wiesz, że Cię kocham."),
+
+    # Dz – Dzieje Apostolskie (28 rozdziałów)
+    ("Dz", "Dzieje Apostolskie", "NT", 1, 8, "Gdy Duch Święty zstąpi na was, otrzymacie Jego moc i będziecie moimi świadkami."),
+    ("Dz", "Dzieje Apostolskie", "NT", 2, 2, "I nagle z nieba przyszedł szum, jakby uderzenie gwałtownego wiatru, i napełnił cały dom."),
+    ("Dz", "Dzieje Apostolskie", "NT", 2, 4, "I wszyscy zostali napełnieni Duchem Świętym."),
+    ("Dz", "Dzieje Apostolskie", "NT", 4, 12, "I nie ma w żadnym innym zbawienia, gdyż nie dano ludziom pod niebem żadnego innego imienia, przez które moglibyśmy być zbawieni."),
+    ("Dz", "Dzieje Apostolskie", "NT", 17, 28, "Bo w Nim żyjemy, poruszamy się i jesteśmy."),
+
+    # Rz – List do Rzymian (16 rozdziałów)
+    ("Rz", "List do Rzymian", "NT", 1, 16, "Nie wstydzę się Ewangelii, jest bowiem mocą Bożą ku zbawieniu dla każdego wierzącego."),
+    ("Rz", "List do Rzymian", "NT", 5, 5, "A nadzieja zawieść nie może, ponieważ miłość Boża rozlana jest w sercach naszych przez Ducha Świętego."),
+    ("Rz", "List do Rzymian", "NT", 8, 1, "Teraz jednak dla tych, którzy są w Chrystusie Jezusie, nie ma już potępienia."),
+    ("Rz", "List do Rzymian", "NT", 8, 28, "Wiemy też, że Bóg z tymi, którzy Go miłują, współdziała we wszystkim dla ich dobra."),
+    ("Rz", "List do Rzymian", "NT", 8, 31, "Jeżeli Bóg z nami, któż przeciwko nam?"),
+    ("Rz", "List do Rzymian", "NT", 8, 38, "Jestem pewien, że ani śmierć, ani życie, ani aniołowie, ani Zwierzchności, ani rzeczy teraźniejsze, ani przyszłe, ani Moce nie zdołają nas odłączyć od miłości Boga."),
+    ("Rz", "List do Rzymian", "NT", 10, 9, "Jeżeli więc ustami swoimi wyznasz, że Jezus jest Panem, i w sercu swoim uwierzysz, że Bóg Go wskrzesił z martwych — osiągniesz zbawienie."),
+    ("Rz", "List do Rzymian", "NT", 12, 1, "Proszę was, bracia, przez miłosierdzie Boże, abyście dali ciała swoje na ofiarę żywą."),
+    ("Rz", "List do Rzymian", "NT", 12, 2, "Nie bierzcie więc wzoru z tego świata, lecz przemieniajcie się przez odnawianie umysłu."),
+
+    # 1Kor – 1 List do Koryntian (16 rozdziałów)
+    ("1Kor", "1 List do Koryntian", "NT", 1, 25, "To bowiem, co jest głupstwem u Boga, przewyższa mądrością ludzi, a co jest słabe u Boga, przewyższa mocą ludzi."),
+    ("1Kor", "1 List do Koryntian", "NT", 10, 13, "Nie napotkaliście pokusy większej od tej, która może przydarzyć się człowiekowi. A Bóg jest wierny i nie dozwoli was kusić ponad to, co możecie wytrzymać."),
+    ("1Kor", "1 List do Koryntian", "NT", 13, 1, "Gdybym mówił językami ludzi i aniołów, a miłości bym nie miał, stałbym się jak miedź brzęcząca albo cymbał brzmiący."),
+    ("1Kor", "1 List do Koryntian", "NT", 13, 4, "Miłość cierpliwa jest, łaskawa jest. Miłość nie zazdrości, nie szuka poklasku, nie unosi się pychą."),
+    ("1Kor", "1 List do Koryntian", "NT", 13, 8, "Miłość nigdy nie ustaje."),
+    ("1Kor", "1 List do Koryntian", "NT", 13, 13, "Tak więc trwają wiara, nadzieja, miłość — te trzy: z nich zaś największa jest miłość."),
+    ("1Kor", "1 List do Koryntian", "NT", 15, 55, "Gdzież jest, o śmierci, twoje zwycięstwo? Gdzież jest, o śmierci, twój oścień?"),
+
+    # 2Kor – 2 List do Koryntian (13 rozdziałów)
+    ("2Kor", "2 List do Koryntian", "NT", 1, 3, "Niech będzie błogosławiony Bóg i Ojciec Pana naszego Jezusa Chrystusa, Ojciec miłosierdzia i Bóg wszelkiej pociechy."),
+    ("2Kor", "2 List do Koryntian", "NT", 3, 17, "Pan zaś jest Duchem, a gdzie jest Duch Pański — tam wolność."),
+    ("2Kor", "2 List do Koryntian", "NT", 5, 17, "Jeżeli więc ktoś pozostaje w Chrystusie, jest nowym stworzeniem."),
+    ("2Kor", "2 List do Koryntian", "NT", 12, 9, "Wystarczy ci mojej łaski. Moc bowiem w słabości się doskonali."),
+
+    # Ga – List do Galatów (6 rozdziałów)
+    ("Ga", "List do Galatów", "NT", 2, 20, "Teraz zaś już nie ja żyję, lecz żyje we mnie Chrystus."),
+    ("Ga", "List do Galatów", "NT", 5, 22, "Owocem zaś Ducha jest: miłość, radość, pokój, cierpliwość, uprzejmość, dobroć, wierność."),
+    ("Ga", "List do Galatów", "NT", 6, 2, "Jeden drugiego brzemiona noście i tak wypełniajcie prawo Chrystusowe."),
+    ("Ga", "List do Galatów", "NT", 6, 14, "Co do mnie, nie daj Boże, bym się miał chlubić z czego innego, jak tylko z krzyża Pana naszego, Jezusa Chrystusa."),
+
+    # Ef – List do Efezjan (6 rozdziałów)
+    ("Ef", "List do Efezjan", "NT", 1, 3, "Niech będzie błogosławiony Bóg i Ojciec Pana naszego Jezusa Chrystusa, który napełnił nas wszelkim błogosławieństwem duchowym."),
+    ("Ef", "List do Efezjan", "NT", 2, 8, "Łaską bowiem jesteście zbawieni przez wiarę. A to pochodzi nie od was, lecz jest darem Boga."),
+    ("Ef", "List do Efezjan", "NT", 4, 26, "Gniewajcie się, a nie grzeszcie: niech nad waszym gniewem nie zachodzi słońce!"),
+    ("Ef", "List do Efezjan", "NT", 6, 11, "Przyobleczcie całą zbroję Bożą, byście mogli się ostać wobec podstępnych zakusów diabła."),
+
+    # Flp – List do Filipian (4 rozdziały)
+    ("Flp", "List do Filipian", "NT", 2, 5, "To dążenie niech was ożywia; ono też było w Chrystusie Jezusie."),
+    ("Flp", "List do Filipian", "NT", 4, 4, "Radujcie się zawsze w Panu; jeszcze raz powtarzam: radujcie się!"),
+    ("Flp", "List do Filipian", "NT", 4, 6, "O nic się już zbytnio nie troskajcie, ale w każdej sprawie wasze prośby przedstawiajcie Bogu w modlitwie i błaganiu z dziękczynieniem."),
+    ("Flp", "List do Filipian", "NT", 4, 7, "A pokój Boży, który przewyższa wszelki umysł, będzie strzegł waszych serc i myśli w Chrystusie Jezusie."),
+    ("Flp", "List do Filipian", "NT", 4, 13, "Wszystko mogę w Tym, który mnie umacnia."),
+
+    # Kol – List do Kolosan (4 rozdziały)
+    ("Kol", "List do Kolosan", "NT", 1, 15, "On jest obrazem Boga niewidzialnego — Pierworodnym wobec każdego stworzenia."),
+    ("Kol", "List do Kolosan", "NT", 3, 16, "Słowo Chrystusa niech w was przebywa z całym swym bogactwem."),
+    ("Kol", "List do Kolosan", "NT", 3, 17, "I wszystko, cokolwiek działacie słowem lub czynem, wszystko czyńcie w imię Pana Jezusa."),
+
+    # 1Tes – 1 List do Tesaloniczan (5 rozdziałów)
+    ("1Tes", "1 List do Tesaloniczan", "NT", 5, 16, "Zawsze się radujcie."),
+    ("1Tes", "1 List do Tesaloniczan", "NT", 5, 17, "Nieustannie się módlcie."),
+    ("1Tes", "1 List do Tesaloniczan", "NT", 5, 18, "W każdym położeniu dziękujcie, taka jest bowiem wola Boża w Jezusie Chrystusie."),
+
+    # 2Tes – 2 List do Tesaloniczan (3 rozdziały)
+    ("2Tes", "2 List do Tesaloniczan", "NT", 2, 16, "Sam zaś Pan nasz, Jezus Chrystus, i Bóg, Ojciec nasz, który nas umiłował i przez łaskę udzielił nam nieskończonej pociechy — niech pocieszy serca wasze."),
+    ("2Tes", "2 List do Tesaloniczan", "NT", 3, 3, "Wierny jest Pan, który umocni was i ustrzeże od złego."),
+
+    # 1Tm – 1 List do Tymoteusza (6 rozdziałów)
+    ("1Tm", "1 List do Tymoteusza", "NT", 2, 1, "Zalecam przede wszystkim, by prośby, modlitwy, wspólne błagania, dziękczynienia odprawiane były za wszystkich ludzi."),
+    ("1Tm", "1 List do Tymoteusza", "NT", 4, 8, "Ćwiczenie cielesne jest bowiem mało użyteczne, ale pobożność przydatna jest do wszystkiego, mając obietnicę życia obecnego i przyszłego."),
+
+    # 2Tm – 2 List do Tymoteusza (4 rozdziały)
+    ("2Tm", "2 List do Tymoteusza", "NT", 2, 13, "Gdy my nie dochowujemy wiary, On wiary dochowuje, bo nie może się zaprzeć siebie samego."),
+    ("2Tm", "2 List do Tymoteusza", "NT", 3, 16, "Wszelkie Pismo od Boga natchnione jest i pożyteczne do nauczania, do przekonywania, do poprawiania, do kształcenia w sprawiedliwości."),
+    ("2Tm", "2 List do Tymoteusza", "NT", 4, 7, "W dobrych zawodach wystąpiłem, bieg ukończyłem, wiary ustrzegłem."),
+
+    # Tt – List do Tytusa (3 rozdziały)
+    ("Tt", "List do Tytusa", "NT", 2, 11, "Ukazała się bowiem łaska Boga, która niesie zbawienie wszystkim ludziom."),
+    ("Tt", "List do Tytusa", "NT", 3, 5, "Zbawił nas nie ze względu na sprawiedliwe uczynki, jakie spełniliśmy, lecz z miłosierdzia swojego."),
+
+    # Flm – List do Filemona (1 rozdział)
+    ("Flm", "List do Filemona", "NT", 1, 7, "Wielką bowiem miałem radość i pociechę z twojej miłości, gdy serca świętych zostały pokrzepione dzięki tobie, bracie."),
+
+    # Hbr – List do Hebrajczyków (13 rozdziałów)
+    ("Hbr", "List do Hebrajczyków", "NT", 4, 12, "Żywe bowiem jest słowo Boże, skuteczne i ostrzejsze niż wszelki miecz obosieczny."),
+    ("Hbr", "List do Hebrajczyków", "NT", 4, 16, "Przybliżmy się więc z ufnością do tronu łaski, abyśmy doznali miłosierdzia i znaleźli łaskę dla (uzyskania) pomocy w stosownej chwili."),
+    ("Hbr", "List do Hebrajczyków", "NT", 11, 1, "Wiara jest poręką tych dóbr, których się spodziewamy, dowodem tych rzeczywistości, których nie widzimy."),
+    ("Hbr", "List do Hebrajczyków", "NT", 12, 1, "Mając wokół siebie takie mnóstwo świadków, odłożywszy wszelki ciężar i grzech, który nas tak łatwo zwodzi, biegnijmy wytrwale w wyznaczonych nam zawodach."),
+    ("Hbr", "List do Hebrajczyków", "NT", 13, 8, "Jezus Chrystus wczoraj i dziś, ten sam także na wieki."),
+
+    # Jk – List Jakuba (5 rozdziałów)
+    ("Jk", "List Jakuba", "NT", 1, 2, "Za pełną radość poczytujcie to sobie, bracia moi, gdy rozmaite doświadczenia przechodzić będziecie."),
+    ("Jk", "List Jakuba", "NT", 4, 8, "Zbliżcie się do Boga, to i On zbliży się do was."),
+    ("Jk", "List Jakuba", "NT", 5, 16, "Wyznawajcie zatem sobie nawzajem grzechy, módlcie się jeden za drugiego, byście odzyskali zdrowie. Wielką moc posiada wytrwała modlitwa sprawiedliwego."),
+
+    # 1P – 1 List Piotra (5 rozdziałów)
+    ("1P", "1 List Piotra", "NT", 1, 3, "Niech będzie błogosławiony Bóg i Ojciec Pana naszego Jezusa Chrystusa. On w swoim wielkim miłosierdziu przez zmartwychwstanie Jezusa Chrystusa na nowo zrodził nas do żywej nadziei."),
+    ("1P", "1 List Piotra", "NT", 4, 8, "Przede wszystkim zachowujcie żarliwą miłość jedni ku drugim, bo miłość zakrywa wiele grzechów."),
+    ("1P", "1 List Piotra", "NT", 5, 7, "Wszystkie troski wasze przerzućcie na Niego, gdyż Jemu zależy na was."),
+
+    # 2P – 2 List Piotra (3 rozdziały)
+    ("2P", "2 List Piotra", "NT", 1, 4, "Przez te dobra zostały nam udzielone drogocenne i największe obietnice, abyście się przez nie stali uczestnikami Bożej natury."),
+    ("2P", "2 List Piotra", "NT", 3, 9, "Pan nie zwleka z wypełnieniem obietnicy, gdy inni mówią o zwłoce, ale jest cierpliwy w stosunku do was."),
+
+    # 1J – 1 List Jana (5 rozdziałów)
+    ("1J", "1 List Jana", "NT", 1, 7, "Jeśli zaś chodzimy w światłości, tak jak On sam trwa w światłości, wtedy mamy jedni z drugimi współuczestnictwo, a krew Jezusa, Syna Jego, oczyszcza nas z wszelkiego grzechu."),
+    ("1J", "1 List Jana", "NT", 4, 7, "Umiłowani, miłujmy się wzajemnie, ponieważ miłość jest z Boga."),
+    ("1J", "1 List Jana", "NT", 4, 8, "Bóg jest miłością."),
+    ("1J", "1 List Jana", "NT", 4, 18, "W miłości nie ma lęku, lecz doskonała miłość usuwa lęk."),
+    ("1J", "1 List Jana", "NT", 4, 19, "My miłujemy Boga, ponieważ Bóg sam pierwszy nas umiłował."),
+
+    # 2J – 2 List Jana (1 rozdział)
+    ("2J", "2 List Jana", "NT", 1, 6, "Miłość polega na tym, abyśmy postępowali według Jego przykazań."),
+
+    # 3J – 3 List Jana (1 rozdział)
+    ("3J", "3 List Jana", "NT", 1, 4, "Nie mam większej radości, jak słyszeć, że moje dzieci postępują w prawdzie."),
+
+    # Jud – List Judy (1 rozdział)
+    ("Jud", "List Judy", "NT", 1, 20, "Wy zaś, umiłowani, budujcie siebie na fundamencie waszej najświętszej wiary, módlcie się w Duchu Świętym."),
+    ("Jud", "List Judy", "NT", 1, 24, "Temu zaś, który może was ustrzec od upadku i stawić nienagannymi przed obliczem swojej chwały, pełnymi radości — jedynemu Bogu, Zbawcy naszemu chwała, majestat, moc i władza."),
+
+    # Ap – Apokalipsa Jana (22 rozdziały)
+    ("Ap", "Apokalipsa Jana", "NT", 1, 8, "Ja jestem Alfa i Omega, mówi Pan Bóg, Który jest, Który był i Który przychodzi, Wszechmogący."),
+    ("Ap", "Apokalipsa Jana", "NT", 3, 20, "Oto stoję u drzwi i kołaczę: jeśli kto posłyszy mój głos i drzwi otworzy, wejdę do niego i będę z nim wieczerzał, a on ze Mną."),
+    ("Ap", "Apokalipsa Jana", "NT", 7, 17, "Baranek, który jest pośrodku tronu, będzie ich pasł i prowadził ku źródłom wód życia. I otrze Bóg wszelką łzę z ich oczu."),
+    ("Ap", "Apokalipsa Jana", "NT", 21, 4, "I otrze z ich oczu wszelką łzę, a śmierci już odtąd nie będzie. Ani żałoby, ni krzyku, ni trudu już (odtąd) nie będzie, bo pierwsze rzeczy przeminęły."),
+    ("Ap", "Apokalipsa Jana", "NT", 21, 5, "I rzekł Zasiadający na tronie: Oto czynię wszystko nowe."),
+    ("Ap", "Apokalipsa Jana", "NT", 22, 13, "Ja jestem Alfa i Omega, Pierwszy i Ostatni, Początek i Koniec."),
+    ("Ap", "Apokalipsa Jana", "NT", 22, 20, "Przyjdź, Panie Jezu!"),
+]
+
+
+# ---------------------------------------------------------------------------
+# Build the corpus index
+# ---------------------------------------------------------------------------
+
+def _build_corpus() -> list[BibleVerse]:
+    corpus = []
+    for abbr, name, testament, chapter, verse, text in _CORPUS_RAW:
+        corpus.append(BibleVerse(
+            book=abbr,
+            book_name=name,
+            chapter=chapter,
+            verse=verse,
+            text=text,
+            testament=testament,
+        ))
+    return corpus
+
+
+_CORPUS: list[BibleVerse] = _build_corpus()
+
+# Tokenise corpus for simple keyword search
+_TOKENS: list[set[str]] = [
+    set(re.findall(r"\w+", v.text.lower())) for v in _CORPUS
+]
+
+
+# ---------------------------------------------------------------------------
+# Service class
+# ---------------------------------------------------------------------------
+
+
+class BibleStaticService:
+    """In-process static Bible service — no infrastructure needed."""
+
+    def search(self, query: str, limit: int = 10) -> list[dict]:
+        """Keyword search across the embedded corpus.
+
+        Returns a ranked list of result dicts with keys:
+        book, chapter, verse, text, reference, score.
+        """
+        tokens = set(re.findall(r"\w+", query.lower()))
+        if not tokens:
+            return []
+
+        scored: list[tuple[float, BibleVerse]] = []
+        for verse, vtokens in zip(_CORPUS, _TOKENS):
+            if not vtokens:
+                continue
+            overlap = len(tokens & vtokens)
+            if overlap == 0:
+                continue
+            # Jaccard-inspired score, boosted by short query matches
+            score = overlap / (len(tokens | vtokens) + 1e-9)
+            scored.append((score, verse))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        return [
+            {
+                "book": v.book,
+                "book_name": v.book_name,
+                "chapter": v.chapter,
+                "verse": v.verse,
+                "text": v.text,
+                "reference": f"{v.book} {v.chapter},{v.verse}",
+                "score": round(score, 4),
+                "testament": v.testament,
+            }
+            for score, v in scored[:limit]
+        ]
+
+    def get_passage(
+        self,
+        book: str,
+        chapter: int,
+        verse_from: int | None = None,
+        verse_to: int | None = None,
+    ) -> list[dict]:
+        """Return verses for a given book/chapter, optionally filtered by verse range."""
+        results = []
+        for v in _CORPUS:
+            if v.book.lower() != book.lower():
+                continue
+            if v.chapter != chapter:
+                continue
+            if verse_from and v.verse < verse_from:
+                continue
+            if verse_to and v.verse > verse_to:
+                continue
+            results.append({
+                "book": v.book,
+                "book_name": v.book_name,
+                "chapter": v.chapter,
+                "verse": v.verse,
+                "text": v.text,
+                "reference": f"{v.book} {v.chapter},{v.verse}",
+            })
+        results.sort(key=lambda x: x["verse"])
+        return results
+
+    def random_verse(self) -> dict:
+        """Return a random verse from the corpus."""
+        v = random.choice(_CORPUS)
+        return {
+            "text": v.text,
+            "ref": f"{v.book} {v.chapter},{v.verse}",
+            "book_name": v.book_name,
+        }
+
+    def list_books(self) -> list[dict]:
+        """Return the list of all 73 Catholic books with metadata."""
+        seen: dict[str, dict] = {}
+        for v in _CORPUS:
+            if v.book not in seen:
+                seen[v.book] = {
+                    "abbr": v.book,
+                    "name": v.book_name,
+                    "testament": v.testament,
+                    "verse_count": 0,
+                }
+            seen[v.book]["verse_count"] += 1
+        return list(seen.values())
+
+    @property
+    def total_verses(self) -> int:
+        return len(_CORPUS)
+
+
+# Module-level singleton
+_instance: BibleStaticService | None = None
+
+
+def get_bible_static_service() -> BibleStaticService:
+    global _instance
+    if _instance is None:
+        _instance = BibleStaticService()
+    return _instance

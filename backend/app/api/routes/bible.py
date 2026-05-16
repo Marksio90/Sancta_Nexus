@@ -252,6 +252,17 @@ async def get_passage(
                 "translation": r.translation,
             })
 
+    # Fallback to static corpus when Qdrant is empty
+    if not verses:
+        from app.services.scripture.bible_static_service import get_bible_static_service
+        static = get_bible_static_service()
+        for sv in static.get_passage(book, chapter, verse_start, verse_end):
+            verses.append({
+                "verse": sv["verse"],
+                "content": sv["text"],
+                "translation": "BT5",
+            })
+
     verses.sort(key=lambda v: v["verse"])
 
     return PassageResponse(
@@ -295,11 +306,33 @@ async def search_scripture(
         for r in results
     ]
 
+    # Fallback to static corpus when Qdrant has no data
+    if not items:
+        from app.services.scripture.bible_static_service import get_bible_static_service
+        static = get_bible_static_service()
+        for sv in static.search(q, limit=limit):
+            items.append(SearchResultItem(
+                reference=sv["reference"],
+                content=sv["text"],
+                score=sv["score"],
+                book=sv["book"],
+                chapter=sv["chapter"],
+                verse=sv["verse"],
+            ))
+
     return SearchResponse(
         query=q,
         total_results=len(items),
         results=items,
     )
+
+
+@router.get("/books", summary="List all 73 Catholic books")
+async def list_books() -> dict:
+    """Return all 73 canonical Catholic books with metadata."""
+    from app.services.scripture.bible_static_service import get_bible_static_service
+    static = get_bible_static_service()
+    return {"books": static.list_books(), "total": 73}
 
 
 @router.get("/random-verse")
@@ -370,8 +403,11 @@ async def get_random_verse() -> dict:
                 ref += f",{pick.verse}"
         return {"text": pick.content, "ref": ref, "source": "qdrant"}
 
-    fallback = random.choice(fallback_verses)
-    return {**fallback, "source": "fallback"}
+    # Fallback to the richer static corpus
+    from app.services.scripture.bible_static_service import get_bible_static_service
+    static = get_bible_static_service()
+    v = static.random_verse()
+    return {"text": v["text"], "ref": v["ref"], "source": "static"}
 
 
 # ---------------------------------------------------------------------------
