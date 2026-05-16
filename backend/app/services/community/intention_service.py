@@ -6,7 +6,7 @@ Handles public/private intentions, category filtering, intercession counting
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -46,10 +46,7 @@ class PrayerIntentionService:
         group_id: str | None = None,
     ) -> dict[str, Any]:
         # Public intentions require moderation; private are immediately active
-        if is_public:
-            initial_status = IntentionStatus.PENDING_MODERATION
-        else:
-            initial_status = IntentionStatus.ACTIVE
+        initial_status = IntentionStatus.PENDING_MODERATION if is_public else IntentionStatus.ACTIVE
 
         intention = PrayerIntention(
             id=str(uuid4()),
@@ -60,7 +57,7 @@ class PrayerIntentionService:
             author_display=author_display or ("Anonim" if not user_id else None),
             prayer_count=0,
             status=initial_status,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=DEFAULT_EXPIRY_DAYS),
+            expires_at=datetime.now(UTC) + timedelta(days=DEFAULT_EXPIRY_DAYS),
             group_id=group_id,
         )
         db.add(intention)
@@ -130,7 +127,7 @@ class PrayerIntentionService:
             .values(
                 status=IntentionStatus.ACTIVE,
                 moderator_id=moderator_id,
-                moderated_at=datetime.now(timezone.utc),
+                moderated_at=datetime.now(UTC),
             )
             .returning(PrayerIntention)
         )
@@ -155,7 +152,7 @@ class PrayerIntentionService:
             .values(
                 status=IntentionStatus.REJECTED,
                 moderator_id=moderator_id,
-                moderated_at=datetime.now(timezone.utc),
+                moderated_at=datetime.now(UTC),
                 rejection_reason=reason[:500],
             )
             .returning(PrayerIntention)

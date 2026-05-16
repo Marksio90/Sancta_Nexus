@@ -39,24 +39,23 @@ from unittest.mock import MagicMock
 if "openai" not in sys.modules:
     sys.modules["openai"] = MagicMock()
 
-from app.services.sacraments.examination_service import (
-    ExaminationMethod,
-    ExaminationService,
-    StateOfLife,
-    _COMMANDMENTS,
-    _STATE_ADDITIONS,
-)
 from app.services.sacraments.confirmation_service import (
     CONFIRMATION_SESSIONS,
     GIFTS_OF_SPIRIT,
     ConfirmationService,
+)
+from app.services.sacraments.examination_service import (
+    _COMMANDMENTS,
+    _STATE_ADDITIONS,
+    ExaminationMethod,
+    ExaminationService,
+    StateOfLife,
 )
 from app.services.sacraments.rcia_service import (
     RCIA_CURRICULUM,
     RCIAService,
     RCIAStage,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

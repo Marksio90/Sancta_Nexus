@@ -28,7 +28,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.llm import get_llm_primary
 from app.services.content.uniqueness_engine import (
     ContentUniquenessEngine,
-    EMOTION_SCRIPTURE_MAP,
 )
 
 logger = logging.getLogger("sancta_nexus.lectio_agent")

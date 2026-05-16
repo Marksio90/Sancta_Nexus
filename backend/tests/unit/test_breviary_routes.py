@@ -14,7 +14,6 @@ from __future__ import annotations
 import ast
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -93,36 +92,42 @@ class TestBreviaryEndpoints:
 class TestSaintTodayResponse:
     def test_returns_date_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "date" in result
 
     def test_returns_name_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "name" in result and result["name"]
 
     def test_returns_description_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "description" in result and result["description"]
 
     def test_returns_icon_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "icon" in result and result["icon"]
 
     def test_returns_patronage_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "patronage" in result
 
     def test_returns_died_field(self):
         import asyncio
+
         from app.api.routes.breviary import get_saint_of_day
         result = asyncio.run(get_saint_of_day())
         assert "died" in result
@@ -135,6 +140,7 @@ class TestDailyEngagementResponse:
     @pytest.fixture(scope="class")
     def engagement(self):
         import asyncio
+
         from app.api.routes.breviary import get_daily_engagement
         return asyncio.run(get_daily_engagement())
 

@@ -52,7 +52,7 @@ class TestJourneyStagesCatalog:
         assert "union" in JOURNEY_STAGES
 
     def test_all_expected_stages_present(self):
-        assert _ALL_EXPECTED_STAGES == set(JOURNEY_STAGES.keys())
+        assert set(JOURNEY_STAGES.keys()) == _ALL_EXPECTED_STAGES
 
     def test_all_have_name_pl(self):
         for stage, data in JOURNEY_STAGES.items():
@@ -159,7 +159,7 @@ class TestPatternTypesCatalog:
         assert len(PATTERN_TYPES) == 6
 
     def test_all_expected_types_present(self):
-        assert _ALL_EXPECTED_PATTERNS == set(PATTERN_TYPES)
+        assert set(PATTERN_TYPES) == _ALL_EXPECTED_PATTERNS
 
     def test_recurring_theme_present(self):
         assert "recurring_theme" in PATTERN_TYPES

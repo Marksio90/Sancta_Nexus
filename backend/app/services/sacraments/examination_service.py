@@ -20,16 +20,16 @@ Stages
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from enum import StrEnum
 
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
-class StateOfLife(str, Enum):
+class StateOfLife(StrEnum):
     """Canonical states of life for a Catholic penitent."""
     SINGLE = "single"
     MARRIED = "married"
@@ -40,7 +40,7 @@ class StateOfLife(str, Enum):
     CHILD = "child"
 
 
-class ExaminationMethod(str, Enum):
+class ExaminationMethod(StrEnum):
     TEN_COMMANDMENTS = "ten_commandments"
     BEATITUDES = "beatitudes"
     SEVEN_SINS = "seven_sins"

@@ -14,13 +14,13 @@ Contracts verified:
 
 from __future__ import annotations
 
+import contextlib
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from app.services.cache.session_store import SessionStore, _DEFAULT_TTL_SECONDS
-
+from app.services.cache.session_store import _DEFAULT_TTL_SECONDS, SessionStore
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -142,10 +142,8 @@ class TestUpdate:
     async def test_setex_not_called_when_missing(self):
         redis = _make_redis(exists=AsyncMock(return_value=0))
         store = SessionStore(redis, namespace="lectio")
-        try:
+        with contextlib.suppress(KeyError):
             await store.update("missing", SAMPLE_DATA)
-        except KeyError:
-            pass
         redis.setex.assert_not_awaited()
 
 

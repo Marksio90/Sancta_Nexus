@@ -13,8 +13,6 @@ import re
 import sys
 import types
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Stub heavy optional deps before importing safety module
 # ---------------------------------------------------------------------------

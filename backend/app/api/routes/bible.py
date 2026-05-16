@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -95,10 +95,10 @@ async def ask_scripture(request: AskRequest) -> FourDimensionalResponse:
     The response follows the traditional Catholic four senses of
     scripture (literal, allegorical, moral, anagogical).
     """
-    from app.services.rag.rag_service import RAGService
-    from app.agents.theology.exegesis_agent import ExegesisAgent
     from app.agents.theology.doctrine_guard import DoctrineGuardAgent
+    from app.agents.theology.exegesis_agent import ExegesisAgent
     from app.agents.theology.theology_pipeline import TheologicalValidationPipeline
+    from app.services.rag.rag_service import RAGService
 
     rag = RAGService()
 
@@ -312,7 +312,7 @@ async def get_random_verse() -> dict:
     """
     import random
 
-    SPIRITUAL_QUERIES = [
+    spiritual_queries = [
         "miłość Boga do człowieka", "zbawienie i odkupienie", "nadzieja wieczna",
         "modlitwa i adoracja", "łaska Boża", "nawrócenie serca",
         "wiara i zaufanie", "pokój serca Boży", "przebaczenie win",
@@ -340,7 +340,7 @@ async def get_random_verse() -> dict:
         "trwałość miłości Bożej", "wierność przymierza", "serce contrite",
     ]
 
-    FALLBACK_VERSES = [
+    fallback_verses = [
         {"text": "Bóg jest miłością", "ref": "1 J 4,8"},
         {"text": "Nie lękaj się, bo Ja jestem z tobą", "ref": "Iz 41,10"},
         {"text": "Pokój zostawiam wam, pokój mój daję wam", "ref": "J 14,27"},
@@ -357,7 +357,7 @@ async def get_random_verse() -> dict:
 
     from app.services.rag.rag_service import RAGService
 
-    query = random.choice(SPIRITUAL_QUERIES)
+    query = random.choice(spiritual_queries)
     rag = RAGService()
     results = rag.search_scripture(query, limit=10)
 
@@ -370,7 +370,7 @@ async def get_random_verse() -> dict:
                 ref += f",{pick.verse}"
         return {"text": pick.content, "ref": ref, "source": "qdrant"}
 
-    fallback = random.choice(FALLBACK_VERSES)
+    fallback = random.choice(fallback_verses)
     return {**fallback, "source": "fallback"}
 
 
@@ -398,8 +398,8 @@ def _generate_allegorical_sense(question: str, context: str) -> str:
     if not context:
         return "Brak wystarczajacego kontekstu dla interpretacji alegorycznej."
     return (
-        f"Sens alegoryczny: Fragment ten moze byc odczytany jako typ "
-        f"lub figura wskazujaca na Chrystusa i Kosciol."
+        "Sens alegoryczny: Fragment ten moze byc odczytany jako typ "
+        "lub figura wskazujaca na Chrystusa i Kosciol."
     )
 
 
@@ -408,8 +408,8 @@ def _generate_moral_sense(question: str, context: str) -> str:
     if not context:
         return "Brak wystarczajacego kontekstu dla interpretacji moralnej."
     return (
-        f"Sens moralny: Tekst wzywa do konkretnej odpowiedzi zyciowej, "
-        f"do nawrocenia i przemiany serca."
+        "Sens moralny: Tekst wzywa do konkretnej odpowiedzi zyciowej, "
+        "do nawrocenia i przemiany serca."
     )
 
 
@@ -418,6 +418,6 @@ def _generate_anagogical_sense(question: str, context: str) -> str:
     if not context:
         return "Brak wystarczajacego kontekstu dla interpretacji anagogicznej."
     return (
-        f"Sens anagogiczny: Fragment wskazuje na rzeczywistosc eschatologiczna, "
-        f"na pelnie zbawienia i zycie wieczne."
+        "Sens anagogiczny: Fragment wskazuje na rzeczywistosc eschatologiczna, "
+        "na pelnie zbawienia i zycie wieczne."
     )

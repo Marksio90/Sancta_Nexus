@@ -19,8 +19,6 @@ from __future__ import annotations
 
 from datetime import date
 
-import pytest
-
 from app.services.content.uniqueness_engine import (
     CANON_NT,
     CANON_OT,
@@ -30,7 +28,6 @@ from app.services.content.uniqueness_engine import (
     SEASON_SCRIPTURE_WEIGHTS,
     ContentUniquenessEngine,
 )
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 

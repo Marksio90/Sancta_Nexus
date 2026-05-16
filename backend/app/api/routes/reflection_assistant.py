@@ -19,12 +19,12 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.core.dependencies import DbSession, RedisDep
 from app.core.rbac import require_authenticated
-from app.core.safety import RiskCategory, ai_safety
+from app.core.safety import ai_safety
 from app.models.database import User
 from app.services.audit.audit_service import audit
 from app.services.cache.session_store import SessionStore
@@ -298,7 +298,11 @@ async def send_message(
     AISafetyLayer zanim trafi do użytkownika.
     """
     from app.services.emotion.emotion_service import EmotionService
-    from app.services.scripture.scripture_matcher import IgnatianState, MatchContext, ScriptureMatcher
+    from app.services.scripture.scripture_matcher import (
+        IgnatianState,
+        MatchContext,
+        ScriptureMatcher,
+    )
 
     store = SessionStore(redis, namespace="assistant")
     session = await store.get(request.session_id)

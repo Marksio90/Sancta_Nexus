@@ -83,8 +83,9 @@ class TestReflectionAssistantSchemaContract:
     """Verify MessageResponse schema contract using a standalone Pydantic model."""
 
     def test_message_response_has_assistant_response_field(self):
-        from pydantic import BaseModel, Field
         from typing import Any
+
+        from pydantic import BaseModel, Field
 
         # Mirror the MessageResponse schema without route imports
         class MessageResponse(BaseModel):

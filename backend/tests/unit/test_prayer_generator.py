@@ -7,8 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.agents.generative.prayer_generator import PrayerGeneratorAgent, _FALLBACK_PRAYER
-
+from app.agents.generative.prayer_generator import _FALLBACK_PRAYER, PrayerGeneratorAgent
 
 SCRIPTURE_TEXT = "Ja jestem krzewem winnym, wy latoroślami."
 EMOTION_STATE = "peace"

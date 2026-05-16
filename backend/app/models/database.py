@@ -29,7 +29,6 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-
 # ── Base ─────────────────────────────────────────────────────────────────────
 
 
@@ -40,7 +39,7 @@ class Base(DeclarativeBase):
 # ── Enums ────────────────────────────────────────────────────────────────────
 
 
-class SubscriptionTier(str, enum.Enum):
+class SubscriptionTier(enum.StrEnum):
     """User subscription levels."""
 
     FREE = "free"
@@ -49,7 +48,7 @@ class SubscriptionTier(str, enum.Enum):
     MYSTIC = "mystic"
 
 
-class SessionType(str, enum.Enum):
+class SessionType(enum.StrEnum):
     """Supported spiritual-session types."""
 
     LECTIO_DIVINA = "lectio_divina"
@@ -59,7 +58,7 @@ class SessionType(str, enum.Enum):
     MEDITATION = "meditation"
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     """Platform role assigned to a user.
 
     Hierarchy (ascending privilege):
@@ -78,7 +77,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
 
 
-class AuditEventType(str, enum.Enum):
+class AuditEventType(enum.StrEnum):
     """Types of operations recorded in the audit log."""
 
     USER_REGISTERED = "user_registered"
@@ -114,7 +113,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(1024), nullable=False)
-    spiritual_profile_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    spiritual_profile_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,
@@ -136,7 +135,7 @@ class User(Base):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -196,15 +195,15 @@ class Session(Base):
         ),
         nullable=False,
     )
-    emotion_vector_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    scripture_reference: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    emotion_vector_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scripture_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
     )
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="sessions")
@@ -230,14 +229,14 @@ class Prayer(Base):
         nullable=False,
         index=True,
     )
-    session_id: Mapped[Optional[str]] = mapped_column(
+    session_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("sessions.id", ondelete="SET NULL"),
         nullable=True,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    prayer_type: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    tradition: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    prayer_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    tradition: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -265,7 +264,7 @@ class ScriptureEncounter(Base):
         nullable=False,
         index=True,
     )
-    session_id: Mapped[Optional[str]] = mapped_column(
+    session_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("sessions.id", ondelete="SET NULL"),
         nullable=True,
@@ -274,8 +273,8 @@ class ScriptureEncounter(Base):
     chapter: Mapped[int] = mapped_column(Integer, nullable=False)
     verse_start: Mapped[int] = mapped_column(Integer, nullable=False)
     verse_end: Mapped[int] = mapped_column(Integer, nullable=False)
-    user_reflection: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    emotion_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    user_reflection: Mapped[str | None] = mapped_column(Text, nullable=True)
+    emotion_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -305,8 +304,8 @@ class SpiritualInsight(Base):
     )
     insight_type: Mapped[str] = mapped_column(String(128), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    period_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -342,7 +341,7 @@ class UserPrivacySettings(Base):
         String(64), default="ignatian", server_default="ignatian", nullable=False
     )
     # Soft-delete requested timestamp (GDPR right to erasure)
-    deletion_requested_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -374,17 +373,17 @@ class AuditLog(Base):
         nullable=False,
         index=True,
     )
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    actor_id: Mapped[Optional[str]] = mapped_column(
+    actor_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), nullable=True, index=True
     )
     # Short human-readable summary — no PII, no sensitive content
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     # JSON with non-sensitive context (module name, role, flag name, etc.)
-    payload_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
@@ -405,16 +404,16 @@ class AiInteraction(Base):
     __tablename__ = "ai_interactions"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    session_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     module: Mapped[str] = mapped_column(String(64), nullable=False)
     # Risk category from AISafetyLayer
     risk_category: Mapped[str] = mapped_column(String(64), nullable=False)
     was_modified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Policy violations if any (comma-separated names)
-    violations: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    violations: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
@@ -425,7 +424,7 @@ class AiInteraction(Base):
 # ── Community models ──────────────────────────────────────────────────────────
 
 
-class IntentionStatus(str, enum.Enum):
+class IntentionStatus(enum.StrEnum):
     ACTIVE = "active"
     ANSWERED = "answered"
     CLOSED = "closed"
@@ -444,14 +443,14 @@ class PrayerIntention(Base):
         default=lambda: str(uuid4()),
     )
     # nullable → allows anonymous / guest intentions
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
     content: Mapped[str] = mapped_column(String(500), nullable=False)
-    author_display: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    author_display: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     category: Mapped[str] = mapped_column(String(50), default="general", nullable=False)
     prayer_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -464,20 +463,20 @@ class PrayerIntention(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     # Moderation fields
-    moderator_id: Mapped[Optional[str]] = mapped_column(
+    moderator_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    moderated_at: Mapped[Optional[datetime]] = mapped_column(
+    moderated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    rejection_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    group_id: Mapped[Optional[str]] = mapped_column(
+    rejection_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    group_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("prayer_groups.id", ondelete="SET NULL"),
         nullable=True,
@@ -495,15 +494,15 @@ class PrayerGroup(Base):
         default=lambda: str(uuid4()),
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    parish: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    leader_user_id: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parish: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    leader_user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
     category: Mapped[str] = mapped_column(String(50), default="general", nullable=False)
-    schedule: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    schedule: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     member_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -556,13 +555,13 @@ class CommunityRosary(Base):
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    initiator_user_id: Mapped[Optional[str]] = mapped_column(
+    initiator_user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
     mystery_type: Mapped[str] = mapped_column(String(30), nullable=False)
-    intention: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    intention: Mapped[str | None] = mapped_column(String(300), nullable=True)
     scheduled_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -594,7 +593,7 @@ class RosaryParticipation(Base):
         nullable=False,
         index=True,
     )
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
@@ -604,7 +603,7 @@ class RosaryParticipation(Base):
     )
     # bitmask: bit N set → decade N+1 completed (5 bits → 5 decades)
     decades_mask: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
@@ -625,20 +624,20 @@ class JournalEntry(Base):
     user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    title: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # Comma-separated tags e.g. "modlitwa,Ewangelia,pokój"
-    tags: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    tags: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # Mood / tone: spokój, niepokój, wdzięczność, smutek, radość, etc.
-    mood: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    mood: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Linked scripture reference e.g. "J 3,16"
-    scripture_reference: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    scripture_reference: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # Linked Lectio Divina session ID (Redis key or DB session UUID)
-    lectio_session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    lectio_session_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # Linked retreat program ID
-    program_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    program_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # Soft-delete
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
@@ -667,9 +666,9 @@ class FavoritePassage(Base):
     # Display reference e.g. "J 3,16-17"
     reference: Mapped[str] = mapped_column(String(128), nullable=False)
     # Short excerpt of the passage text
-    excerpt: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    excerpt: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # Personal note added by user
-    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -694,13 +693,13 @@ class NovenaTracking(Base):
         index=True,
     )
     novena_id: Mapped[str] = mapped_column(String(60), nullable=False)
-    intention: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    intention: Mapped[str | None] = mapped_column(String(500), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     # bitmask: bit N set → day N+1 prayed (9 bits)
     completed_days_mask: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     is_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -723,9 +722,9 @@ class Subscription(Base):
         unique=True,
         index=True,
     )
-    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
-    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
-    stripe_price_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    stripe_price_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # active | canceled | past_due | trialing | free
     status: Mapped[str] = mapped_column(String(32), default="free", nullable=False)
     tier: Mapped[SubscriptionTier] = mapped_column(
@@ -738,7 +737,7 @@ class Subscription(Base):
         nullable=False,
     )
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

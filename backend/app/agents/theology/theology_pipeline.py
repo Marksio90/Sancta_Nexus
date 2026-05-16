@@ -16,20 +16,19 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
+from .doctrine_guard import DoctrineGuardAgent
+from .exegesis_agent import ExegesisAgent
 from .magisterium_validator import MagisteriumValidator, ValidationResult
 from .patristic_agent import PatristicAgent, PatristicReference
-from .exegesis_agent import ExegesisAgent
-from .doctrine_guard import DoctrineGuardAgent
 
 logger = logging.getLogger(__name__)
 
 AGGREGATE_THRESHOLD = 0.85
 
 
-class GateStatus(str, Enum):
+class GateStatus(StrEnum):
     """Status of an individual pipeline gate."""
 
     PASSED = "passed"

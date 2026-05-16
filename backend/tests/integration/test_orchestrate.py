@@ -7,12 +7,10 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from httpx import AsyncClient
 
 from app.core.rbac import require_authenticated
 from app.main import app
-
 
 ORCHESTRATE_URL = "/api/v1/orchestrate"
 

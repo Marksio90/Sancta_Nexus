@@ -32,7 +32,6 @@ WS_PATH = Path(__file__).parents[2] / "app" / "api" / "routes" / "ws_rosary.py"
 
 def _get_manager_class():
     """Import _ConnectionManager without triggering FastAPI/SQLAlchemy init."""
-    import importlib
     import sys
 
     # Minimal stubs for heavy deps

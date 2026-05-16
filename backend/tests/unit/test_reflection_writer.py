@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 from app.agents.generative.reflection_writer import (
-    ReflectionWriterAgent,
     ReflectionLayer,
+    ReflectionWriterAgent,
     ScripturePassage,
     UserContext,
 )
-
 
 PASSAGE = ScripturePassage(
     reference="J 15,5",

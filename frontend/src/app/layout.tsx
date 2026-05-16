@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/footer";
 import { ToastContainer } from "@/components/ui/toast";
 import { LiturgicalSeasonProvider } from "@/components/providers/LiturgicalSeasonProvider";
 import { ServiceWorkerProvider } from "@/components/providers/ServiceWorkerProvider";
+import { ErrorBoundary } from "@/components/providers/ErrorBoundary";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { InstallPrompt } from "@/components/mobile/InstallPrompt";
 
@@ -87,7 +88,9 @@ export default function RootLayout({
           <Header />
 
           {/* pb-16 on mobile to clear BottomNav */}
-          <main className="pt-16 pb-16 md:pb-0">{children}</main>
+          <main className="pt-16 pb-16 md:pb-0">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
 
           <ToastContainer />
 

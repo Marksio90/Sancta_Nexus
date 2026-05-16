@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ HUMAN_DIRECTOR_DISCLAIMER = (
 )
 
 
-class SpiritualTradition(str, Enum):
+class SpiritualTradition(StrEnum):
     """Supported spiritual traditions for direction."""
 
     IGNATIAN = "ignatian"
@@ -37,7 +36,7 @@ class SpiritualTradition(str, Enum):
     GENERAL = "general"
 
 
-class DirectionMode(str, Enum):
+class DirectionMode(StrEnum):
     """Mode of spiritual direction interaction."""
 
     CONVERSATION = "conversation"
@@ -54,8 +53,8 @@ class UserProfile:
     user_id: str
     preferred_tradition: SpiritualTradition = SpiritualTradition.GENERAL
     spiritual_maturity: str = "intermediate"  # beginner / intermediate / advanced
-    sacramental_life: Optional[str] = None
-    vocation: Optional[str] = None  # lay / religious / ordained
+    sacramental_life: str | None = None
+    vocation: str | None = None  # lay / religious / ordained
     prayer_practices: list[str] = field(default_factory=list)
     current_challenges: list[str] = field(default_factory=list)
 

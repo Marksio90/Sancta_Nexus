@@ -88,7 +88,7 @@ def _uses_require_authenticated(func_name: str) -> bool:
         all_defaults = (
             [None] * (len(all_args) - len(node.args.defaults))
         ) + node.args.defaults
-        for _arg, default in zip(all_args, all_defaults):
+        for _arg, default in zip(all_args, all_defaults, strict=False):
             if isinstance(default, ast.Name) and default.id == "require_authenticated":
                 return True
     return False
@@ -303,10 +303,9 @@ class TestMoodValidation:
         for node in ast.walk(TREE):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "_VALID_MOODS":
-                        if isinstance(node.value, ast.Set):
-                            assert len(node.value.elts) >= 8
-                            return
+                    if isinstance(target, ast.Name) and target.id == "_VALID_MOODS" and isinstance(node.value, ast.Set):
+                        assert len(node.value.elts) >= 8
+                        return
         # If not found as Set literal, just check the string count in source
         assert SRC.count('"') >= 16  # at least 8 quoted mood strings
 

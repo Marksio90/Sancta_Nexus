@@ -10,7 +10,7 @@ Provides:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import Depends, HTTPException, status
@@ -63,7 +63,7 @@ def create_access_token(
         settings.
     """
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta
         if expires_delta is not None
         else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -78,7 +78,7 @@ def create_refresh_token(
 ) -> str:
     """Create a signed JWT refresh token (longer-lived)."""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta
         if expires_delta is not None
         else timedelta(days=_REFRESH_TOKEN_EXPIRE_DAYS)
@@ -111,8 +111,8 @@ def verify_token(token: str, *, expected_type: str = "access") -> dict[str, Any]
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
-    except JWTError:
-        raise credentials_exception
+    except JWTError as err:
+        raise credentials_exception from err
 
     if payload.get("type") != expected_type:
         raise credentials_exception

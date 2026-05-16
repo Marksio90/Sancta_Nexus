@@ -15,7 +15,7 @@ nie kierownik duchowy.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -106,6 +106,6 @@ class JournalInsightsService:
             "journey": journey,
             "patterns": patterns,
             "entry_count": len(entries),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "disclaimer": DISCLAIMER,
         }

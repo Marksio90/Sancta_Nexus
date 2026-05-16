@@ -5,7 +5,8 @@ in the user's spiritual life using temporal analysis.
 """
 
 import logging
-from langchain_core.messages import SystemMessage, HumanMessage
+
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 

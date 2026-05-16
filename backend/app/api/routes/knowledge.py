@@ -208,7 +208,7 @@ async def search_knowledge(req: SearchRequest) -> SearchResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {exc}",
-        )
+        ) from exc
 
 
 @router.get("/collections")
@@ -275,7 +275,7 @@ async def get_collection(collection_name: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get("/document/{doc_id}")
@@ -322,7 +322,7 @@ async def get_document_chunks(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get("/stats")
@@ -411,7 +411,7 @@ async def cross_reference(req: CrossReferenceRequest) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
-        )
+        ) from exc
 
 
 @router.get("/scripture")
@@ -429,7 +429,7 @@ async def search_scripture(
         )
 
     collection_map = {"pl": "biblia_pl", "la": "biblia_la", "en": "biblia_en"}
-    collection = collection_map.get(translation, "biblia_pl")
+    collection_map.get(translation, "biblia_pl")
 
     try:
         results = await rag.search_scripture(query=q, limit=limit)
@@ -440,7 +440,7 @@ async def search_scripture(
             "total": len(results),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/catechism")
@@ -464,7 +464,7 @@ async def search_catechism(
             "total": len(results),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/magisterium")
@@ -498,4 +498,4 @@ async def search_magisterium(
             "total": len(results),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

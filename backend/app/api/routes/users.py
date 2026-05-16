@@ -15,19 +15,15 @@ Endpoints:
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
 
 from app.core.dependencies import DbSession
 from app.core.rbac import require_authenticated
-from app.core.security import get_current_user
-from app.models.database import AuditEventType, User, UserPrivacySettings
-from app.services.audit.audit_service import audit
+from app.models.database import User
 from app.services.privacy.privacy_service import privacy_svc
 
 logger = logging.getLogger(__name__)

@@ -21,10 +21,7 @@ Contracts verified:
 from __future__ import annotations
 
 import sys
-from types import ModuleType
 from unittest.mock import MagicMock
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # Stub out qdrant_client and openai before importing app modules
@@ -49,15 +46,14 @@ if "app.services.rag.rag_service" not in sys.modules:
     sys.modules["app.services.rag.rag_service"] = _rag_stub
 
 from app.services.scripture.scripture_matcher import (
+    _FALLBACK_CORPUS,
+    _FALLBACK_INDEX,
     IgnatianState,
     MatchContext,
     ScriptureMatch,
     ScriptureMatcher,
     TheologyGuard,
-    _FALLBACK_CORPUS,
-    _FALLBACK_INDEX,
 )
-
 
 # ── Static corpus ─────────────────────────────────────────────────────────────
 
@@ -109,7 +105,7 @@ class TestFallbackIndex:
         assert "peace" in _FALLBACK_INDEX
 
     def test_index_values_are_passage_lists(self):
-        for emotion, passages in _FALLBACK_INDEX.items():
+        for _emotion, passages in _FALLBACK_INDEX.items():
             assert isinstance(passages, list) and len(passages) > 0
 
 

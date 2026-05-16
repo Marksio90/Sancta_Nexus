@@ -6,16 +6,13 @@ Tests /run, /journey/me, /patterns/me, /history/me,
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
 from app.core.rbac import require_authenticated
 from app.main import app
-
 
 BASE = "/api/v1/lectio-divina"
 
@@ -99,15 +96,17 @@ async def test_analyze_emotion_with_text(authed_seeded_client: AsyncClient):
     emotion_result.confidence = 0.85
     emotion_result.spiritual_state = MagicMock(value="consolation")
 
-    with patch("app.services.emotion.emotion_service.EmotionService.analyze_text", return_value=emotion_result):
-        with patch("app.services.scripture.scripture_matcher.ScriptureMatcher.match", return_value=[]):
-            response = await authed_seeded_client.post(
-                f"{BASE}/emotion",
-                json={
-                    "session_id": "sess-001",
-                    "text": "Czuję spokój i wdzięczność w modlitwie.",
-                },
-            )
+    with (
+        patch("app.services.emotion.emotion_service.EmotionService.analyze_text", return_value=emotion_result),
+        patch("app.services.scripture.scripture_matcher.ScriptureMatcher.match", return_value=[]),
+    ):
+        response = await authed_seeded_client.post(
+            f"{BASE}/emotion",
+            json={
+                "session_id": "sess-001",
+                "text": "Czuję spokój i wdzięczność w modlitwie.",
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     assert "primary_emotion" in data
@@ -183,18 +182,20 @@ async def test_run_pipeline_returns_expected_shape(authed_client: AsyncClient):
         "error": None,
     }
 
-    with patch("app.api.routes.lectio_divina.run_session", return_value=mock_session_result):
-        with patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM:
-            inst = MockLLM.return_value
-            inst.ainvoke = AsyncMock(
-                return_value=MagicMock(
-                    content="STAGE: purgation\nPROGRESS: 10\nMILESTONE: Start\nGROWTH: Modlitwa"
-                )
+    with (
+        patch("app.api.routes.lectio_divina.run_session", return_value=mock_session_result),
+        patch("app.agents.memory.journey_tracker.ChatOpenAI") as MockLLM,
+    ):
+        inst = MockLLM.return_value
+        inst.ainvoke = AsyncMock(
+            return_value=MagicMock(
+                content="STAGE: purgation\nPROGRESS: 10\nMILESTONE: Start\nGROWTH: Modlitwa"
             )
-            response = await authed_client.post(
-                f"{BASE}/run",
-                json={"emotion_text": "Czuję spokój.", "tradition": "ignatian"},
-            )
+        )
+        response = await authed_client.post(
+            f"{BASE}/run",
+            json={"emotion_text": "Czuję spokój.", "tradition": "ignatian"},
+        )
 
     assert response.status_code == 200
     data = response.json()

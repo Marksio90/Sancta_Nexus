@@ -3,8 +3,8 @@
 import pytest
 
 from app.core.safety import (
-    AISafetyLayer,
     HIGH_RISK_CATEGORIES,
+    AISafetyLayer,
     RiskCategory,
     ai_safety,
 )

@@ -44,7 +44,8 @@ Overview:
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -65,16 +66,17 @@ _optional_bearer = HTTPBearer(auto_error=False)
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
-) -> Optional[User]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+) -> User | None:
     """Return the authenticated User if a valid Bearer token is present, else None."""
     if credentials is None:
         return None
     try:
-        from app.core.security import verify_token
         from sqlalchemy import select
-        from app.models.database import User as UserModel
+
         from app.core.dependencies import _get_session_factory
+        from app.core.security import verify_token
+        from app.models.database import User as UserModel
 
         payload = verify_token(credentials.credentials, expected_type="access")
         user_id: str = payload["sub"]
@@ -115,20 +117,20 @@ class IntentionCreate(BaseModel):
     content: str = Field(..., min_length=5, max_length=500)
     is_public: bool = Field(default=True)
     category: str = Field(default="general")
-    author_display: Optional[str] = Field(default=None, max_length=100)
+    author_display: str | None = Field(default=None, max_length=100)
 
 
 class GroupCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=1000)
+    description: str | None = Field(default=None, max_length=1000)
     category: str = Field(default="ogólna")
-    schedule: Optional[str] = Field(default=None, max_length=200)
-    parish: Optional[str] = Field(default=None, max_length=200)
+    schedule: str | None = Field(default=None, max_length=200)
+    parish: str | None = Field(default=None, max_length=200)
 
 
 class RosarySessionCreate(BaseModel):
     mystery_type: str = Field(..., description="radosne|bolesne|chwalebne|swietlne")
-    intention: Optional[str] = Field(default=None, max_length=300)
+    intention: str | None = Field(default=None, max_length=300)
 
 
 class RosaryMeditationRequest(BaseModel):
@@ -141,7 +143,7 @@ class DecadeComplete(BaseModel):
 
 
 class NovenaStart(BaseModel):
-    intention: Optional[str] = Field(default=None, max_length=500)
+    intention: str | None = Field(default=None, max_length=500)
 
 
 class NovenaCompleteDay(BaseModel):
@@ -174,7 +176,7 @@ async def list_intentions(
 async def create_intention(
     req: IntentionCreate,
     db: DbSession,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
     """Create a prayer intention. Auth is optional — anonymous submissions allowed.
 
@@ -226,8 +228,9 @@ async def delete_intention(
     current_user: User = require_authenticated,
 ) -> dict[str, Any]:
     """Delete an intention. Requires ownership or admin role."""
-    from sqlalchemy import select
     from sqlalchemy import delete as sa_delete
+    from sqlalchemy import select
+
     from app.models.database import PrayerIntention
 
     result = await db.execute(
@@ -410,7 +413,7 @@ async def list_community_rosaries(db: DbSession) -> dict[str, Any]:
 async def create_community_rosary(
     req: RosarySessionCreate,
     db: DbSession,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
     """Create a community Rosary session. Auth is optional."""
     valid = {"radosne", "bolesne", "chwalebne", "swietlne"}
@@ -425,7 +428,7 @@ async def create_community_rosary(
 async def join_community_rosary(
     rosary_id: str,
     db: DbSession,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict[str, Any]:
     """Join a community Rosary session. Auth is optional."""
     svc = _rosary()
@@ -514,7 +517,7 @@ async def get_novena_day(novena_id: str, day: int) -> dict[str, Any]:
 async def get_novena_meditation(
     novena_id: str,
     day: int,
-    intention: Optional[str] = Query(default=None),
+    intention: str | None = Query(default=None),
 ) -> dict[str, Any]:
     """Return AI-generated meditation for a novena day. No authentication required."""
     try:
@@ -522,7 +525,7 @@ async def get_novena_meditation(
         meditation = await svc.generate_day_meditation(novena_id, day, intention)
         return {"novena_id": novena_id, "day": day, "meditation": meditation}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/novenas/{novena_id}/start", status_code=status.HTTP_201_CREATED)

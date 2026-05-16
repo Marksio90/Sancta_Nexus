@@ -7,23 +7,21 @@ retrieval backed by the PostgreSQL database via async SQLAlchemy.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.dependencies import DbSession
 from app.core.rbac import require_authenticated
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    get_current_user,
     hash_password,
     verify_password,
     verify_token,
 )
-from app.core.config import settings
 from app.models.database import User
 
 logger = logging.getLogger(__name__)
@@ -50,7 +48,7 @@ class UserInfo(BaseModel):
 
     id: str
     email: str
-    displayName: str
+    displayName: str  # noqa: N815 — camelCase matches AuthUser TypeScript interface
 
 
 class RegisterResponse(BaseModel):
@@ -262,6 +260,6 @@ async def get_me(
     return UserProfile(
         user_id=current_user.id,
         email=current_user.email,
-        display_name=current_user.name,
+        displayName=current_user.name,
         created_at=current_user.created_at.isoformat(),
     )

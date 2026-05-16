@@ -7,7 +7,7 @@ as completed independently (non-sequential — catch-up is allowed).
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -243,8 +243,9 @@ class NovenaService:
     """Novena library with per-user progress tracking."""
 
     def __init__(self, model: str = "gpt-4o-mini") -> None:
-        from app.core.config import settings
         from openai import AsyncOpenAI
+
+        from app.core.config import settings
         self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or None)
         self._model = model
 
@@ -336,7 +337,7 @@ class NovenaService:
 
         if tracking.completed_days_mask == all_mask:
             tracking.is_complete = True
-            tracking.completed_at = datetime.now(timezone.utc)
+            tracking.completed_at = datetime.now(UTC)
 
         await db.commit()
         return self._tracking_to_dict(tracking, novena)

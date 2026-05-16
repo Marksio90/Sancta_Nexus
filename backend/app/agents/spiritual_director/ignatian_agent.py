@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class SpiritualMovement(str, Enum):
+class SpiritualMovement(StrEnum):
     """Ignatian categories of interior spiritual movement."""
 
     CONSOLATION = "consolation"
@@ -26,7 +25,7 @@ class SpiritualMovement(str, Enum):
     AMBIGUOUS = "ambiguous"
 
 
-class ExerciseWeek(str, Enum):
+class ExerciseWeek(StrEnum):
     """The four weeks of the Spiritual Exercises of St. Ignatius."""
 
     FIRST = "first"  # Principle & Foundation, sin, mercy
@@ -35,14 +34,14 @@ class ExerciseWeek(str, Enum):
     FOURTH = "fourth"  # Resurrection, Contemplation to Attain Love
 
 
-class DiscernmentRuleSet(str, Enum):
+class DiscernmentRuleSet(StrEnum):
     """Rule sets for discernment of spirits."""
 
     FIRST_WEEK = "first_week"  # For those moving from mortal sin to conversion
     SECOND_WEEK = "second_week"  # For those progressing in spiritual life
 
 
-class ExamenPhase(str, Enum):
+class ExamenPhase(StrEnum):
     """Phases of the Ignatian Daily Examen."""
 
     GRATITUDE = "gratitude"  # Give thanks
@@ -57,7 +56,7 @@ class SpiritualState:
     """Current spiritual state of the user."""
 
     user_id: str
-    current_movement: Optional[SpiritualMovement] = None
+    current_movement: SpiritualMovement | None = None
     exercise_week: ExerciseWeek = ExerciseWeek.FIRST
     rule_set: DiscernmentRuleSet = DiscernmentRuleSet.FIRST_WEEK
     recent_consolations: list[str] = field(default_factory=list)
@@ -65,7 +64,7 @@ class SpiritualState:
     prayer_frequency: str = "daily"
     in_retreat: bool = False
     days_in_exercises: int = 0
-    current_grace_desired: Optional[str] = None
+    current_grace_desired: str | None = None
     examen_history: list[dict] = field(default_factory=list)
 
 
@@ -75,7 +74,7 @@ class IgnatianExercise:
 
     name: str
     description: str
-    scripture: Optional[str] = None
+    scripture: str | None = None
     duration_minutes: int = 30
     method: str = ""  # e.g. "composition of place", "application of senses"
     grace_to_ask: str = ""
@@ -89,8 +88,8 @@ class IgnatianGuidance:
     spiritual_movement: SpiritualMovement
     movement_analysis: str
     exercises: list[IgnatianExercise]
-    agere_contra_suggestion: Optional[str] = None
-    examen_guidance: Optional[str] = None
+    agere_contra_suggestion: str | None = None
+    examen_guidance: str | None = None
     discernment_notes: str = ""
     rules_applied: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)

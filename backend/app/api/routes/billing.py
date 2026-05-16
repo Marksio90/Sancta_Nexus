@@ -20,9 +20,9 @@ Webhook obsługuje:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -55,8 +55,8 @@ def _stripe():
         import stripe as _s
         _s.api_key = settings.STRIPE_SECRET_KEY
         return _s
-    except ImportError:
-        raise HTTPException(status_code=503, detail="Stripe SDK nie jest zainstalowane.")
+    except ImportError as err:
+        raise HTTPException(status_code=503, detail="Stripe SDK nie jest zainstalowane.") from err
 
 
 def _stripe_enabled() -> bool:
@@ -98,7 +98,7 @@ async def _activate_premium(
     sub.status = "active"
     sub.cancel_at_period_end = False
     if period_end_ts:
-        sub.current_period_end = datetime.fromtimestamp(period_end_ts, tz=timezone.utc)
+        sub.current_period_end = datetime.fromtimestamp(period_end_ts, tz=UTC)
 
     user_result = await db.execute(select(User).where(User.id == sub.user_id))
     user = user_result.scalar_one_or_none()
@@ -238,11 +238,11 @@ async def stripe_webhook(request: Request, db: DbSession) -> dict:
         event = stripe.Webhook.construct_event(
             payload, sig, settings.STRIPE_WEBHOOK_SECRET
         )
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Nieprawidłowy podpis webhooka.")
+    except stripe.error.SignatureVerificationError as err:
+        raise HTTPException(status_code=400, detail="Nieprawidłowy podpis webhooka.") from err
     except Exception as exc:
         logger.error("Webhook parse error: %s", exc)
-        raise HTTPException(status_code=400, detail="Błąd parsowania eventu.")
+        raise HTTPException(status_code=400, detail="Błąd parsowania eventu.") from exc
 
     etype = event["type"]
     data = event["data"]["object"]

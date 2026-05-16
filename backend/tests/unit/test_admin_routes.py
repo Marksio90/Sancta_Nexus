@@ -58,7 +58,7 @@ def _uses_guard(func_name: str, guard_name: str) -> bool:
         all_defaults = (
             [None] * (len(all_args) - len(node.args.defaults))
         ) + node.args.defaults
-        for _arg, default in zip(all_args, all_defaults):
+        for _arg, default in zip(all_args, all_defaults, strict=False):
             if isinstance(default, ast.Name) and default.id == guard_name:
                 return True
     return False

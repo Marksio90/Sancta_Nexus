@@ -32,7 +32,6 @@ import pytest
 from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from app.middleware.timing import SLOW_THRESHOLD_MS, TimingMiddleware
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

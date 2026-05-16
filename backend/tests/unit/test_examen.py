@@ -6,11 +6,7 @@ Self-contained: brak DB, Redis, LLM. Testuje logikę danych i stałe.
 from __future__ import annotations
 
 import ast
-import inspect
-import textwrap
 from pathlib import Path
-
-import pytest
 
 # ── Stałe z modułu routes/examen.py ──────────────────────────────────────────
 
@@ -165,12 +161,11 @@ class TestExamenSecurity:
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name.endswith("Request"):
                 for item in ast.walk(node):
-                    if isinstance(item, ast.AnnAssign):
-                        if isinstance(item.target, ast.Name):
-                            assert item.target.id != "user_id", (
-                                f"Klasa {node.name} nie powinna mieć pola user_id "
-                                f"— użyj require_authenticated"
-                            )
+                    if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                        assert item.target.id != "user_id", (
+                            f"Klasa {node.name} nie powinna mieć pola user_id "
+                            f"— użyj require_authenticated"
+                        )
 
     def test_require_authenticated_used(self):
         source = EXAMEN_MODULE.read_text()

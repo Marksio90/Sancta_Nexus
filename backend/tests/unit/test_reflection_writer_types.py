@@ -55,7 +55,6 @@ from app.agents.generative.reflection_writer import (
     UserContext,
 )
 
-
 # ===========================================================================
 # ReflectionLayer enum
 # ===========================================================================
@@ -81,7 +80,7 @@ class TestReflectionLayer:
         assert isinstance(ReflectionLayer.EXEGETICAL, str)
 
     def test_all_values_unique(self):
-        vals = [l.value for l in ReflectionLayer]
+        vals = [layer.value for layer in ReflectionLayer]
         assert len(vals) == len(set(vals))
 
 

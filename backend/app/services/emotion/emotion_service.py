@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ assert len(EMOTION_LABELS) == 36, f"Expected 36 emotion labels, got {len(EMOTION
 # ---------------------------------------------------------------------------
 
 
-class SpiritualStateType(str, Enum):
+class SpiritualStateType(StrEnum):
     """High-level spiritual state classification."""
 
     CONSOLATION = "consolation"
@@ -216,7 +216,7 @@ class EmotionService:
         return EmotionAnalysis(
             vector=vector,
             primary_emotion=primary,
-            secondary_emotions=sorted(secondary, key=lambda l: vector[l], reverse=True),
+            secondary_emotions=sorted(secondary, key=lambda lbl: vector[lbl], reverse=True),
             confidence=round(confidence, 4),
             spiritual_state=spiritual_state_type,
         )
@@ -275,7 +275,7 @@ class EmotionService:
         return EmotionAnalysis(
             vector=vector,
             primary_emotion=primary,
-            secondary_emotions=sorted(secondary, key=lambda l: vector[l], reverse=True),
+            secondary_emotions=sorted(secondary, key=lambda lbl: vector[lbl], reverse=True),
             confidence=confidence,
             spiritual_state=spiritual,
         )

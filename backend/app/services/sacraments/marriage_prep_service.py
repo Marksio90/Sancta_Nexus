@@ -19,15 +19,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
-class MarriagePrepSession(str, Enum):
+class MarriagePrepSession(StrEnum):
     SACRAMENT = "sacrament"
     LOVE = "love"
     COMMUNICATION = "communication"

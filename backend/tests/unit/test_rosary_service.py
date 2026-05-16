@@ -63,7 +63,7 @@ class TestMysteriesCatalog:
                 assert m["scripture"].strip(), f"{mtype} mystery {m['number']} has empty scripture"
 
     def test_all_have_fruit(self):
-        for mtype, mysteries in MYSTERIES.items():
+        for _mtype, mysteries in MYSTERIES.items():
             for m in mysteries:
                 assert m["fruit"].strip()
 

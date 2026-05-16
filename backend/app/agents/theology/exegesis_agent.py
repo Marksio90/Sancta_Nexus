@@ -13,9 +13,7 @@ Uses ChatOpenAI for LLM-based analysis.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -123,7 +121,7 @@ class ExegesisAgent:
             *tasks.values(), return_exceptions=True
         )
 
-        for dimension, result in zip(tasks.keys(), gathered):
+        for dimension, result in zip(tasks.keys(), gathered, strict=False):
             if isinstance(result, Exception):
                 logger.error(
                     "[%s] Dimension '%s' failed: %s",

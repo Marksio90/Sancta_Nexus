@@ -20,16 +20,15 @@ Usage::
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import (
-    AuditEventType,
     AiInteraction,
+    AuditEventType,
     Prayer,
     ScriptureEncounter,
     Session,
@@ -100,7 +99,7 @@ class PrivacyService:
         privacy = await self.get_or_create_privacy_settings(db, user)
 
         export: dict[str, Any] = {
-            "export_generated_at": datetime.now(timezone.utc).isoformat(),
+            "export_generated_at": datetime.now(UTC).isoformat(),
             "account": {
                 "id": user.id,
                 "email": user.email,
@@ -194,7 +193,7 @@ class PrivacyService:
         Sets deleted_at and is_active=False. Hard deletion is performed
         by admin after the configured retention period.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user.is_active = False
         user.deleted_at = now
 

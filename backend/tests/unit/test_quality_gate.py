@@ -45,7 +45,6 @@ from app.agents.orchestration.quality_gate import (
     _CircuitState,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -85,7 +84,7 @@ class TestConstants:
         assert MIN_CONTENT_LENGTH == 20
 
     def test_valid_stages_matches_fallback_content(self):
-        assert VALID_STAGES == frozenset(FALLBACK_CONTENT.keys())
+        assert frozenset(FALLBACK_CONTENT.keys()) == VALID_STAGES
 
 
 # ---------------------------------------------------------------------------

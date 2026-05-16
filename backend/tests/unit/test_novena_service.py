@@ -19,14 +19,11 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-
 # Stub openai (may not be installed) and ensure app.core.config is available
 if "openai" not in sys.modules:
     sys.modules["openai"] = MagicMock()
 
 from app.services.community.novena_service import NOVENAS, NovenaService
-
 
 # ---------------------------------------------------------------------------
 # Helpers

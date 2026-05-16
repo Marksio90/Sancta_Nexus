@@ -78,7 +78,7 @@ def _uses_require_authenticated(func_name: str) -> bool:
         all_defaults = (
             [None] * (len(all_args) - len(node.args.defaults))
         ) + node.args.defaults
-        for _arg, default in zip(all_args, all_defaults):
+        for _arg, default in zip(all_args, all_defaults, strict=False):
             if isinstance(default, ast.Name) and default.id == "require_authenticated":
                 return True
     return False

@@ -12,8 +12,8 @@ from typing import Any
 from fastapi import APIRouter
 
 from app.services.scripture.liturgical_calendar import (
-    LiturgicalDay,
     LiturgicalCalendar,
+    LiturgicalDay,
 )
 from app.services.scripture.saints_calendar import get_saint_today
 
@@ -187,14 +187,14 @@ async def get_daily_engagement() -> dict[str, Any]:
     saint = get_saint_today(today)
 
     # Sugerowana modlitwa poranna zależna od sezonu
-    _MORNING_PRAYERS: dict[str, str] = {
+    _morning_prayers: dict[str, str] = {
         "advent": "Przyjdź Panie Jezu — Maranatha! Dziękuję za ten nowy dzień Adwentu.",
         "christmas": "Chwała Bogu na wysokości! Dziękuję za dar Wcielonego Słowa.",
         "lent": "Panie, pomóż mi dzisiaj nawrócić się choć w jednej małej rzeczy.",
         "easter": "Alleluja! Zmartwychwstały Panie, prowadź mnie dzisiaj swoim Duchem.",
         "ordinary": "Panie Jezu, oddaję Ci ten dzień — moje myśli, słowa i czyny.",
     }
-    morning_prayer = _MORNING_PRAYERS.get(liturgical_day.season, _MORNING_PRAYERS["ordinary"])
+    morning_prayer = _morning_prayers.get(liturgical_day.season, _morning_prayers["ordinary"])
 
     return {
         "date": today.isoformat(),

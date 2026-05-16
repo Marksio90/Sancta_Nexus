@@ -25,11 +25,11 @@ Qdrant collection layout
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 
-class DocumentType(str, Enum):
+class DocumentType(StrEnum):
     # Scripture
     BIBLE = "bible"
     # Councils
@@ -49,7 +49,7 @@ class DocumentType(str, Enum):
     LITURGICAL = "liturgical"
 
 
-class QdrantCollection(str, Enum):
+class QdrantCollection(StrEnum):
     BIBLIA_PL = "biblia_pl"
     BIBLIA_LA = "biblia_la"
     BIBLIA_EN = "biblia_en"

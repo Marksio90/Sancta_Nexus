@@ -17,16 +17,15 @@ and AI-assisted reflection prompts.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from dataclasses import dataclass
+from enum import StrEnum
 
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
-class RCIAStage(str, Enum):
+class RCIAStage(StrEnum):
     PRECATECHUMENATE = "precatechumenate"
     CATECHUMENATE = "catechumenate"
     PURIFICATION = "purification"

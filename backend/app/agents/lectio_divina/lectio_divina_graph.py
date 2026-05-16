@@ -96,9 +96,7 @@ def _detect_crisis(state: LectioDivinaState) -> bool:
     if emotion.get("suicidal_ideation", 0.0) > 0.0:
         return True
     raw_input = str(state.get("raw_input", "")).lower()
-    if any(kw in raw_input for kw in CRISIS_KEYWORDS):
-        return True
-    return False
+    return bool(any(kw in raw_input for kw in CRISIS_KEYWORDS))
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +205,11 @@ class LectioDivinaSupervisor:
         try:
             from app.agents.generative.reflection_writer import (
                 ReflectionWriterAgent,
+            )
+            from app.agents.generative.reflection_writer import (
                 ScripturePassage as ReflectionPassage,
+            )
+            from app.agents.generative.reflection_writer import (
                 UserContext as ReflectionUserContext,
             )
             from app.core.llm import get_llm_client

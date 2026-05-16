@@ -27,9 +27,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.services.notifications.push_service import (
-    PushNotificationService,
-    PushSubscription,
     PushPayload,
+    PushSubscription,
     push_service,
 )
 
@@ -175,7 +174,7 @@ async def set_daily_reminder(request: Request) -> dict[str, str]:
         raise
     except Exception as exc:
         logger.error("daily-reminder error: %s", exc)
-        raise HTTPException(status_code=500, detail="Błąd ustawiania przypomnienia.")
+        raise HTTPException(status_code=500, detail="Błąd ustawiania przypomnienia.") from exc
 
 
 @router.post("/send-morning", summary="Wyślij poranne powiadomienie (cron/scheduler)")
@@ -185,13 +184,14 @@ async def send_morning_notifications() -> dict[str, int]:
     Docelowo wywoływany przez cron job o 07:00 (lub przez APScheduler).
     W tej wersji wysyła do wszystkich aktywnych subskrypcji.
     """
-    from app.services.scripture.saints_calendar import get_saint_today
     from datetime import date
+
+    from app.services.scripture.saints_calendar import get_saint_today
 
     saint = get_saint_today(date.today())
     payload = PushPayload(
         title=f"Dzień dobry! {saint['icon']} {saint['name']}",
-        body=f"Módlmy się dzisiaj przez wstawiennictwo patrona dnia. Niech Pan błogosławi Twój dzień!",
+        body="Módlmy się dzisiaj przez wstawiennictwo patrona dnia. Niech Pan błogosławi Twój dzień!",
         icon="/icons/icon-192x192.png",
         url="/dzisiaj",
     )

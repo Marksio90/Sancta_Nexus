@@ -15,8 +15,6 @@ import ast
 import sys
 from pathlib import Path
 
-import pytest
-
 NOTIF_PATH = Path(__file__).parents[2] / "app" / "api" / "routes" / "notifications.py"
 sys.path.insert(0, str(Path(__file__).parents[2]))
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
@@ -25,9 +25,9 @@ from app.core.dependencies import DbSession
 from app.core.feature_flags import feature_flags
 from app.core.rbac import require_admin
 from app.models.database import (
+    AiInteraction,
     AuditEventType,
     AuditLog,
-    AiInteraction,
     User,
     UserRole,
 )

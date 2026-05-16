@@ -14,9 +14,7 @@ These tests document and enforce the Phase 4 moderation contract:
 """
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, timezone
-
+from datetime import UTC, datetime
 
 # ── Inline the IntentionStatus enum values (no DB import needed) ──────────────
 
@@ -45,7 +43,7 @@ def _approve(intention: dict) -> dict:
     """Mirror PrayerIntentionService.approve() state transition."""
     updated = dict(intention)
     updated["status"] = _IntentionStatus.ACTIVE
-    updated["moderated_at"] = datetime.now(timezone.utc).isoformat()
+    updated["moderated_at"] = datetime.now(UTC).isoformat()
     # moderator_id would be set from the caller in the real service
     return updated
 
@@ -55,7 +53,7 @@ def _reject(intention: dict, reason: str) -> dict:
     updated = dict(intention)
     updated["status"] = _IntentionStatus.REJECTED
     updated["rejection_reason"] = reason[:500]
-    updated["moderated_at"] = datetime.now(timezone.utc).isoformat()
+    updated["moderated_at"] = datetime.now(UTC).isoformat()
     return updated
 
 

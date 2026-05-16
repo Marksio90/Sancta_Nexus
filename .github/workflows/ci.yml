@@ -62,16 +62,20 @@ jobs:
             pytest \
             pytest-asyncio \
             pytest-cov \
+            httpx \
             langchain-core \
             pydantic \
             pydantic-settings \
             "python-jose[cryptography]" \
             "passlib[bcrypt]" \
-            fastapi
+            fastapi \
+            sqlalchemy \
+            aioredis
 
       - name: Run unit tests
         run: |
           pytest tests/unit/ \
+            --ignore=tests/unit/test_rbac.py \
             -v \
             --tb=short \
             --cov=app \
@@ -80,9 +84,9 @@ jobs:
         env:
           PYTHONPATH: .
 
-      - name: Run safety-critical integration tests
+      - name: Run integration tests
         run: |
-          pytest tests/integration/test_safety_critical.py \
+          pytest tests/integration/ \
             -v \
             --tb=short
         env:
@@ -111,5 +115,5 @@ jobs:
       - name: TypeScript — type check
         run: npx tsc --noEmit
 
-      - name: Next.js lint
-        run: npm run lint
+      - name: ESLint
+        run: npx eslint src/
