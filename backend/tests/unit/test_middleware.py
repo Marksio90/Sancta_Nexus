@@ -115,7 +115,7 @@ class TestRequestLoggingMiddleware:
 class TestRateLimitMiddlewareInit:
     def test_default_max_requests(self):
         mw = RateLimitMiddleware(_make_starlette_app())
-        assert mw._max_requests == 100
+        assert mw._max == 120
 
     def test_default_window_seconds(self):
         mw = RateLimitMiddleware(_make_starlette_app())
@@ -123,11 +123,21 @@ class TestRateLimitMiddlewareInit:
 
     def test_custom_max_requests(self):
         mw = RateLimitMiddleware(_make_starlette_app(), max_requests=50)
-        assert mw._max_requests == 50
+        assert mw._max == 50
 
     def test_custom_window_seconds(self):
         mw = RateLimitMiddleware(_make_starlette_app(), window_seconds=30)
         assert mw._window == 30
+
+    def test_ai_tier_defaults(self):
+        mw = RateLimitMiddleware(_make_starlette_app())
+        assert mw._ai_max == 20
+        assert mw._ai_window == 60
+
+    def test_ai_tier_custom(self):
+        mw = RateLimitMiddleware(_make_starlette_app(), ai_max_requests=5, ai_window_seconds=30)
+        assert mw._ai_max == 5
+        assert mw._ai_window == 30
 
     def test_hits_dict_starts_empty(self):
         mw = RateLimitMiddleware(_make_starlette_app())
@@ -278,3 +288,88 @@ class TestTimingMiddleware:
         # Format string uses ":.0f" — no decimal point
         value = response.headers["X-Response-Time-Ms"]
         assert "." not in value
+
+
+# ===========================================================================
+# RateLimitMiddleware — AI tier
+# ===========================================================================
+
+
+class TestRateLimitAITier:
+    @pytest.mark.asyncio
+    async def test_ai_path_post_triggers_ai_tier(self):
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=2
+        )
+        req = _make_request(method="POST", path="/api/v1/lectio-divina/run")
+        resp = _make_response()
+        # First two requests pass
+        for _ in range(2):
+            result = await mw.dispatch(req, _call_next(resp))
+            assert result.status_code == 200
+        # Third is blocked by AI tier
+        result = await mw.dispatch(req, _call_next(resp))
+        assert result.status_code == 429
+        assert "AI rate limit" in result.body.decode()
+
+    @pytest.mark.asyncio
+    async def test_ai_path_get_does_not_trigger_ai_tier(self):
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=1
+        )
+        # GET on an AI path should NOT trigger AI tier (POST-only)
+        req = _make_request(method="GET", path="/api/v1/lectio-divina/run")
+        resp = _make_response()
+        for _ in range(3):
+            result = await mw.dispatch(req, _call_next(resp))
+            assert result.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_non_ai_path_post_skips_ai_tier(self):
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=1
+        )
+        req = _make_request(method="POST", path="/api/v1/auth/login")
+        resp = _make_response()
+        for _ in range(3):
+            result = await mw.dispatch(req, _call_next(resp))
+            assert result.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_examen_start_is_ai_path(self):
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=1
+        )
+        req = _make_request(method="POST", path="/api/v1/examen/start")
+        resp = _make_response()
+        await mw.dispatch(req, _call_next(resp))
+        result = await mw.dispatch(req, _call_next(resp))
+        assert result.status_code == 429
+
+    @pytest.mark.asyncio
+    async def test_reflection_message_is_ai_path(self):
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=1
+        )
+        req = _make_request(method="POST", path="/api/v1/reflection-assistant/message")
+        resp = _make_response()
+        await mw.dispatch(req, _call_next(resp))
+        result = await mw.dispatch(req, _call_next(resp))
+        assert result.status_code == 429
+
+    @pytest.mark.asyncio
+    async def test_ai_limit_independent_of_global(self):
+        # AI tier exhausted but global still has room → AI requests blocked
+        mw = RateLimitMiddleware(
+            _make_starlette_app(), max_requests=100, ai_max_requests=1
+        )
+        ai_req = _make_request(method="POST", path="/api/v1/examen/start")
+        other_req = _make_request(method="GET", path="/api/v1/breviary/today")
+        resp = _make_response()
+        # Exhaust AI tier
+        await mw.dispatch(ai_req, _call_next(resp))
+        ai_result = await mw.dispatch(ai_req, _call_next(resp))
+        assert ai_result.status_code == 429
+        # Non-AI requests still work
+        other_result = await mw.dispatch(other_req, _call_next(resp))
+        assert other_result.status_code == 200

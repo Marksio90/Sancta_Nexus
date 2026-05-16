@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 interface PrayerGroup {
   id: string;
@@ -284,11 +285,7 @@ export default function GrupyPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="bg-white/5 rounded-xl p-4 h-24 animate-pulse" />
-            ))}
-          </div>
+          <SkeletonList count={3} />
         ) : (
           <div className="space-y-3">
             {groups.map((group) => {
