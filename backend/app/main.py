@@ -189,6 +189,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     # User data sync — replaces localStorage-only stores
     ("app.api.routes.notes", "/api/v1/notes", ["notes"]),
     ("app.api.routes.progress", "/api/v1/progress", ["progress"]),
+    # AI response quality feedback
+    ("app.api.routes.feedback", "/api/v1/feedback", ["feedback"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
