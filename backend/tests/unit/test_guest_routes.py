@@ -32,6 +32,7 @@ class TestIpHash:
 
         req = MagicMock()
         req.client.host = "192.168.1.1"
+        req.headers = {}
         result = _ip_hash(req)
         assert len(result) == 16
 
@@ -41,6 +42,7 @@ class TestIpHash:
 
         req = MagicMock()
         req.client.host = "10.0.0.1"
+        req.headers = {}
         assert _ip_hash(req) == _ip_hash(req)
 
     def test_different_ips_different_hashes(self):
@@ -49,8 +51,10 @@ class TestIpHash:
 
         req1 = MagicMock()
         req1.client.host = "1.1.1.1"
+        req1.headers = {}
         req2 = MagicMock()
         req2.client.host = "2.2.2.2"
+        req2.headers = {}
         assert _ip_hash(req1) != _ip_hash(req2)
 
     def test_none_client_handled(self):
@@ -59,6 +63,7 @@ class TestIpHash:
 
         req = MagicMock()
         req.client = None
+        req.headers = {}
         result = _ip_hash(req)
         assert isinstance(result, str)
         assert len(result) == 16

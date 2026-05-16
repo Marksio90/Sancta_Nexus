@@ -27,7 +27,7 @@ const STAGES = [
     name: "Via Purgativa",
     namePl: "Oczyszczenie",
     description: "Odwracanie się od grzechu, oczyszczenie serca i woli.",
-    scripture: "„Stwórz we mnie serce czyste, Boże." — Ps 51,12",
+    scripture: '„Stwórz we mnie serce czyste, Boże." — Ps 51,12',
     milestones: [
       { sessions: 1, label: "Pierwsze spotkanie ze Słowem" },
       { sessions: 5, label: "Regularność modlitwy" },
@@ -40,7 +40,7 @@ const STAGES = [
     name: "Via Illuminativa",
     namePl: "Oświecenie",
     description: "Wzrost w cnocie, kontemplacja prawd wiary, głębsza miłość.",
-    scripture: "„Słowo Twoje jest lampą dla moich stóp." — Ps 119,105",
+    scripture: '„Słowo Twoje jest lampą dla moich stóp." — Ps 119,105',
     milestones: [
       { sessions: 20, label: "Początek oświecenia" },
       { sessions: 30, label: "Modlitwa myślna" },
@@ -53,7 +53,7 @@ const STAGES = [
     name: "Via Unitiva",
     namePl: "Zjednoczenie",
     description: "Zjednoczenie woli z Wolą Bożą, trwała kontemplacja.",
-    scripture: "„Trwajcie we Mnie, a Ja w was trwać będę." — J 15,4",
+    scripture: '„Trwajcie we Mnie, a Ja w was trwać będę." — J 15,4',
     milestones: [
       { sessions: 40, label: "Pierwsze chwile zjednoczenia" },
       { sessions: 50, label: "Wytrwałość w kontemplacji" },
