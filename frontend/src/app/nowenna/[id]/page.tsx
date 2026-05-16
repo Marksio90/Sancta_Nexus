@@ -100,9 +100,10 @@ export function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const meta = NOVENA_META[params.id];
+  const { id } = await params;
+  const meta = NOVENA_META[id];
   if (!meta) {
     return {
       title: "Nowenna | Sancta Nexus",
@@ -110,7 +111,7 @@ export async function generateMetadata({
     };
   }
 
-  const canonicalUrl = `https://sanctanexus.pl/nowenna/${params.id}`;
+  const canonicalUrl = `https://sanctanexus.pl/nowenna/${id}`;
 
   return {
     title: `${meta.title} | Sancta Nexus`,
@@ -205,12 +206,13 @@ function NovenaJsonLd({ id }: { id: string }) {
 
 // ── Page component ─────────────────────────────────────────────────────────
 
-export default function NovenaPage({ params }: { params: { id: string } }) {
-  const meta = NOVENA_META[params.id];
+export default async function NovenaPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const meta = NOVENA_META[id];
 
   return (
     <>
-      <NovenaJsonLd id={params.id} />
+      <NovenaJsonLd id={id} />
 
       {/* SEO-visible above-the-fold content (server-rendered) */}
       <div className="mx-auto max-w-3xl px-4 py-10">
@@ -232,7 +234,7 @@ export default function NovenaPage({ params }: { params: { id: string } }) {
         )}
 
         {/* Interactive client component — day tracker, prayer text, etc. */}
-        <NovenaDetailClient novenaId={params.id} />
+        <NovenaDetailClient novenaId={id} />
       </div>
     </>
   );
