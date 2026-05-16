@@ -186,6 +186,9 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.ws_rosary", "/ws", ["websocket"]),
     # Billing — Stripe subskrypcje
     ("app.api.routes.billing", "/api/v1/billing", ["billing"]),
+    # User data sync — replaces localStorage-only stores
+    ("app.api.routes.notes", "/api/v1/notes", ["notes"]),
+    ("app.api.routes.progress", "/api/v1/progress", ["progress"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:

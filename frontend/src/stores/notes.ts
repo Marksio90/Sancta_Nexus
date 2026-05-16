@@ -1,76 +1,122 @@
 /**
- * Personal notes store — persists verse reflections to localStorage.
- * Keyed by verse reference string (e.g. "J 3,16").
+ * Verse notes store — personal scripture reflections.
+ *
+ * Primary storage: backend API (/api/v1/notes).
+ * Offline fallback: localStorage (same key as before for backwards compat).
+ *
+ * Strategy:
+ *  - On load: fetch from backend; merge with any localStorage data not yet synced.
+ *  - On save/delete: write to backend first; fall back to localStorage on API error.
+ *  - isBackendSynced flag lets UI show sync status.
  */
 import { create } from "zustand";
+import { api } from "@/lib/api";
+
+interface NoteItem {
+  ref: string;
+  text: string;
+  saved_at?: string;
+}
 
 interface NotesState {
   notes: Record<string, string>;
+  isBackendSynced: boolean;
+  isLoading: boolean;
 }
 
 interface NotesActions {
   loadFromStorage: () => void;
+  loadFromBackend: () => Promise<void>;
   getNote: (ref: string) => string;
-  saveNote: (ref: string, text: string) => void;
-  deleteNote: (ref: string) => void;
+  saveNote: (ref: string, text: string) => Promise<void>;
+  deleteNote: (ref: string) => Promise<void>;
   getAllNotes: () => { ref: string; text: string; savedAt: string }[];
 }
 
 const STORAGE_KEY = "sancta_nexus_notes";
 
+function readLocalStorage(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalStorage(notes: Record<string, string>): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+  }
+}
+
 export const useNotesStore = create<NotesState & NotesActions>((set, get) => ({
   notes: {},
+  isBackendSynced: false,
+  isLoading: false,
 
   loadFromStorage: () => {
-    if (typeof window === "undefined") return;
+    set({ notes: readLocalStorage() });
+  },
+
+  loadFromBackend: async () => {
+    set({ isLoading: true });
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        set({ notes: JSON.parse(raw) });
+      const items = await api.get<NoteItem[]>("/api/v1/notes");
+      const notes: Record<string, string> = {};
+      for (const item of items) {
+        notes[item.ref] = item.text;
       }
+      // Merge: backend wins; keep any local-only refs not yet uploaded.
+      const local = readLocalStorage();
+      for (const [ref, text] of Object.entries(local)) {
+        if (!(ref in notes) && text.trim()) {
+          notes[ref] = text;
+          // Fire-and-forget upload of locally-only note.
+          api
+            .put(`/api/v1/notes/${encodeURIComponent(ref)}`, { text })
+            .catch(() => {/* will retry next time */});
+        }
+      }
+      writeLocalStorage(notes);
+      set({ notes, isBackendSynced: true, isLoading: false });
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      // Backend unavailable — fall back to localStorage.
+      set({ notes: readLocalStorage(), isBackendSynced: false, isLoading: false });
     }
   },
 
-  getNote: (ref) => {
-    // Lazy load from storage on first access
-    if (typeof window !== "undefined") {
-      const state = get();
-      if (Object.keys(state.notes).length === 0) {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          if (raw) {
-            const notes = JSON.parse(raw) as Record<string, string>;
-            set({ notes });
-            return notes[ref] ?? "";
-          }
-        } catch { /* ignore */ }
-      }
-    }
-    return get().notes[ref] ?? "";
-  },
+  getNote: (ref) => get().notes[ref] ?? "",
 
-  saveNote: (ref, text) => {
+  saveNote: async (ref, text) => {
+    // Optimistic update.
     const notes = { ...get().notes, [ref]: text };
     set({ notes });
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    writeLocalStorage(notes);
+
+    try {
+      await api.put(`/api/v1/notes/${encodeURIComponent(ref)}`, { text });
+      set({ isBackendSynced: true });
+    } catch {
+      set({ isBackendSynced: false });
     }
   },
 
-  deleteNote: (ref) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deleteNote: async (ref) => {
     const { [ref]: _removed, ...rest } = get().notes;
     set({ notes: rest });
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+    writeLocalStorage(rest);
+
+    try {
+      await api.delete(`/api/v1/notes/${encodeURIComponent(ref)}`);
+    } catch {
+      set({ isBackendSynced: false });
     }
   },
 
-  getAllNotes: () => {
-    return Object.entries(get().notes)
+  getAllNotes: () =>
+    Object.entries(get().notes)
       .filter(([, text]) => text.trim())
-      .map(([ref, text]) => ({ ref, text, savedAt: new Date().toISOString() }));
-  },
+      .map(([ref, text]) => ({ ref, text, savedAt: new Date().toISOString() })),
 }));
