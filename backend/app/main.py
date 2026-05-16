@@ -201,6 +201,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.feedback", "/api/v1/feedback", ["feedback"]),
     # Background task status polling (ARQ)
     ("app.api.routes.tasks", "/api/v1/tasks", ["tasks"]),
+    # Guest mode — one free Lectio Divina without registration
+    ("app.api.routes.guest", "/api/v1/guest", ["guest"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
