@@ -116,6 +116,16 @@ async def get_redis_client() -> AsyncGenerator[aioredis.Redis, None]:
         await client.aclose()
 
 
+async def get_redis_direct() -> aioredis.Redis:
+    """Return a Redis client without yielding — for use outside FastAPI Depends().
+
+    Caller is responsible for calling ``await client.aclose()`` when done,
+    or simply let the connection pool reclaim it.  Used by middleware and
+    background tasks that cannot use the generator-based dependency.
+    """
+    return aioredis.Redis(connection_pool=_get_redis_pool())
+
+
 # ── Annotated shortcuts for cleaner router signatures ────────────────────────
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 QdrantDep = Annotated[AsyncQdrantClient, Depends(get_qdrant_client)]
