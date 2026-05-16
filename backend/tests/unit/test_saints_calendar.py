@@ -24,13 +24,11 @@ CALENDAR_PATH = Path(__file__).parents[2] / "app" / "services" / "scripture" / "
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 from app.services.scripture.saints_calendar import (
-    SaintInfo,
-    _SAINTS,
     _DEFAULT_SAINT,
-    get_saint_today,
+    _SAINTS,
     get_saint_for_date,
+    get_saint_today,
 )
-
 
 # ── Podstawowa struktura ──────────────────────────────────────────────────────
 

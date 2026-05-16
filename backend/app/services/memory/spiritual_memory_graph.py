@@ -11,7 +11,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class NodeType(str, Enum):
+class NodeType(StrEnum):
     EMOTIONAL_STATE = "EmotionalState"
     SPIRITUAL_STATE = "SpiritualState"
     SCRIPTURE_ENCOUNTER = "ScriptureEncounter"
@@ -34,7 +34,7 @@ class NodeType(str, Enum):
     VIRTUE = "Virtue"
 
 
-class RelationType(str, Enum):
+class RelationType(StrEnum):
     TRIGGERED_BY = "TRIGGERED_BY"
     LED_TO = "LED_TO"
     RESOLVED_BY = "RESOLVED_BY"

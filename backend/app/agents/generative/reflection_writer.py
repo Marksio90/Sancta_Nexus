@@ -10,13 +10,12 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class ReflectionLayer(str, Enum):
+class ReflectionLayer(StrEnum):
     """The four interpretive layers of a spiritual reflection."""
 
     EXEGETICAL = "exegetical"  # Historical-critical, literary context
@@ -34,8 +33,8 @@ class ScripturePassage:
     book: str
     chapter: int
     verses: str
-    liturgical_context: Optional[str] = None  # e.g. "V Niedziela Wielkanocna"
-    original_language_notes: Optional[str] = None
+    liturgical_context: str | None = None  # e.g. "V Niedziela Wielkanocna"
+    original_language_notes: str | None = None
 
 
 @dataclass
@@ -43,9 +42,9 @@ class UserContext:
     """Context about the user requesting the reflection."""
 
     user_id: str
-    spiritual_stage: Optional[str] = None  # purgation / illumination / union
-    current_struggles: Optional[list[str]] = None
-    prayer_tradition: Optional[str] = None
+    spiritual_stage: str | None = None  # purgation / illumination / union
+    current_struggles: list[str] | None = None
+    prayer_tradition: str | None = None
     theological_depth: str = "intermediate"  # beginner / intermediate / advanced
     preferred_language: str = "pl"
 

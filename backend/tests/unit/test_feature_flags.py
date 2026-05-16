@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 
-from app.core.feature_flags import FeatureFlags, FeatureFlagRegistry, require_feature
+from app.core.feature_flags import FeatureFlagRegistry, FeatureFlags, require_feature
 
 
 @pytest.fixture

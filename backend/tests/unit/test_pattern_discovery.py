@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-from app.agents.memory.pattern_discovery import PatternDiscoveryAgent, PATTERN_TYPES
-
+from app.agents.memory.pattern_discovery import PatternDiscoveryAgent
 
 SESSIONS = [
     {"date": "2026-01-01", "primary_emotion": "peace", "spiritual_state": "illumination", "scripture_ref": "J 15,5"},

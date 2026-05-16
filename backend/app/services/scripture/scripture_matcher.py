@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from app.services.rag.rag_service import RAGService, ScriptureResult
@@ -85,7 +85,7 @@ _FALLBACK_INDEX: dict[str, list[dict]] = _build_fallback_index()
 TOTAL_BIBLE_VERSES = 31_102  # canonical verse count
 
 
-class IgnatianState(str, Enum):
+class IgnatianState(StrEnum):
     """Simplified Ignatian discernment states."""
 
     CONSOLATION = "consolation"
@@ -375,9 +375,8 @@ class ScriptureMatcher:
         if context.ignatian_state == IgnatianState.CONSOLATION:
             if candidate.book in consolation_books:
                 return 0.04
-        elif context.ignatian_state == IgnatianState.DESOLATION:
-            if candidate.book in desolation_books:
-                return 0.04
+        elif context.ignatian_state == IgnatianState.DESOLATION and candidate.book in desolation_books:
+            return 0.04
         return 0.0
 
     def _to_scripture_match(

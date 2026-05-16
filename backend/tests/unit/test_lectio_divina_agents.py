@@ -15,31 +15,26 @@ All agents bypass __init__ to avoid LLM initialisation.
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock
 
-import pytest
-
 from app.agents.lectio_divina.actio_agent import (
-    ACTIO_SYSTEM_PROMPT,
     FALLBACK_ACTION,
     ActioAgent,
 )
 from app.agents.lectio_divina.contemplatio_agent import (
+    _SEASON_AMBIENT,
     FALLBACK_CONTEMPLATION,
     ContemplatioAgent,
-    _SEASON_AMBIENT,
 )
 from app.agents.lectio_divina.lectio_agent import (
+    _EMOTION_FALLBACK_MAP,
     FALLBACK_PASSAGES,
     LectioAgent,
-    _EMOTION_FALLBACK_MAP,
 )
 from app.agents.lectio_divina.meditatio_agent import (
     FALLBACK_MEDITATION,
     MeditatioAgent,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers — bypass __init__ for all agents

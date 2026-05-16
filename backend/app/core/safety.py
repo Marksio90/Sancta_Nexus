@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ── Risk categories ──────────────────────────────────────────────────────────
 
 
-class RiskCategory(str, Enum):
+class RiskCategory(StrEnum):
     """Classification of user input by theological and safety risk level."""
 
     NORMAL_REFLECTION = "normal_reflection"

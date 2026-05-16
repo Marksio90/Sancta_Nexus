@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-from app.agents.memory.journey_tracker import JourneyTrackerAgent, JOURNEY_STAGES
-
+from app.agents.memory.journey_tracker import JourneyTrackerAgent
 
 SESSION_DATA = {
     "emotions": {"primary": "peace"},

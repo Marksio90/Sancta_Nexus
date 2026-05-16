@@ -5,7 +5,8 @@ Purgation (Oczyszczenie) -> Illumination (Oświecenie) -> Union (Zjednoczenie)
 """
 
 import logging
-from langchain_core.messages import SystemMessage, HumanMessage
+
+from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 

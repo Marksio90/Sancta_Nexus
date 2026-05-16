@@ -13,7 +13,7 @@ Voice profiles are mapped to spiritually appropriate voices:
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 
 import httpx
 from openai import AsyncOpenAI
@@ -23,7 +23,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-class VoiceProfile(str, Enum):
+class VoiceProfile(StrEnum):
     NARRATOR_MALE = "narrator_male"
     NARRATOR_FEMALE = "narrator_female"
     CONTEMPLATIVE = "contemplative"

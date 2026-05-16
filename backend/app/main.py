@@ -4,17 +4,17 @@ Initialises middleware, routers, and infrastructure connections via an async
 lifespan context manager.
 """
 
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.dependencies import close_all_connections, create_tables
-from app.middleware.timing import TimingMiddleware
 from app.core.middleware import RateLimitMiddleware
+from app.middleware.timing import TimingMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ def _build_scheduler():
     async def _prefetch_tomorrow_scripture() -> None:
         try:
             from datetime import date, timedelta
+
             from app.services.scripture.saints_calendar import get_saint_today
             tomorrow = date.today() + timedelta(days=1)
             saint = get_saint_today(tomorrow)

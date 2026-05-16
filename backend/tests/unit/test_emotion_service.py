@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from app.services.emotion.emotion_service import EmotionService, SpiritualStateType
-
 
 # ---------------------------------------------------------------------------
 # analyze_text (sync, keyword-based) — always works
@@ -54,21 +51,20 @@ async def test_analyze_text_async_returns_valid_structure_on_success():
     mock_state.confidence = 0.85
 
     mock_llm = MagicMock()
-    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm), patch(
+        "app.agents.emotion.emotion_detector.EmotionDetectorAgent"
+    ) as MockDet:
+        det_inst = MockDet.return_value
+        det_inst.detect = AsyncMock(return_value=mock_vector)
+
         with patch(
-            "app.agents.emotion.emotion_detector.EmotionDetectorAgent"
-        ) as MockDet:
-            det_inst = MockDet.return_value
-            det_inst.detect = AsyncMock(return_value=mock_vector)
+            "app.agents.emotion.spiritual_state_classifier.SpiritualStateClassifier"
+        ) as MockCls:
+            cls_inst = MockCls.return_value
+            cls_inst.classify = AsyncMock(return_value=mock_state)
 
-            with patch(
-                "app.agents.emotion.spiritual_state_classifier.SpiritualStateClassifier"
-            ) as MockCls:
-                cls_inst = MockCls.return_value
-                cls_inst.classify = AsyncMock(return_value=mock_state)
-
-                svc = EmotionService()
-                result = await svc.analyze_text_async("Panie, jestem blisko Ciebie.")
+            svc = EmotionService()
+            result = await svc.analyze_text_async("Panie, jestem blisko Ciebie.")
 
     assert result.primary_emotion
     assert isinstance(result.vector, dict)
@@ -87,14 +83,13 @@ async def test_detect_crisis_returns_required_keys():
     crisis_result.resources = []
 
     mock_llm = MagicMock()
-    with patch("app.core.llm.get_llm_fast", return_value=mock_llm):
-        with patch(
-            "app.agents.emotion.crisis_detector.CrisisDetectorAgent"
-        ) as MockCrisis:
-            inst = MockCrisis.return_value
-            inst.check = AsyncMock(return_value=crisis_result)
+    with patch("app.core.llm.get_llm_fast", return_value=mock_llm), patch(
+        "app.agents.emotion.crisis_detector.CrisisDetectorAgent"
+    ) as MockCrisis:
+        inst = MockCrisis.return_value
+        inst.check = AsyncMock(return_value=crisis_result)
 
-            result = await svc.detect_crisis("Modlę się dziś spokojnie.")
+        result = await svc.detect_crisis("Modlę się dziś spokojnie.")
 
     assert "is_crisis" in result
     assert "severity" in result

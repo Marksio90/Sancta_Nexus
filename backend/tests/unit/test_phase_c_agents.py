@@ -9,8 +9,6 @@ from __future__ import annotations
 import ast
 import pathlib
 
-import pytest
-
 BACKEND_ROOT = pathlib.Path("/home/user/Sancta_Nexus/backend")
 
 

@@ -21,14 +21,14 @@ Usage:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import Depends, HTTPException, status
 
 from app.core.config import settings
 
 
-class FeatureFlags(str, Enum):
+class FeatureFlags(StrEnum):
     """Canonical names for every platform module flag."""
 
     LECTIO_DIVINA = "FEATURE_LECTIO_DIVINA"

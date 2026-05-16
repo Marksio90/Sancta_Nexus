@@ -20,8 +20,6 @@ Contracts verified:
 
 from __future__ import annotations
 
-import pytest
-
 from app.services.knowledge.corpus_registry import (
     BIBLE_BOOKS_NT,
     BIBLE_BOOKS_OT,
@@ -40,7 +38,6 @@ from app.services.knowledge.corpus_registry import (
     get_document,
     search_registry,
 )
-
 
 # ---------------------------------------------------------------------------
 # DocumentType enum
@@ -354,7 +351,7 @@ class TestCorpusByID:
 
 class TestCorpusByCollection:
     def test_all_referenced_collections_valid(self):
-        for collection in CORPUS_BY_COLLECTION.keys():
+        for collection in CORPUS_BY_COLLECTION:
             assert isinstance(collection, QdrantCollection)
 
     def test_sobory_collection_has_entries(self):

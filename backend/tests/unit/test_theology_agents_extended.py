@@ -46,17 +46,21 @@ if "openai" not in sys.modules:
 import pytest
 
 from app.agents.theology.exegesis_agent import (
-    ExegesisAgent,
     _DIMENSION_PROMPTS,
+    ExegesisAgent,
 )
 from app.agents.theology.magisterium_validator import (
     ALIGNMENT_THRESHOLD,
-    COLLECTION_NAME as MAGISTERIUM_COLLECTION,
     MagisteriumValidator,
     ValidationResult,
 )
+from app.agents.theology.magisterium_validator import (
+    COLLECTION_NAME as MAGISTERIUM_COLLECTION,
+)
 from app.agents.theology.patristic_agent import (
     COLLECTION_NAME as PATRISTIC_COLLECTION,
+)
+from app.agents.theology.patristic_agent import (
     DEFAULT_MIN_RELEVANCE,
     PatristicAgent,
     PatristicReference,
@@ -65,9 +69,7 @@ from app.services.sacraments.marriage_prep_service import (
     SESSIONS,
     MarriagePrepService,
     MarriagePrepSession,
-    SessionContent,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

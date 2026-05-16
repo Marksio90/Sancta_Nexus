@@ -175,7 +175,6 @@ async def ingest_seed_chunks(
     from qdrant_client.models import PointStruct
 
     counts: dict[str, int] = {}
-    batch: list[tuple[str, PointStruct]] = []
 
     async def _flush(batch: list[tuple[str, PointStruct]]) -> None:
         if not batch:
@@ -214,9 +213,8 @@ async def ingest_seed_chunks(
 
         vectors = await embedding_service.aembed_batch(batch_texts)
 
-        points_batch: list[tuple[str, "PointStruct"]] = []
-        for (chunk_id, collection, payload), vector in zip(batch_meta, vectors):
-            from qdrant_client.models import PointStruct
+        points_batch: list[tuple[str, PointStruct]] = []
+        for (chunk_id, collection, payload), vector in zip(batch_meta, vectors, strict=False):
             pt = PointStruct(id=chunk_id, vector=vector, payload=payload)
             points_batch.append((collection, pt))
 
@@ -232,9 +230,9 @@ async def ingest_seed_chunks(
 
 async def run_ingest(args: argparse.Namespace) -> None:
     """Main async ingestion flow."""
-    from app.services.rag.embedding_service import EmbeddingService
-    from app.services.knowledge.collection_manager import CollectionManager
     from app.core.config import settings
+    from app.services.knowledge.collection_manager import CollectionManager
+    from app.services.rag.embedding_service import EmbeddingService
 
     # Initialise services
     embedding_service = EmbeddingService(backend="openai")

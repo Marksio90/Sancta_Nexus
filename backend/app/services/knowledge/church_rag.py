@@ -23,12 +23,12 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.services.rag.embedding_service import EmbeddingService
 from app.services.knowledge.collection_manager import CollectionManager
 from app.services.knowledge.corpus_registry import (
-    QdrantCollection,
     CORPUS_BY_ID,
+    QdrantCollection,
 )
+from app.services.rag.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 

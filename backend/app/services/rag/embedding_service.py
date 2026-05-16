@@ -70,6 +70,7 @@ class EmbeddingService:
     def _get_openai_client(self) -> Any:
         if self._openai_client is None:
             from openai import OpenAI
+
             from app.core.config import settings
             self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY or None)
             logger.info("OpenAI embedding client initialised (model=%s)", self._model_name)
@@ -77,6 +78,7 @@ class EmbeddingService:
 
     def _get_async_openai_client(self) -> Any:
         from openai import AsyncOpenAI
+
         from app.core.config import settings
         return AsyncOpenAI(api_key=settings.OPENAI_API_KEY or None)
 

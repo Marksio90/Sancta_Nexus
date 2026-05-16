@@ -12,7 +12,8 @@ from typing import Annotated
 
 import redis.asyncio as aioredis
 from fastapi import Depends
-from neo4j import AsyncGraphDatabase, AsyncDriver, AsyncSession as Neo4jAsyncSession
+from neo4j import AsyncDriver, AsyncGraphDatabase
+from neo4j import AsyncSession as Neo4jAsyncSession
 from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -135,6 +136,7 @@ async def create_tables() -> None:
     In production use Alembic migrations instead.
     """
     from sqlalchemy import text
+
     from app.models.database import Base  # noqa: F401 — ensure all models loaded
 
     _ENUM_TYPES = [

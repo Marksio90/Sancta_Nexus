@@ -12,20 +12,18 @@ Both agents bypass __init__ to avoid OpenAI/config imports.
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
 
 import pytest
 
-from app.agents.theology.doctrine_guard import (
-    DOGMAS,
-    DoctrineGuardAgent,
-)
 from app.agents.emotion.spiritual_state_classifier import (
     SpiritualState,
     SpiritualStateClassifier,
     SpiritualStateEnum,
 )
-
+from app.agents.theology.doctrine_guard import (
+    DOGMAS,
+    DoctrineGuardAgent,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

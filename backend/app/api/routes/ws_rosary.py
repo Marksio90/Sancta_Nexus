@@ -30,13 +30,12 @@ import logging
 from collections import defaultdict
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
-from app.core.config import settings
 from app.core.dependencies import _get_session_factory
 from app.core.security import verify_token
-from app.models.database import CommunityRosary, User
+from app.models.database import CommunityRosary
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

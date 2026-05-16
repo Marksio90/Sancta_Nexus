@@ -56,17 +56,16 @@ if "qdrant_client" not in sys.modules:
 from app.agents.lectio_divina.lectio_divina_graph import (
     CRISIS_EMOTION_THRESHOLD,
     CRISIS_KEYWORDS,
-    LectioDivinaSupervisor,
     LectioDivinaState,
+    LectioDivinaSupervisor,
     _detect_crisis,
 )
 from app.services.knowledge.collection_manager import (
-    VECTOR_DIM,
     _COMMON_INDICES,
     _PAYLOAD_INDICES,
+    VECTOR_DIM,
 )
 from app.services.knowledge.corpus_registry import QdrantCollection
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -31,19 +31,18 @@ CrisisDetectorAgent (A-026):
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
 
 import pytest
 
 from app.agents.emotion.crisis_detector import (
-    CrisisDetectorAgent,
-    CrisisResult,
-    CrisisSeverity,
     _EMERGENCY_RESOURCES,
     _PASTORAL_RESOURCES,
     _SEVERE_DEPRESSION_PATTERNS,
     _SPIRITUAL_ABUSE_PATTERNS,
     _SUICIDAL_PATTERNS,
+    CrisisDetectorAgent,
+    CrisisResult,
+    CrisisSeverity,
 )
 from app.agents.emotion.emotion_detector import (
     ALL_EMOTIONS,
@@ -51,7 +50,6 @@ from app.agents.emotion.emotion_detector import (
     COMPLEX_EMOTIONS,
     EmotionDetectorAgent,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -61,10 +59,15 @@ from app.agents.emotion.emotion_detector import (
 def _crisis_agent() -> CrisisDetectorAgent:
     agent = CrisisDetectorAgent.__new__(CrisisDetectorAgent)
     import re
+
+    from app.agents.emotion.crisis_detector import (
+        _SEVERE_DEPRESSION_PATTERNS as DP,
+    )
+    from app.agents.emotion.crisis_detector import (
+        _SPIRITUAL_ABUSE_PATTERNS as AP,
+    )
     from app.agents.emotion.crisis_detector import (
         _SUICIDAL_PATTERNS as SP,
-        _SEVERE_DEPRESSION_PATTERNS as DP,
-        _SPIRITUAL_ABUSE_PATTERNS as AP,
     )
     agent._llm = None
     agent._suicidal_re = [re.compile(p, re.IGNORECASE) for p in SP]

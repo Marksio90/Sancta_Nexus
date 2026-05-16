@@ -29,25 +29,24 @@ AuditService.log_ai_interaction:
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, call, patch
-
-import pytest
 
 # Stub pywebpush before import (not installed)
 import sys
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 if "pywebpush" not in sys.modules:
     sys.modules["pywebpush"] = MagicMock()
 
+# Import AuditEventType via the ORM module (sqlalchemy is installed)
+from app.models.database import AuditEventType
+from app.services.audit.audit_service import AuditService
 from app.services.notifications.push_service import (
     PushNotificationService,
     PushPayload,
     PushSubscription,
 )
-from app.services.audit.audit_service import AuditService
-
-# Import AuditEventType via the ORM module (sqlalchemy is installed)
-from app.models.database import AuditEventType
-
 
 # ---------------------------------------------------------------------------
 # Helpers

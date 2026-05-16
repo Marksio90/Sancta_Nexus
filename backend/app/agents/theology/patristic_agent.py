@@ -9,11 +9,11 @@ and Doctors of the Church.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Filter, FieldCondition, MatchAny
+from qdrant_client.models import FieldCondition, Filter, MatchAny
 
 logger = logging.getLogger(__name__)
 

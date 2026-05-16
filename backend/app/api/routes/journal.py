@@ -21,7 +21,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -312,7 +312,7 @@ async def delete_entry(
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wpis nie istnieje.")
 
-    entry.deleted_at = datetime.now(timezone.utc)
+    entry.deleted_at = datetime.now(UTC)
 
     await audit.log(
         db,
@@ -374,7 +374,7 @@ async def get_insights(
             },
             patterns=[],
             entry_count=0,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             disclaimer=(
                 "Analiza AI dziennika jest wyłączona w ustawieniach prywatności. "
                 "Możesz ją włączyć w sekcji Ustawienia → Prywatność."
@@ -403,7 +403,7 @@ async def get_insights(
             },
             patterns=[],
             entry_count=0,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             disclaimer=DISCLAIMER,
             ai_enabled=True,
         )

@@ -55,13 +55,12 @@ class TestNovenaSecurityNoUserIdInBody:
         tree = ast.parse(source)
         protected_funcs = ["get_my_novenas", "start_novena", "complete_novena_day"]
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name in protected_funcs:
-                    # Sprawdź, że w parametrach funkcji NIE ma user_id jako Query
-                    param_names = [arg.arg for arg in node.args.args]
-                    assert "user_id" not in param_names, (
-                        f"{node.name} nie powinien mieć user_id w parametrach"
-                    )
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in protected_funcs:
+                # Sprawdź, że w parametrach funkcji NIE ma user_id jako Query
+                param_names = [arg.arg for arg in node.args.args]
+                assert "user_id" not in param_names, (
+                    f"{node.name} nie powinien mieć user_id w parametrach"
+                )
 
     def test_require_authenticated_on_my_novenas(self):
         source = _source()
@@ -72,10 +71,9 @@ class TestNovenaSecurityNoUserIdInBody:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "start_novena":
-                    func_source = ast.unparse(node)
-                    assert "require_authenticated" in func_source or "current_user" in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "start_novena":
+                func_source = ast.unparse(node)
+                assert "require_authenticated" in func_source or "current_user" in func_source
 
     def test_complete_day_is_authenticated(self):
         source = _source()
@@ -117,11 +115,10 @@ class TestNovenaEndpoints:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "list_novenas":
-                    func_source = ast.unparse(node)
-                    # Funkcja publiczna — nie powinna mieć require_authenticated
-                    assert "require_authenticated" not in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "list_novenas":
+                func_source = ast.unparse(node)
+                # Funkcja publiczna — nie powinna mieć require_authenticated
+                assert "require_authenticated" not in func_source
 
     def test_start_novena_is_post(self):
         source = _source()
@@ -228,10 +225,9 @@ class TestGroupEndpoints:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "create_group":
-                    func_source = ast.unparse(node)
-                    assert "current_user" in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "create_group":
+                func_source = ast.unparse(node)
+                assert "current_user" in func_source
 
 
 # ── Logika nowenny — 9 dni ────────────────────────────────────────────────────
@@ -253,8 +249,7 @@ class TestNovenaLogic:
         source = _source()
         tree = ast.parse(source)
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == "start_novena":
-                    func_source = ast.unparse(node)
-                    assert "error" in func_source
-                    assert "HTTPException" in func_source
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "start_novena":
+                func_source = ast.unparse(node)
+                assert "error" in func_source
+                assert "HTTPException" in func_source

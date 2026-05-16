@@ -9,8 +9,9 @@ Implements:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -198,8 +199,9 @@ Medytacja: 120-150 słów, zakończona wezwaniem do modlitwy Zdrowaś Maryjo."""
 class RosaryService:
 
     def __init__(self, model: str = "gpt-4o-mini") -> None:
-        from app.core.config import settings
         from openai import AsyncOpenAI
+
+        from app.core.config import settings
         self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or None)
         self._model = model
 
@@ -207,7 +209,7 @@ class RosaryService:
         return MYSTERIES.get(mystery_type, [])
 
     def get_today_mystery(self) -> str:
-        weekday = datetime.now(timezone.utc).weekday()
+        weekday = datetime.now(UTC).weekday()
         return DAILY_MYSTERY[weekday]
 
     def get_all_mystery_types(self) -> list[dict]:
@@ -238,7 +240,6 @@ class RosaryService:
             "Pomóż modlącemu wejść w scenę ewangeliczną wszystkimi zmysłami duszy."
         )
 
-        from openai import AsyncOpenAI
         stream = await self._client.chat.completions.create(
             model=self._model,
             temperature=0.75,
@@ -338,7 +339,7 @@ class RosaryService:
 
         part.decades_mask = new_mask
         if all_done:
-            part.completed_at = datetime.now(timezone.utc)
+            part.completed_at = datetime.now(UTC)
 
         await db.commit()
         return {

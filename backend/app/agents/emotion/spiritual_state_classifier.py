@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -19,7 +19,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 logger = logging.getLogger(__name__)
 
 
-class SpiritualStateEnum(str, Enum):
+class SpiritualStateEnum(StrEnum):
     """Spiritual states in Ignatian terminology."""
 
     DARK_NIGHT = "dark_night"

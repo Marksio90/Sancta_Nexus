@@ -26,7 +26,7 @@ STT:
 from __future__ import annotations
 
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -54,13 +54,12 @@ _config_stub.settings = MagicMock(
 if "app.core.config" not in sys.modules:
     sys.modules["app.core.config"] = _config_stub
 
+from app.services.voice.stt_service import STTService
 from app.services.voice.tts_service import (
+    _OPENAI_VOICES,
     TTSService,
     VoiceProfile,
-    _OPENAI_VOICES,
 )
-from app.services.voice.stt_service import STTService
-
 
 # ---------------------------------------------------------------------------
 # TTS Helpers

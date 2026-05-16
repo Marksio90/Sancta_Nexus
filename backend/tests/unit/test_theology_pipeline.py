@@ -17,8 +17,6 @@ Contracts verified:
 from __future__ import annotations
 
 import sys
-from dataclasses import field
-from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -49,6 +47,8 @@ for _mod in (
     if _mod not in sys.modules:
         sys.modules[_mod] = MagicMock()
 
+from app.agents.theology.magisterium_validator import ValidationResult
+from app.agents.theology.patristic_agent import PatristicReference
 from app.agents.theology.theology_pipeline import (
     AGGREGATE_THRESHOLD,
     GateResult,
@@ -57,9 +57,6 @@ from app.agents.theology.theology_pipeline import (
     ScripturePassage,
     TheologicalValidationPipeline,
 )
-from app.agents.theology.magisterium_validator import ValidationResult
-from app.agents.theology.patristic_agent import PatristicReference
-
 
 # ---------------------------------------------------------------------------
 # Helpers

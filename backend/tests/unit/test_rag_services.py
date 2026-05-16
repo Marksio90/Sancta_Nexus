@@ -28,18 +28,17 @@ if "sentence_transformers" not in sys.modules:
     sys.modules["sentence_transformers"] = MagicMock()
 
 from app.services.rag.embedding_service import (
+    _E5_PASSAGE_PREFIX,
+    _E5_QUERY_PREFIX,
     LOCAL_MODEL_NAME,
     OPENAI_EMBEDDING_MODEL,
     EmbeddingService,
-    _E5_PASSAGE_PREFIX,
-    _E5_QUERY_PREFIX,
 )
 from app.services.rag.rag_service import (
     COLLECTIONS,
     ScriptureResult,
     SearchResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

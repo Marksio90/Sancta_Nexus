@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, FieldCondition, MatchValue
+from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 logger = logging.getLogger(__name__)
 

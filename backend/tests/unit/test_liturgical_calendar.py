@@ -28,7 +28,6 @@ from app.services.scripture.liturgical_calendar import (
     _easter_date,
 )
 
-
 # ── Easter date computation ────────────────────────────────────────────────────
 
 

@@ -42,8 +42,8 @@ if "langgraph" not in sys.modules:
     sys.modules["langgraph"] = MagicMock()
     sys.modules["langgraph.graph"] = MagicMock()
 
-from app.api.routes.lectio_divina import _STAGE_ORDER
 from app.agents.generative.prayer_generator import _FALLBACK_PRAYER, _TRADITION_ELEMENTS
+from app.api.routes.lectio_divina import _STAGE_ORDER
 
 _CANONICAL_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 _EXPECTED_TRADITIONS = {"ignatian", "carmelite", "franciscan", "benedictine", "charismatic"}
@@ -104,7 +104,7 @@ class TestTraditionElements:
         assert len(_TRADITION_ELEMENTS) == 5
 
     def test_all_expected_traditions_present(self):
-        assert _EXPECTED_TRADITIONS == set(_TRADITION_ELEMENTS.keys())
+        assert set(_TRADITION_ELEMENTS.keys()) == _EXPECTED_TRADITIONS
 
     def test_ignatian_present(self):
         assert "ignatian" in _TRADITION_ELEMENTS

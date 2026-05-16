@@ -36,8 +36,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-import pytest
-
 from app.services.content.uniqueness_engine import (
     CANON_NT,
     CANON_OT,
@@ -55,7 +53,6 @@ from app.services.memory.spiritual_memory_graph import (
     SessionData,
     Theme,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

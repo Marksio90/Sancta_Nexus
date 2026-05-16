@@ -14,15 +14,14 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
 
-class CrisisSeverity(str, Enum):
+class CrisisSeverity(StrEnum):
     """Severity levels for detected crises."""
 
     NONE = "none"

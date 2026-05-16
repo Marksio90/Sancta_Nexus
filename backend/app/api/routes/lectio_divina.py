@@ -16,10 +16,10 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -31,9 +31,11 @@ from app.models.database import (
     FavoritePassage,
     Prayer,
     ScriptureEncounter,
-    Session as DbSession_model,
     SessionType,
     User,
+)
+from app.models.database import (
+    Session as DbSession_model,
 )
 from app.services.audit.audit_service import audit
 from app.services.cache.session_store import SessionStore
@@ -202,7 +204,7 @@ async def start_session(
     from app.services.scripture.liturgical_calendar import LiturgicalCalendar
 
     session_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     calendar = LiturgicalCalendar()
     today = calendar.get_today()
@@ -260,7 +262,7 @@ async def complete_session(
     if session["user_id"] != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="To nie jest Twoja sesja.")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     started_at = datetime.fromisoformat(session["created_at"])
 
     # Zapis sesji do DB

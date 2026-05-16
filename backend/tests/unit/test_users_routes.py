@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -80,7 +79,7 @@ def _uses_require_authenticated(func_name: str) -> bool:
         # Check default values against require_authenticated
         all_args = node.args.args
         all_defaults = ([None] * (len(all_args) - len(node.args.defaults))) + node.args.defaults
-        for _arg, default in zip(all_args, all_defaults):
+        for _arg, default in zip(all_args, all_defaults, strict=False):
             if isinstance(default, ast.Name) and default.id == "require_authenticated":
                 return True
     return False

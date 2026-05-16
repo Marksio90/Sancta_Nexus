@@ -6,16 +6,13 @@ Tests /run, /journey/me, /patterns/me, /history/me,
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
 from app.core.rbac import require_authenticated
 from app.main import app
-
 
 BASE = "/api/v1/lectio-divina"
 

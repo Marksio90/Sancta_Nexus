@@ -112,7 +112,7 @@ class TestHoursCatalog:
             assert "\n" in data["psalm_text"], f"{hour} psalm_text not multiline"
 
     def test_all_psalm_texts_non_empty(self):
-        for hour, data in _HOURS.items():
+        for _hour, data in _HOURS.items():
             assert len(data["psalm_text"].strip()) > 50
 
     def test_vespers_magnificat_canticle_text(self):
@@ -125,11 +125,11 @@ class TestHoursCatalog:
         assert "Błogosławiony" in _HOURS["lauds"]["canticle"]
 
     def test_all_closings_non_empty(self):
-        for hour, data in _HOURS.items():
+        for _hour, data in _HOURS.items():
             assert len(data["closing"].strip()) > 20
 
     def test_all_readings_non_empty(self):
-        for hour, data in _HOURS.items():
+        for _hour, data in _HOURS.items():
             assert len(data["reading"].strip()) > 10
 
     def test_compline_reading_ref_is_1p58(self):
@@ -164,7 +164,7 @@ class TestSeasonLabels:
         assert _SEASON_LABELS["advent"] == "Adwent"
 
     def test_christmas_label(self):
-        assert "Boże Narodzenie" == _SEASON_LABELS["christmas"]
+        assert _SEASON_LABELS["christmas"] == "Boże Narodzenie"
 
     def test_lent_label(self):
         assert _SEASON_LABELS["lent"] == "Wielki Post"

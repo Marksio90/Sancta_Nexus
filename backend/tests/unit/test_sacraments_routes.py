@@ -16,8 +16,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
 SACRAMENTS_PATH = Path(__file__).parents[2] / "app" / "api" / "routes" / "sacraments.py"
 SRC = SACRAMENTS_PATH.read_text()
 TREE = ast.parse(SRC)

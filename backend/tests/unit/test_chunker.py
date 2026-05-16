@@ -18,19 +18,16 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
 from app.services.knowledge.chunker import (
     DocumentChunk,
-    _stable_id,
     _sliding_window,
+    _stable_id,
     chunk_bible_verses,
     chunk_by_paragraph,
     chunk_by_section,
     chunk_document,
     chunk_sliding_window,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

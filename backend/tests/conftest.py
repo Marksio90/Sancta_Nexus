@@ -12,13 +12,12 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from langchain_core.messages import AIMessage
-
 
 # ---------------------------------------------------------------------------
 # LLM helpers
@@ -144,8 +143,8 @@ def seeded_redis(mock_redis: AsyncMock) -> AsyncMock:
 @pytest_asyncio.fixture()
 async def app_client(mock_redis: AsyncMock):
     """Async HTTPX client backed by the FastAPI app with Redis dependency overridden."""
-    from app.main import app
     from app.core.dependencies import get_redis
+    from app.main import app
 
     app.dependency_overrides[get_redis] = lambda: mock_redis
 
@@ -158,8 +157,8 @@ async def app_client(mock_redis: AsyncMock):
 @pytest_asyncio.fixture()
 async def seeded_client(seeded_redis: AsyncMock):
     """Test client with a pre-seeded Redis session."""
-    from app.main import app
     from app.core.dependencies import get_redis
+    from app.main import app
 
     app.dependency_overrides[get_redis] = lambda: seeded_redis
 

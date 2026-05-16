@@ -49,17 +49,16 @@ _MORAL_DISCLAIMER:
 from __future__ import annotations
 
 from app.core.safety import (
+    _CONFESSION_BOUNDARY,
+    _CRISIS_REFERRAL,
+    _MORAL_DISCLAIMER,
+    _STANDARD_DISCLAIMER,
     ADVISORY_CATEGORIES,
     HIGH_RISK_CATEGORIES,
     RiskCategory,
     SafetyAssessment,
     SafetyResult,
-    _CONFESSION_BOUNDARY,
-    _CRISIS_REFERRAL,
-    _MORAL_DISCLAIMER,
-    _STANDARD_DISCLAIMER,
 )
-
 
 # ===========================================================================
 # RiskCategory enum

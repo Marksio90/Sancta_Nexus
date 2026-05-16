@@ -12,6 +12,7 @@ Contracts verified:
 
 from __future__ import annotations
 
+from datetime import UTC
 from unittest.mock import MagicMock
 
 from app.services.community.prayer_group_service import (
@@ -19,7 +20,6 @@ from app.services.community.prayer_group_service import (
     SAMPLE_GROUPS,
     PrayerGroupService,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,12 +32,12 @@ def _group_orm(**kwargs) -> MagicMock:
     g.id = kwargs.get("id", "group-uuid-001")
     g.name = kwargs.get("name", "Test Group")
     g.description = kwargs.get("description", "A test group")
-    g.parish = kwargs.get("parish", None)
+    g.parish = kwargs.get("parish")
     g.category = kwargs.get("category", "ogólna")
-    g.schedule = kwargs.get("schedule", None)
+    g.schedule = kwargs.get("schedule")
     g.member_count = kwargs.get("member_count", 0)
     g.is_public = kwargs.get("is_public", True)
-    g.created_at = kwargs.get("created_at", None)
+    g.created_at = kwargs.get("created_at")
     return g
 
 
@@ -177,9 +177,9 @@ class TestToDict:
         assert result["created_at"] is None
 
     def test_created_at_iso_when_set(self):
-        from datetime import datetime, timezone
+        from datetime import datetime
         svc = _svc()
-        dt = datetime(2026, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+        dt = datetime(2026, 1, 15, 10, 30, 0, tzinfo=UTC)
         g = _group_orm(created_at=dt)
         result = svc._to_dict(g)
         assert "2026-01-15" in result["created_at"]

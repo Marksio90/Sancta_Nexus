@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -204,9 +204,9 @@ async def _get_ai_response(phase: str, reflection: str) -> str:
     except Exception:
         logger.warning("AI unavailable for examen step=%s; returning default", phase)
         return (
-            f"Dziękuję za tę refleksję. "
-            f"Trwaj chwilę w ciszy z tym, co napisałeś/napisałaś. "
-            f"Pozwól Bogu działać w tym, co odkryłeś/odkryłaś."
+            "Dziękuję za tę refleksję. "
+            "Trwaj chwilę w ciszy z tym, co napisałeś/napisałaś. "
+            "Pozwól Bogu działać w tym, co odkryłeś/odkryłaś."
         )
 
 
@@ -226,7 +226,7 @@ async def start_examen(
 ) -> StartExamenResponse:
     """Tworzy sesję Rachunku Sumienia w Redis (ważna 24h)."""
     session_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     session_data = {
         "session_id": session_id,
@@ -340,14 +340,14 @@ async def complete_examen(
             meta = PHASE_META[phase]
             summary_parts.append(f"**{meta['title']}**: {reflections[phase][:200]}")
 
-    resolution = reflections.get("resolution", "")
+    reflections.get("resolution", "")
     summary = "\n\n".join(summary_parts) if summary_parts else "Rachunek Sumienia zakończony."
 
     journal_entry_id: str | None = None
 
     if body.save_to_journal and summary_parts:
         content = (
-            f"Rachunek Sumienia — {datetime.now(timezone.utc).strftime('%d.%m.%Y')}\n\n"
+            f"Rachunek Sumienia — {datetime.now(UTC).strftime('%d.%m.%Y')}\n\n"
             + "\n\n".join(summary_parts)
         )
         if session.get("intention"):
@@ -355,7 +355,7 @@ async def complete_examen(
 
         entry = JournalEntry(
             user_id=current_user.id,
-            title=f"Rachunek Sumienia — {datetime.now(timezone.utc).strftime('%d.%m.%Y')}",
+            title=f"Rachunek Sumienia — {datetime.now(UTC).strftime('%d.%m.%Y')}",
             content=content,
             tags="rachunek-sumienia,examen",
             mood="spokój",
@@ -368,7 +368,7 @@ async def complete_examen(
 
     # Oznacz sesję jako zakończoną
     session["status"] = "completed"
-    session["completed_at"] = datetime.now(timezone.utc).isoformat()
+    session["completed_at"] = datetime.now(UTC).isoformat()
     await store.update(body.session_id, session)
 
     message = (

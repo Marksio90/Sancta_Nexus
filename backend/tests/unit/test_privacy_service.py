@@ -1,11 +1,11 @@
 """Unit tests for the privacy service."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.database import User, UserPrivacySettings, UserRole, SubscriptionTier
+from app.models.database import SubscriptionTier, User, UserPrivacySettings, UserRole
 from app.services.privacy.privacy_service import PrivacyService
 
 
@@ -18,8 +18,8 @@ def _make_user(user_id: str = "test-user-123") -> User:
     user.subscription_tier = SubscriptionTier.FREE
     user.is_active = True
     user.deleted_at = None
-    user.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    user.updated_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    user.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+    user.updated_at = datetime(2026, 1, 1, tzinfo=UTC)
     return user
 
 
@@ -66,7 +66,7 @@ class TestGetOrCreatePrivacySettings:
         db.flush = AsyncMock()
         db.refresh = AsyncMock()
 
-        result = await svc.get_or_create_privacy_settings(db, user)
+        await svc.get_or_create_privacy_settings(db, user)
         db.add.assert_called_once()
         db.flush.assert_called_once()
 

@@ -6,11 +6,9 @@ Tests the service's data-mapping logic and fallback behaviour.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
-
-import pytest
 
 from app.services.memory.journal_insights_service import (
     DISCLAIMER,
@@ -18,7 +16,6 @@ from app.services.memory.journal_insights_service import (
     _combined_session,
     _entries_to_sessions,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -34,7 +31,7 @@ def _make_entry(
         mood=mood,
         content=content,
         scripture_reference=scripture,
-        created_at=created_at or datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc),
+        created_at=created_at or datetime(2026, 1, 15, 12, 0, tzinfo=UTC),
     )
 
 
@@ -70,7 +67,7 @@ class TestEntriesToSessions:
         assert sessions[0]["scripture_ref"] == ""
 
     def test_date_formatted_as_iso(self):
-        entries = [_make_entry(created_at=datetime(2026, 3, 5, tzinfo=timezone.utc))]
+        entries = [_make_entry(created_at=datetime(2026, 3, 5, tzinfo=UTC))]
         sessions = _entries_to_sessions(entries)
         assert sessions[0]["date"] == "2026-03-05"
 
@@ -128,21 +125,20 @@ class TestJournalInsightsServiceGenerate:
         }
         mock_patterns = [{"type": "grace_moment", "description": "Przełom"}]
 
-        with patch("app.core.llm.get_llm_fast", return_value=None):
+        with patch("app.core.llm.get_llm_fast", return_value=None), patch(
+            "app.agents.memory.journey_tracker.JourneyTrackerAgent"
+        ) as MockTracker:
+            tracker_inst = MockTracker.return_value
+            tracker_inst.track = AsyncMock(return_value=mock_journey)
+
             with patch(
-                "app.agents.memory.journey_tracker.JourneyTrackerAgent"
-            ) as MockTracker:
-                tracker_inst = MockTracker.return_value
-                tracker_inst.track = AsyncMock(return_value=mock_journey)
+                "app.agents.memory.pattern_discovery.PatternDiscoveryAgent"
+            ) as MockDisc:
+                disc_inst = MockDisc.return_value
+                disc_inst.discover = AsyncMock(return_value=mock_patterns)
 
-                with patch(
-                    "app.agents.memory.pattern_discovery.PatternDiscoveryAgent"
-                ) as MockDisc:
-                    disc_inst = MockDisc.return_value
-                    disc_inst.discover = AsyncMock(return_value=mock_patterns)
-
-                    svc = JournalInsightsService()
-                    result = await svc.generate("user-1", entries)
+                svc = JournalInsightsService()
+                result = await svc.generate("user-1", entries)
 
         assert "journey" in result
         assert "patterns" in result
@@ -157,15 +153,14 @@ class TestJournalInsightsServiceGenerate:
         with patch(
             "app.agents.memory.journey_tracker.JourneyTrackerAgent",
             side_effect=RuntimeError("LLM down"),
-        ):
-            with patch(
-                "app.agents.memory.pattern_discovery.PatternDiscoveryAgent"
-            ) as MockDisc:
-                disc_inst = MockDisc.return_value
-                disc_inst.discover = AsyncMock(return_value=[])
+        ), patch(
+            "app.agents.memory.pattern_discovery.PatternDiscoveryAgent"
+        ) as MockDisc:
+            disc_inst = MockDisc.return_value
+            disc_inst.discover = AsyncMock(return_value=[])
 
-                svc = JournalInsightsService()
-                result = await svc.generate("user-1", entries)
+            svc = JournalInsightsService()
+            result = await svc.generate("user-1", entries)
 
         # Should not raise; journey has defaults
         assert result["journey"]["current_stage"] == "purgation"
@@ -197,13 +192,12 @@ class TestJournalInsightsServiceGenerate:
         with patch(
             "app.agents.memory.journey_tracker.JourneyTrackerAgent",
             side_effect=RuntimeError("down"),
+        ), patch(
+            "app.agents.memory.pattern_discovery.PatternDiscoveryAgent",
+            side_effect=RuntimeError("down"),
         ):
-            with patch(
-                "app.agents.memory.pattern_discovery.PatternDiscoveryAgent",
-                side_effect=RuntimeError("down"),
-            ):
-                svc = JournalInsightsService()
-                result = await svc.generate("user-1", entries)
+            svc = JournalInsightsService()
+            result = await svc.generate("user-1", entries)
 
         assert "asystent refleksji" in result["disclaimer"].lower() or \
                "kierownika duchowego" in result["disclaimer"].lower()

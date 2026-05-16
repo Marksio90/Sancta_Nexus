@@ -60,7 +60,7 @@ class TestTraditionPromptsCatalog:
         assert len(TRADITION_PROMPTS) == 7
 
     def test_all_tradition_ids_present(self):
-        assert _ALL_TRADITIONS == set(TRADITION_PROMPTS.keys())
+        assert set(TRADITION_PROMPTS.keys()) == _ALL_TRADITIONS
 
     def test_ignatian_present(self):
         assert "ignatian" in TRADITION_PROMPTS
@@ -241,7 +241,7 @@ class TestValidTraditions:
         assert len(OratioAgent.VALID_TRADITIONS) == 7
 
     def test_matches_tradition_prompts_keys(self):
-        assert OratioAgent.VALID_TRADITIONS == set(TRADITION_PROMPTS.keys())
+        assert set(TRADITION_PROMPTS.keys()) == OratioAgent.VALID_TRADITIONS
 
     def test_ignatian_valid(self):
         assert "ignatian" in OratioAgent.VALID_TRADITIONS

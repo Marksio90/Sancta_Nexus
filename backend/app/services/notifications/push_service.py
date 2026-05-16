@@ -74,7 +74,7 @@ class PushNotificationService:
             return False
 
         try:
-            from pywebpush import webpush, WebPushException  # type: ignore[import]
+            from pywebpush import webpush  # type: ignore[import]
 
             webpush(
                 subscription_info={

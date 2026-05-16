@@ -18,13 +18,8 @@ PatternDiscoveryAgent:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import pytest
-
 from app.agents.memory.journey_tracker import JOURNEY_STAGES, JourneyTrackerAgent
 from app.agents.memory.pattern_discovery import PATTERN_TYPES, PatternDiscoveryAgent
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -61,7 +56,7 @@ class TestJourneyStages:
             assert required <= set(data.keys()), f"{stage} missing fields"
 
     def test_all_have_indicators(self):
-        for stage, data in JOURNEY_STAGES.items():
+        for _stage, data in JOURNEY_STAGES.items():
             assert len(data["indicators"]) >= 3
 
     def test_ranges_cover_0_to_100(self):
@@ -86,7 +81,7 @@ class TestJourneyStages:
         assert JOURNEY_STAGES["union"]["range"][1] == 100
 
     def test_all_have_polish_names(self):
-        for stage, data in JOURNEY_STAGES.items():
+        for _stage, data in JOURNEY_STAGES.items():
             assert data["name_pl"].strip()
 
 

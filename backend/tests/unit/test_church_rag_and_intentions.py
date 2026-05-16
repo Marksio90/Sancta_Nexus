@@ -46,24 +46,23 @@ if "qdrant_client" not in sys.modules:
     sys.modules["qdrant_client"] = MagicMock()
     sys.modules["qdrant_client.models"] = MagicMock()
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from app.services.knowledge.church_rag import (
-    ChurchRAG,
-    KnowledgeResult,
-    _AUTHORITY_WEIGHT,
-    _ROUTING_HINTS,
-    _rerank,
-    _route_query,
-)
-from app.services.knowledge.corpus_registry import QdrantCollection
+from app.models.database import IntentionStatus
 from app.services.community.intention_service import (
     DEFAULT_EXPIRY_DAYS,
     INTENTION_CATEGORIES,
     PrayerIntentionService,
 )
-from app.models.database import IntentionStatus
-
+from app.services.knowledge.church_rag import (
+    _AUTHORITY_WEIGHT,
+    _ROUTING_HINTS,
+    ChurchRAG,
+    KnowledgeResult,
+    _rerank,
+    _route_query,
+)
+from app.services.knowledge.corpus_registry import QdrantCollection
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,13 +108,13 @@ def _intention_orm(**kwargs) -> MagicMock:
     obj.category = kwargs.get("category", "zdrowie")
     obj.prayer_count = kwargs.get("prayer_count", 0)
     obj.status = kwargs.get("status", IntentionStatus.ACTIVE)
-    obj.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
-    obj.expires_at = kwargs.get("expires_at", datetime(2026, 2, 1, tzinfo=timezone.utc))
-    obj.group_id = kwargs.get("group_id", None)
+    obj.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=UTC))
+    obj.expires_at = kwargs.get("expires_at", datetime(2026, 2, 1, tzinfo=UTC))
+    obj.group_id = kwargs.get("group_id")
     obj.user_id = kwargs.get("user_id", "user-001")
-    obj.moderator_id = kwargs.get("moderator_id", None)
-    obj.moderated_at = kwargs.get("moderated_at", None)
-    obj.rejection_reason = kwargs.get("rejection_reason", None)
+    obj.moderator_id = kwargs.get("moderator_id")
+    obj.moderated_at = kwargs.get("moderated_at")
+    obj.rejection_reason = kwargs.get("rejection_reason")
     return obj
 
 
@@ -466,14 +465,14 @@ class TestIntentionToDict:
 
     def test_created_at_iso_format(self):
         svc = _svc()
-        dt = datetime(2026, 3, 15, 10, 30, 0, tzinfo=timezone.utc)
+        dt = datetime(2026, 3, 15, 10, 30, 0, tzinfo=UTC)
         obj = _intention_orm(created_at=dt)
         result = svc._to_dict(obj)
         assert "2026-03-15" in result["created_at"]
 
     def test_expires_at_iso_format(self):
         svc = _svc()
-        dt = datetime(2026, 4, 15, tzinfo=timezone.utc)
+        dt = datetime(2026, 4, 15, tzinfo=UTC)
         obj = _intention_orm(expires_at=dt)
         result = svc._to_dict(obj)
         assert "2026-04-15" in result["expires_at"]

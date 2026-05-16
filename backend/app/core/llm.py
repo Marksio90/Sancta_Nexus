@@ -117,23 +117,7 @@ def get_llm(
     fallback = settings.LLM_FALLBACK_PROVIDER
 
     # Check if primary provider has an API key configured
-    if primary == "openai" and settings.OPENAI_API_KEY:
-        try:
-            llm = _create_llm(primary, tier, temperature, max_tokens)
-            logger.debug(
-                "Created %s LLM (tier=%s, model=%s)",
-                primary,
-                tier,
-                _get_model_name(primary, tier),
-            )
-            return llm
-        except Exception:
-            logger.warning(
-                "Failed to create %s LLM; trying fallback %s",
-                primary,
-                fallback,
-            )
-    elif primary == "anthropic" and settings.ANTHROPIC_API_KEY:
+    if primary == "openai" and settings.OPENAI_API_KEY or primary == "anthropic" and settings.ANTHROPIC_API_KEY:
         try:
             llm = _create_llm(primary, tier, temperature, max_tokens)
             logger.debug(
@@ -151,11 +135,7 @@ def get_llm(
             )
 
     # Try fallback provider
-    if fallback == "anthropic" and settings.ANTHROPIC_API_KEY:
-        llm = _create_llm(fallback, tier, temperature, max_tokens)
-        logger.info("Using fallback provider: %s", fallback)
-        return llm
-    elif fallback == "openai" and settings.OPENAI_API_KEY:
+    if fallback == "anthropic" and settings.ANTHROPIC_API_KEY or fallback == "openai" and settings.OPENAI_API_KEY:
         llm = _create_llm(fallback, tier, temperature, max_tokens)
         logger.info("Using fallback provider: %s", fallback)
         return llm

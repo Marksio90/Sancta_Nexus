@@ -24,7 +24,7 @@ _FLAG_TO_SETTING mapping:
 
 from __future__ import annotations
 
-from app.core.feature_flags import FeatureFlags, _FLAG_TO_SETTING
+from app.core.feature_flags import _FLAG_TO_SETTING, FeatureFlags
 
 _EXPECTED_FLAGS = {
     "FEATURE_LECTIO_DIVINA",
@@ -55,7 +55,7 @@ class TestFeatureFlagsCatalog:
         assert len(FeatureFlags) == 15
 
     def test_all_expected_flags_present(self):
-        assert _EXPECTED_FLAGS == {f.value for f in FeatureFlags}
+        assert {f.value for f in FeatureFlags} == _EXPECTED_FLAGS
 
     def test_is_str_subclass(self):
         assert isinstance(FeatureFlags.LECTIO_DIVINA, str)
