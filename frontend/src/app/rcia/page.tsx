@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 const STAGE_META: Record<
   string,
@@ -144,9 +145,7 @@ export default function RCIAPage() {
           </div>
 
           {curriculum.length === 0 ? (
-            <div className="text-center text-gray-500 py-10 animate-pulse">
-              Ładuję program...
-            </div>
+            <SkeletonList count={4} />
           ) : (
             <div className="space-y-6">
               {curriculum.map((stage: RciaStage) => {
