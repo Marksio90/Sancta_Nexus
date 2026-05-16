@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useBillingStore } from "@/stores/billing";
 
@@ -26,17 +26,35 @@ const PREMIUM_FEATURES = [
   "🔔 Powiadomienia push (Jutrznia, Anioł Pański…)",
 ];
 
+function CheckoutBanners() {
+  const searchParams = useSearchParams();
+  const checkoutSuccess = searchParams.get("checkout") === "success";
+  const checkoutCanceled = searchParams.get("checkout") === "canceled";
+  if (!checkoutSuccess && !checkoutCanceled) return null;
+  return (
+    <>
+      {checkoutSuccess && (
+        <div className="bg-green-900/30 border border-green-700/40 rounded-2xl p-4 mb-8 text-center">
+          <div className="text-2xl mb-1">🙏</div>
+          <p className="text-green-300 font-semibold">Dziękujemy! Twój plan Premium jest aktywny.</p>
+        </div>
+      )}
+      {checkoutCanceled && (
+        <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-2xl p-4 mb-8 text-center">
+          <p className="text-yellow-300 text-sm">Płatność anulowana — możesz spróbować ponownie.</p>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function CennikPage() {
   const { subscription, loading, error, fetchStatus, startCheckout } = useBillingStore();
-  const searchParams = useSearchParams();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
-
-  const checkoutSuccess = searchParams.get("checkout") === "success";
-  const checkoutCanceled = searchParams.get("checkout") === "canceled";
 
   const handleSubscribe = (priceId: string) => {
     if (!priceId) {
@@ -62,17 +80,9 @@ export default function CennikPage() {
         </div>
 
         {/* Banery po checkout */}
-        {checkoutSuccess && (
-          <div className="bg-green-900/30 border border-green-700/40 rounded-2xl p-4 mb-8 text-center">
-            <div className="text-2xl mb-1">🙏</div>
-            <p className="text-green-300 font-semibold">Dziękujemy! Twój plan Premium jest aktywny.</p>
-          </div>
-        )}
-        {checkoutCanceled && (
-          <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-2xl p-4 mb-8 text-center">
-            <p className="text-yellow-300 text-sm">Płatność anulowana — możesz spróbować ponownie.</p>
-          </div>
-        )}
+        <Suspense>
+          <CheckoutBanners />
+        </Suspense>
         {error && (
           <div className="bg-red-900/30 border border-red-700/40 rounded-xl p-3 mb-6 text-sm text-red-300 text-center">
             {error}
