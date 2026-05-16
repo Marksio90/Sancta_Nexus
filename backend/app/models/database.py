@@ -101,6 +101,38 @@ class AuditEventType(enum.StrEnum):
 # ── Models ───────────────────────────────────────────────────────────────────
 
 
+class DioceseLicense(Base):
+    """Diocese-level B2B license for Sancta Nexus.
+
+    A diocese can license the platform for all their parishes.
+    Members of the diocese get a ``DISCIPLE`` subscription tier automatically.
+
+    Migration: alembic revision --autogenerate -m "add diocese_licenses table"
+    """
+
+    __tablename__ = "diocese_licenses"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    country: Mapped[str] = mapped_column(String(2), nullable=False, default="PL")
+    diocese_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    contact_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    # Stripe subscription ID for the diocese contract
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Maximum users covered by this license (0 = unlimited)
+    max_users: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    license_starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    license_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class User(Base):
     """Platform user with role, subscription, and soft-delete support."""
 
@@ -147,6 +179,14 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+    # Diocese license link — NULL for individual users, set for diocese members.
+    # Migration: alembic revision --autogenerate -m "add diocese_id to users"
+    diocese_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("diocese_licenses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     # Relationships

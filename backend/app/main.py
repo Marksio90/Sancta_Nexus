@@ -226,6 +226,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.guest", "/api/v1/guest", ["guest"]),
     # Doctrinal review — imprimatur support infrastructure
     ("app.api.routes.doctrinal_review", "/api/v1/doctrinal-review", ["doctrinal-review"]),
+    # Diocese licensing — B2B SaaS for dioceses
+    ("app.api.routes.diocese", "/api/v1/diocese", ["diocese"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
