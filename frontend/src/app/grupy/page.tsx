@@ -3,6 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 
+interface PrayerGroup {
+  id: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  schedule?: string;
+  parish?: string;
+  member_count?: number;
+}
+
 const CATEGORY_META: Record<string, { icon: string; color: string }> = {
   rodziny: { icon: "👨‍👩‍👧", color: "from-rose-900/40 to-rose-800/20" },
   młodzież: { icon: "🌟", color: "from-yellow-900/40 to-yellow-800/20" },
@@ -32,8 +42,8 @@ type AppState = "list" | "detail" | "new";
 
 export default function GrupyPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [groups, setGroups] = useState<Record<string, unknown>[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<Record<string, unknown> | null>(null);
+  const [groups, setGroups] = useState<PrayerGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<PrayerGroup | null>(null);
   const [category, setCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
@@ -50,7 +60,7 @@ export default function GrupyPage() {
   const loadGroups = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<{ groups: Record<string, unknown>[] }>(
+      const data = await api.get<{ groups: PrayerGroup[] }>(
         `/api/v1/community/groups?category=${category}`
       );
       setGroups(data.groups || []);
@@ -76,7 +86,7 @@ export default function GrupyPage() {
         setJoinedIds((prev) => new Set([...prev, groupId]));
         setGroups((prev) =>
           prev.map((g) =>
-            g.id === groupId ? { ...g, member_count: g.member_count + 1 } : g
+            g.id === groupId ? { ...g, member_count: (g.member_count ?? 0) + 1 } : g
           )
         );
       }
@@ -202,7 +212,7 @@ export default function GrupyPage() {
 
   // ── Group detail ──────────────────────────────────────────────────────────
   if (appState === "detail" && selectedGroup) {
-    const meta = CATEGORY_META[selectedGroup.category] || CATEGORY_META["ogólna"];
+    const meta = CATEGORY_META[selectedGroup.category ?? "ogólna"] || CATEGORY_META["ogólna"];
     const joined = joinedIds.has(selectedGroup.id);
     return (
       <main className="min-h-screen bg-[#0d0b1a] text-white">
@@ -224,7 +234,7 @@ export default function GrupyPage() {
           </div>
 
           <button
-            onClick={() => join(selectedGroup.id)}
+            onClick={() => join(selectedGroup.id ?? "")}
             disabled={joined}
             className={`w-full font-semibold py-4 rounded-2xl transition-colors ${
               joined
@@ -282,7 +292,7 @@ export default function GrupyPage() {
         ) : (
           <div className="space-y-3">
             {groups.map((group) => {
-              const meta = CATEGORY_META[group.category] || CATEGORY_META["ogólna"];
+              const meta = CATEGORY_META[group.category ?? "ogólna"] || CATEGORY_META["ogólna"];
               const joined = joinedIds.has(group.id);
               return (
                 <button

@@ -13,6 +13,14 @@ const STATES = [
   { value: "child", label: "Dziecko" },
 ];
 
+interface Commandment {
+  number: number;
+  title?: string;
+  ccc_ref?: string;
+  scripture?: string;
+  questions?: string[];
+}
+
 const COMMANDMENTS = [
   { number: 1, short: "Jeden Bóg", icon: "✝" },
   { number: 2, short: "Imię Boga", icon: "🗣" },
@@ -38,7 +46,7 @@ export default function SpowiedzPage() {
   const [stage, setStage] = useState<Stage>("setup");
   const [stateOfLife, setStateOfLife] = useState("single");
   const [selectedCommandment, setSelectedCommandment] = useState<number>(1);
-  const [commandments, setCommandments] = useState<Record<string, unknown>[]>([]);
+  const [commandments, setCommandments] = useState<Commandment[]>([]);
   const [stateQuestions, setStateQuestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [streamedText, setStreamedText] = useState("");
@@ -53,7 +61,7 @@ export default function SpowiedzPage() {
     setLoading(true);
     try {
       const [cmdData, stateData] = await Promise.all([
-        api.get<{ commandments: Record<string, unknown>[] }>("/api/v1/sacraments/confession/commandments"),
+        api.get<{ commandments: Commandment[] }>("/api/v1/sacraments/confession/commandments"),
         api.get<{ questions: string[] }>(`/api/v1/sacraments/confession/state-questions/${stateOfLife}`),
       ]);
       setCommandments(cmdData.commandments || []);

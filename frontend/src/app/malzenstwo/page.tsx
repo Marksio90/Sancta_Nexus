@@ -5,12 +5,26 @@ import { api } from "@/lib/api";
 
 const SESSION_ICONS = ["⛪", "❤", "🗣", "🌸", "👶", "🙏", "📱", "🗺"];
 
+interface MarriageSession {
+  session_id?: string;
+  number?: number | string;
+  title?: string;
+  subtitle?: string;
+  key_questions?: string[];
+  key_document?: string;
+  scripture?: string[];
+  ccc_refs?: string[];
+  couple_exercise?: string;
+  prayer?: string;
+  duration_hours?: number | string;
+}
+
 type AppState = "loading" | "list" | "session" | "chat" | "reflection";
 
 export default function MalzenstwoPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [program, setProgram] = useState<Record<string, unknown>[]>([]);
-  const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
+  const [program, setProgram] = useState<MarriageSession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<MarriageSession | null>(null);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -24,7 +38,7 @@ export default function MalzenstwoPage() {
     if (programLoaded) return;
     setAppState("loading");
     try {
-      const data = await api.get<{ sessions: Record<string, unknown>[] }>("/api/v1/sacraments/marriage/program");
+      const data = await api.get<{ sessions: MarriageSession[] }>("/api/v1/sacraments/marriage/program");
       setProgram(data.sessions || []);
       setProgramLoaded(true);
     } catch {
@@ -35,12 +49,12 @@ export default function MalzenstwoPage() {
   }, [programLoaded]);
 
   const openSession = useCallback(
-    async (session: Record<string, unknown>) => {
+    async (session: MarriageSession) => {
       setSelectedSession(session);
       setMessages([
         {
           role: "assistant",
-          content: `Witam w sesji **${session.title}** — *${session.subtitle}*.\n\n${session.key_questions[0]}`,
+          content: `Witam w sesji **${session.title}** — *${session.subtitle}*.\n\n${session.key_questions?.[0] ?? ""}`,
         },
       ]);
       setReflection("");

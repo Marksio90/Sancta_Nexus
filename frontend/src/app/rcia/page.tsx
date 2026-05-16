@@ -39,10 +39,28 @@ const STAGE_META: Record<
 
 type AppState = "list" | "session" | "chat" | "reflection";
 
+interface RciaSession {
+  session_id?: string;
+  session_number: number;
+  title_pl: string;
+  summary?: string;
+  key_question?: string;
+  scripture?: string[];
+  ccc_refs?: string[];
+  prayer_suggestion?: string;
+  stage?: string;
+}
+
+interface RciaStage {
+  stage: string;
+  session_count?: number;
+  sessions: RciaSession[];
+}
+
 export default function RCIAPage() {
   const [appState, setAppState] = useState<AppState>("list");
-  const [curriculum, setCurriculum] = useState<Record<string, unknown>[]>([]);
-  const [selectedSession, setSelectedSession] = useState<Record<string, unknown> | null>(null);
+  const [curriculum, setCurriculum] = useState<RciaStage[]>([]);
+  const [selectedSession, setSelectedSession] = useState<RciaSession | null>(null);
   const [messages, setMessages] = useState<
     { role: "user" | "assistant"; content: string }[]
   >([]);
@@ -52,12 +70,12 @@ export default function RCIAPage() {
   const [loadingReflection, setLoadingReflection] = useState(false);
 
   useEffect(() => {
-    api.get<{ stages: Record<string, unknown>[] }>("/api/v1/sacraments/rcia/curriculum")
+    api.get<{ stages: RciaStage[] }>("/api/v1/sacraments/rcia/curriculum")
       .then((d) => setCurriculum(d.stages || []))
       .catch(() => setCurriculum([]));
   }, []);
 
-  const openSession = (session: Record<string, unknown>) => {
+  const openSession = (session: RciaSession) => {
     setSelectedSession(session);
     setMessages([
       {
@@ -131,7 +149,7 @@ export default function RCIAPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {curriculum.map((stage: Record<string, unknown>) => {
+              {curriculum.map((stage: RciaStage) => {
                 const meta = STAGE_META[stage.stage] || {
                   label: stage.stage,
                   color: "from-gray-900/60 to-gray-800/40",
@@ -163,7 +181,7 @@ export default function RCIAPage() {
 
                     {/* Sessions */}
                     <div className="space-y-2 pl-2">
-                      {(stage.sessions as Record<string, unknown>[] | undefined)?.map((session: Record<string, unknown>) => (
+                      {stage.sessions?.map((session: RciaSession) => (
                         <button
                           key={session.session_id}
                           onClick={() => openSession(session)}
