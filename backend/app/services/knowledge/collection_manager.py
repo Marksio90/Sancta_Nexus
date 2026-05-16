@@ -235,9 +235,9 @@ class CollectionManager:
             ]
             qdrant_filter = Filter(must=conditions)
 
-        results = client.search(
+        response = client.query_points(
             collection_name=collection.value,
-            query_vector=query_vector,
+            query=query_vector,
             limit=limit,
             query_filter=qdrant_filter,
             score_threshold=score_threshold,
@@ -246,7 +246,7 @@ class CollectionManager:
 
         return [
             {"id": r.id, "score": r.score, "payload": r.payload}
-            for r in results
+            for r in response.points
         ]
 
     async def async_search(
@@ -267,9 +267,9 @@ class CollectionManager:
             qdrant_filter = Filter(must=conditions)
 
         async with self._get_async_client() as client:
-            results = await client.search(
+            response = await client.query_points(
                 collection_name=collection.value,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=limit,
                 query_filter=qdrant_filter,
                 score_threshold=score_threshold,
@@ -278,5 +278,5 @@ class CollectionManager:
 
         return [
             {"id": r.id, "score": r.score, "payload": r.payload}
-            for r in results
+            for r in response.points
         ]

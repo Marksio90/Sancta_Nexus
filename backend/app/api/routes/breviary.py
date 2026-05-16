@@ -214,10 +214,10 @@ async def get_daily_engagement() -> dict[str, Any]:
         },
         "morning_prayer": morning_prayer,
         "suggested_practices": [
-            {"label": "Jutrznia", "href": "/brewiarz", "icon": "🕯"},
+            {"label": "Brewiarz", "href": "/brewiarz", "icon": "🕯"},
             {"label": "Lectio Divina", "href": "/lectio-divina", "icon": "📖"},
             {"label": "Różaniec", "href": "/rozaniec", "icon": "📿"},
-            {"label": "Rachunek Sumienia (wieczór)", "href": "/rachunek-sumienia", "icon": "🔥"},
+            {"label": "Rachunek sumienia", "href": "/rachunek-sumienia", "icon": "🔥"},
         ],
     }
 
