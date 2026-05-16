@@ -335,7 +335,8 @@ export default function DzisiajPage() {
               <p className="text-xs text-gray-400">Uroczystość / Święto liturgiczne</p>
             </>
           ) : (
-            <h2 className="text-lg font-bold text-white">Feria zwykła</h2>
+            <h2 className="text-lg font-bold text-white">Dzień powszedni</h2>
+            <p className="text-xs text-gray-400 mt-1">Brak wspomnienia liturgicznego</p>
           )}
         </div>
 

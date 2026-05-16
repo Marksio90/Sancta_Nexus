@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     # Generate keys: python -m py_vapid --gen-key
     VAPID_PRIVATE_KEY: str = ""
     VAPID_PUBLIC_KEY: str = ""
-    VAPID_CLAIMS_EMAIL: str = "mailto:admin@sanctanexus.org"
+    VAPID_CLAIMS_EMAIL: str = "mailto:marks.mateusz@wp.pl"
 
     # ── LLM Configuration ─────────────────────────────────────────────────
     LLM_PROVIDER: str = "openai"  # "openai" or "anthropic"

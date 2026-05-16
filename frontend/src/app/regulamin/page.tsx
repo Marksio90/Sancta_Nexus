@@ -149,7 +149,7 @@ export default function RegulaminPage() {
           <div className="flex justify-center gap-4 text-xs text-gray-600">
             <a href="/polityka-prywatnosci" className="hover:text-[#d4af37] transition-colors">Polityka Prywatności</a>
             <span>·</span>
-            <a href="mailto:kontakt@sanctanexus.org" className="hover:text-[#d4af37] transition-colors">Kontakt</a>
+            <a href="mailto:marks.mateusz@wp.pl" className="hover:text-[#d4af37] transition-colors">Kontakt</a>
           </div>
         </div>
       </div>
