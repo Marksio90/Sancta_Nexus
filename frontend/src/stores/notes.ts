@@ -104,6 +104,7 @@ export const useNotesStore = create<NotesState & NotesActions>((set, get) => ({
   },
 
   deleteNote: async (ref) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { [ref]: _removed, ...rest } = get().notes;
     set({ notes: rest });
     writeLocalStorage(rest);

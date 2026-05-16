@@ -191,9 +191,6 @@ export default function MojaDrogaPage() {
               stage.key === "purgativa" ||
               (stage.key === "illuminativa" && totalSessions >= 20) ||
               (stage.key === "unitiva" && totalSessions >= 40);
-            const completedMilestones = stage.milestones.filter(
-              (m) => totalSessions >= m.sessions
-            );
 
             return (
               <div
