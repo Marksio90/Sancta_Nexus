@@ -372,6 +372,134 @@ async def create_group_intention(
     )
 
 
+# ── Parish invite codes ────────────────────────────────────────────────────────
+
+
+class InviteCodeResponse(BaseModel):
+    group_id: str
+    invite_code: str
+    join_url: str
+
+
+@router.post("/groups/{group_id}/invite-code", response_model=InviteCodeResponse)
+async def generate_invite_code(
+    group_id: str,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> InviteCodeResponse:
+    """Generate (or regenerate) a short invite code for a parish group.
+
+    Only the group leader or an admin can call this endpoint.
+    The code is 8 uppercase alphanumeric characters (≈2.8 trillion combinations).
+    Priests share the code in their bulletin or WhatsApp — members enter it
+    to join without needing the group's UUID.
+    """
+    import random
+    import string
+
+    from sqlalchemy import select
+
+    from app.models.database import PrayerGroup
+
+    result = await db.execute(select(PrayerGroup).where(PrayerGroup.id == group_id))
+    group = result.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found.")
+
+    is_leader = group.leader_user_id == current_user.id
+    is_admin = current_user.role in (UserRole.ADMIN, UserRole.ORGANIZATION_ADMIN)
+    if not (is_leader or is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the group leader or an admin can generate an invite code.",
+        )
+
+    alphabet = string.ascii_uppercase + string.digits
+    code = "".join(random.SystemRandom().choices(alphabet, k=8))
+    group.invite_code = code
+    await db.flush()
+
+    return InviteCodeResponse(
+        group_id=group_id,
+        invite_code=code,
+        join_url=f"/grupy/dolacz/{code}",
+    )
+
+
+class GroupByCodeResponse(BaseModel):
+    group_id: str
+    name: str
+    description: str | None
+    parish: str | None
+    category: str
+    member_count: int
+    is_public: bool
+
+
+@router.get("/groups/code/{invite_code}", response_model=GroupByCodeResponse)
+async def get_group_by_invite_code(
+    invite_code: str,
+    db: DbSession,
+) -> GroupByCodeResponse:
+    """Look up a prayer group by its invite code.
+
+    Unauthenticated — used by the join flow before the user logs in.
+    Returns group metadata but not member list.
+    """
+    from sqlalchemy import select
+
+    from app.models.database import PrayerGroup
+
+    result = await db.execute(
+        select(PrayerGroup).where(PrayerGroup.invite_code == invite_code.upper())
+    )
+    group = result.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nieprawidłowy kod zaproszenia. Sprawdź i spróbuj ponownie.",
+        )
+    return GroupByCodeResponse(
+        group_id=group.id,
+        name=group.name,
+        description=group.description,
+        parish=group.parish,
+        category=group.category,
+        member_count=group.member_count,
+        is_public=group.is_public,
+    )
+
+
+@router.post("/groups/code/{invite_code}/join")
+async def join_group_by_code(
+    invite_code: str,
+    db: DbSession,
+    current_user: User = require_authenticated,
+) -> dict[str, object]:
+    """Join a prayer group using an invite code.
+
+    Priests distribute the code (e.g. 'ABCD1234') — members enter it in the
+    app to join the group without knowing its UUID.
+    """
+    from sqlalchemy import select
+
+    from app.models.database import PrayerGroup
+
+    result = await db.execute(
+        select(PrayerGroup).where(PrayerGroup.invite_code == invite_code.upper())
+    )
+    group = result.scalar_one_or_none()
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nieprawidłowy kod zaproszenia.",
+        )
+
+    svc = _groups()
+    join_result = await svc.join_group(db, group.id, current_user.id)
+    return {**join_result, "group_name": group.name}
+
+
 # ── Rosary ────────────────────────────────────────────────────────────────────
 
 @router.get("/rosary/mysteries")
