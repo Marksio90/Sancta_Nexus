@@ -61,9 +61,12 @@ class RAGService:
             if filters:
                 conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()]
                 qdrant_filter = Filter(must=conditions)
-            results = self.client.search(
-                collection_name=collection, query_vector=query_vector,
-                limit=limit, query_filter=qdrant_filter,
+            response = self.client.query_points(
+                collection_name=collection,
+                query=query_vector,
+                limit=limit,
+                query_filter=qdrant_filter,
+                with_payload=True,
             )
             return [
                 SearchResult(
@@ -71,7 +74,7 @@ class RAGService:
                     metadata=r.payload,
                     score=r.score,
                 )
-                for r in results
+                for r in response.points
             ]
         except Exception as e:
             logger.error("RAG search error in %s: %s", collection, e)
