@@ -20,11 +20,12 @@ export const DEFAULT_LOCALE: Locale = "pl";
 
 type TranslationDict = Record<string, unknown>;
 
-// Translations are imported statically so no dynamic require is needed.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+import plMessages from "../../messages/pl.json";
+import enMessages from "../../messages/en.json";
+
 const MESSAGES: Record<Locale, TranslationDict> = {
-  pl: require("../../messages/pl.json") as TranslationDict,
-  en: require("../../messages/en.json") as TranslationDict,
+  pl: plMessages as unknown as TranslationDict,
+  en: enMessages as unknown as TranslationDict,
 };
 
 function deepGet(obj: TranslationDict, path: string): string | undefined {

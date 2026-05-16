@@ -59,7 +59,7 @@ export function CrisisButton() {
 
           {/* Scripture anchor */}
           <p className="mb-3 text-center text-sm font-medium italic text-gray-500">
-            „Pan jest blisko ludzi skruszonych w sercu, ocala złamanych na duchu."
+            {'„Pan jest blisko ludzi skruszonych w sercu, ocala złamanych na duchu."'}
           </p>
           <p className="mb-4 text-center text-xs text-gray-400">— Ps 34,19</p>
 
