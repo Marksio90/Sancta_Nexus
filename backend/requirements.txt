@@ -45,3 +45,6 @@ stripe>=7.0.0
 
 # Task scheduling (cron-like background jobs)
 apscheduler>=3.10.0
+
+# Background task queue (AI pipelines run off HTTP thread)
+arq>=0.25.0

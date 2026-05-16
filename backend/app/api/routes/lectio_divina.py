@@ -185,6 +185,14 @@ class RunPipelineResponse(BaseModel):
     error: str | None = None
 
 
+class EnqueuedTaskResponse(BaseModel):
+    """Returned by POST /run/async — client polls GET /api/v1/tasks/{task_id}."""
+
+    task_id: str
+    status: str = "queued"
+    poll_url: str
+
+
 _STAGE_ORDER = ["lectio", "meditatio", "oratio", "contemplatio", "actio"]
 
 
@@ -819,6 +827,56 @@ async def run_lectio_pipeline_stream(
             "X-Accel-Buffering": "no",  # disable nginx buffering for SSE
         },
     )
+
+
+# ── Async pipeline via ARQ (mobile-friendly, no SSE required) ────────────────
+
+
+@router.post(
+    "/run/async",
+    response_model=EnqueuedTaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Enqueue Lectio Divina pipeline — returns task_id immediately",
+)
+async def run_lectio_pipeline_async(
+    request: RunPipelineRequest,
+    current_user: User = require_authenticated,
+) -> EnqueuedTaskResponse:
+    """Enqueue the Lectio Divina LangGraph pipeline as a background task.
+
+    Returns immediately (< 100 ms) with a ``task_id``.
+    Poll ``GET /api/v1/tasks/{task_id}`` for status and result.
+
+    Preferred on mobile / Capacitor where SSE connections may be dropped
+    by the OS when the app enters the background.
+    """
+    try:
+        from app.workers.pool import enqueue
+
+        job = await enqueue(
+            "run_lectio_pipeline",
+            user_id=current_user.id,
+            emotion_text=request.emotion_text,
+            tradition=request.tradition,
+        )
+        if job is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Task queue unavailable — use POST /run or /run/stream instead.",
+            )
+        return EnqueuedTaskResponse(
+            task_id=job.job_id,
+            status="queued",
+            poll_url=f"/api/v1/tasks/{job.job_id}",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to enqueue Lectio Divina pipeline: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Task queue unavailable — use POST /run or /run/stream instead.",
+        )
 
 
 # ── Ulubione fragmenty ────────────────────────────────────────────────────────

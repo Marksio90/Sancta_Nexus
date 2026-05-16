@@ -112,6 +112,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if scheduler is not None:
         scheduler.shutdown(wait=False)
         logger.info("Background scheduler stopped")
+
+    # Close ARQ pool if it was opened during this process lifetime
+    try:
+        from app.workers.pool import close_pool
+        await close_pool()
+    except Exception:
+        pass
+
     logger.info("Shutting down -- releasing infrastructure connections")
     await close_all_connections()
 
@@ -191,6 +199,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.progress", "/api/v1/progress", ["progress"]),
     # AI response quality feedback
     ("app.api.routes.feedback", "/api/v1/feedback", ["feedback"]),
+    # Background task status polling (ARQ)
+    ("app.api.routes.tasks", "/api/v1/tasks", ["tasks"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
