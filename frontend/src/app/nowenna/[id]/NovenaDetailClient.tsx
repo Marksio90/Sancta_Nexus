@@ -72,7 +72,7 @@ export function NovenaDetailClient({ novenaId }: { novenaId: string }) {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500/30 border-t-amber-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#d4af37]/30 border-t-[#d4af37]" />
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function NovenaDetailClient({ novenaId }: { novenaId: string }) {
       <div className="text-center py-10">
         <p className="text-gray-500 text-sm">
           Nie można załadować treści nowenny.{" "}
-          <Link href="/nowenna" className="text-amber-500 hover:underline">
+          <Link href="/nowenna" className="text-[#d4af37] hover:underline">
             Wróć do biblioteki
           </Link>
         </p>
@@ -102,10 +102,10 @@ export function NovenaDetailClient({ novenaId }: { novenaId: string }) {
             <button
               key={day}
               onClick={() => setSelectedDay(day)}
-              className={`h-9 w-9 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+              className={`h-9 w-9 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#d4af37] ${
                 selectedDay === day
-                  ? "bg-amber-600 text-white"
-                  : "border border-white/10 text-gray-400 hover:border-amber-500/30 hover:text-amber-400"
+                  ? "bg-[#d4af37] text-black"
+                  : "border border-white/10 text-gray-400 hover:border-[#d4af37]/30 hover:text-[#d4af37]"
               }`}
             >
               {day}
@@ -116,8 +116,8 @@ export function NovenaDetailClient({ novenaId }: { novenaId: string }) {
 
       {/* Day intention */}
       {novena.daily_intentions[selectedDay - 1] && (
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-6 py-5">
-          <p className="text-xs text-amber-500 uppercase tracking-wider mb-2 font-medium">
+        <div className="rounded-2xl border border-[#d4af37]/20 bg-[#d4af37]/5 px-6 py-5">
+          <p className="text-xs text-[#d4af37] uppercase tracking-wider mb-2 font-medium">
             Intencja dnia {selectedDay}
           </p>
           <p className="text-sacred-text font-medium leading-relaxed">
@@ -172,14 +172,14 @@ export function NovenaDetailClient({ novenaId }: { novenaId: string }) {
           <button
             onClick={handleStart}
             disabled={starting}
-            className="flex-1 rounded-xl bg-amber-600 px-6 py-4 font-semibold text-white hover:bg-amber-700 disabled:opacity-40 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="flex-1 rounded-xl bg-[#d4af37] px-6 py-4 font-semibold text-black hover:bg-[#c9a227] disabled:opacity-40 transition-colors focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
           >
             {starting ? "Zapisuję…" : "Zacznij śledzić nowennę"}
           </button>
         ) : (
           <Link
             href="/auth/login"
-            className="flex-1 rounded-xl bg-amber-600 px-6 py-4 font-semibold text-white hover:bg-amber-700 transition-colors text-center"
+            className="flex-1 rounded-xl bg-[#d4af37] px-6 py-4 font-semibold text-black hover:bg-[#c9a227] transition-colors text-center"
           >
             Zaloguj się, by śledzić postęp
           </Link>
