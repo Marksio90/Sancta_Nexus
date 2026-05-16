@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.dependencies import close_all_connections, create_tables
 from app.core.middleware import RateLimitMiddleware
+from app.middleware.langsmith_context import LangSmithContextMiddleware
 from app.middleware.timing import TimingMiddleware
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         settings.APP_NAME,
         settings.VERSION,
     )
+
+    # ── LangSmith tracing ────────────────────────────────────────────────
+    # LangChain reads LANGCHAIN_* env vars automatically. We set them here
+    # from our Settings object so the app works even if env vars are not
+    # exported directly (e.g. in Docker when injected via config files).
+    if settings.LANGCHAIN_TRACING_V2 and settings.LANGCHAIN_API_KEY:
+        import os
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+        os.environ.setdefault("LANGCHAIN_API_KEY", settings.LANGCHAIN_API_KEY)
+        os.environ.setdefault("LANGCHAIN_PROJECT", settings.LANGCHAIN_PROJECT)
+        os.environ.setdefault("LANGCHAIN_ENDPOINT", settings.LANGCHAIN_ENDPOINT)
+        logger.info(
+            "LangSmith tracing enabled — project=%s endpoint=%s",
+            settings.LANGCHAIN_PROJECT,
+            settings.LANGCHAIN_ENDPOINT,
+        )
+    else:
+        logger.info("LangSmith tracing disabled (set LANGCHAIN_TRACING_V2=true + LANGCHAIN_API_KEY to enable)")
+
     # Create database tables if they don't exist yet
     try:
         await create_tables()
@@ -140,6 +160,7 @@ app = FastAPI(
 # ── Observability ────────────────────────────────────────────────────────────
 
 app.add_middleware(TimingMiddleware)
+app.add_middleware(LangSmithContextMiddleware)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 
@@ -229,4 +250,28 @@ async def health_check() -> dict[str, str]:
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.VERSION,
+    }
+
+
+@app.get("/health/llm", tags=["system"])
+async def llm_health() -> dict[str, object]:
+    """LLM observability status — reports LangSmith tracing configuration.
+
+    Does NOT make a live LangSmith API call (avoids latency in health checks).
+    Use this to verify tracing is configured correctly in each environment.
+    """
+    import os
+
+    tracing_active = bool(
+        os.environ.get("LANGCHAIN_TRACING_V2") == "true"
+        and os.environ.get("LANGCHAIN_API_KEY")
+    )
+    return {
+        "status": "healthy",
+        "langsmith_tracing": tracing_active,
+        "langsmith_project": os.environ.get("LANGCHAIN_PROJECT", settings.LANGCHAIN_PROJECT),
+        "langsmith_endpoint": os.environ.get("LANGCHAIN_ENDPOINT", settings.LANGCHAIN_ENDPOINT),
+        "llm_provider": settings.LLM_PROVIDER,
+        "llm_primary_model": settings.LLM_PRIMARY_MODEL,
+        "llm_fast_model": settings.LLM_FAST_MODEL,
     }
