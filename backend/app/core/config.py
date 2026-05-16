@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     FEATURE_CONTENT_LIBRARY: bool = False
     FEATURE_EXAMINATION_OF_CONSCIENCE: bool = False
     FEATURE_DISCERNMENT_NOTEBOOK: bool = False
-    FEATURE_VOICE: bool = False
+    FEATURE_VOICE: bool = True
 
 
 settings = Settings()
