@@ -92,20 +92,20 @@ export function VoiceRecorder({
     sr.maxAlternatives = 1;
 
     sr.onresult = (e: SpeechRecognitionEvent) => {
-      let interimText = "";
+      // Accumulate all final results (iterate forward to preserve order)
       let finalText = "";
-      for (let i = e.results.length - 1; i >= 0; i--) {
+      let interimText = "";
+      for (let i = 0; i < e.results.length; i++) {
         const result = e.results[i];
         if (result.isFinal) {
-          finalText = result[0].transcript;
-          break;
+          finalText += result[0].transcript;
         } else {
           interimText = result[0].transcript;
         }
       }
       setInterim(interimText);
       if (finalText) {
-        onTranscript(finalText);
+        onTranscript(finalText.trim());
         setInterim("");
         setRecState("idle");
       }
@@ -117,8 +117,9 @@ export function VoiceRecorder({
       setTimeout(() => setRecState("idle"), 2000);
     };
 
+    // Unconditionally reset — captures stale recState otherwise (closure bug)
     sr.onend = () => {
-      if (recState === "recording") setRecState("idle");
+      setRecState("idle");
       setInterim("");
     };
 
@@ -126,7 +127,7 @@ export function VoiceRecorder({
     sr.start();
     setRecState("recording");
     return true;
-  }, [language, onTranscript, recState]);
+  }, [language, onTranscript]);
 
   // ── MediaRecorder + Whisper path ──────────────────────────────────────────
 
