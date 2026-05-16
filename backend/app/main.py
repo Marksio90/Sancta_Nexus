@@ -224,6 +224,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.tasks", "/api/v1/tasks", ["tasks"]),
     # Guest mode — one free Lectio Divina without registration
     ("app.api.routes.guest", "/api/v1/guest", ["guest"]),
+    # Doctrinal review — imprimatur support infrastructure
+    ("app.api.routes.doctrinal_review", "/api/v1/doctrinal-review", ["doctrinal-review"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:
