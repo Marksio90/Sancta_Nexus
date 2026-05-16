@@ -80,8 +80,16 @@ class GuestEmailCaptureResponse(BaseModel):
 
 
 def _ip_hash(request: Request) -> str:
-    """Return a stable 16-char hex hash of the client IP for rate-limiting."""
-    ip = request.client.host if request.client else "unknown"
+    """Return a stable 16-char hex hash of the client IP for rate-limiting.
+
+    Prefers X-Forwarded-For (set by nginx in production) over the socket IP
+    so that the rate limit correctly identifies the real client behind the proxy.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        ip = forwarded.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "unknown"
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
 
 

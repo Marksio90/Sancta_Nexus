@@ -56,3 +56,21 @@ services:
 volumes:
   dev_postgres_data:
     driver: local
+
+# ── ARQ worker (dev) ──────────────────────────────────────────────────────────
+# The app runs outside Docker in dev. Run the ARQ worker manually:
+#
+#   cd backend && arq app.workers.arq_settings.WorkerSettings
+#
+# Or add the following service if you prefer containerised workers:
+#
+#   arq-worker:
+#     image: python:3.11-slim
+#     command: arq app.workers.arq_settings.WorkerSettings
+#     working_dir: /app
+#     volumes:
+#       - ./backend:/app
+#     environment:
+#       - REDIS_URL=redis://redis:6379/0
+#       - DATABASE_URL=postgresql+asyncpg://sancta:sancta_dev@postgres:5432/sancta_nexus_dev
+#     depends_on: [redis, postgres]
