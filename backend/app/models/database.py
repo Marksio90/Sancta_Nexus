@@ -84,6 +84,7 @@ class AuditEventType(enum.StrEnum):
     USER_ROLE_CHANGED = "user_role_changed"
     USER_DELETED = "user_deleted"
     USER_DATA_EXPORTED = "user_data_exported"
+    LOGIN_FAILED = "login_failed"
     AI_RESPONSE_GENERATED = "ai_response_generated"
     AI_RESPONSE_REWRITTEN = "ai_response_rewritten"
     AI_CRISIS_DETECTED = "ai_crisis_detected"

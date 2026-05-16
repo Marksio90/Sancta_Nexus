@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -76,15 +77,39 @@ def create_refresh_token(
     data: dict[str, Any],
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Create a signed JWT refresh token (longer-lived)."""
+    """Create a signed JWT refresh token (longer-lived).
+
+    Each token receives a unique ``jti`` (JWT ID) so it can be individually
+    revoked in Redis on use, preventing replay attacks.
+    """
     to_encode = data.copy()
-    expire = datetime.now(UTC) + (
-        expires_delta
-        if expires_delta is not None
-        else timedelta(days=_REFRESH_TOKEN_EXPIRE_DAYS)
-    )
-    to_encode.update({"exp": expire, "type": "refresh"})
+    lifetime = expires_delta if expires_delta is not None else timedelta(days=_REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + lifetime
+    to_encode.update({"exp": expire, "type": "refresh", "jti": str(uuid4())})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+# ---------------------------------------------------------------------------
+# Refresh-token revocation (Redis blocklist)
+# ---------------------------------------------------------------------------
+
+_REVOKED_PREFIX = "revoked_jti:"
+
+
+async def revoke_refresh_token(redis, jti: str, expires_at: datetime) -> None:
+    """Store *jti* in Redis until the token naturally expires.
+
+    The TTL is set to the token's remaining lifetime so the blocklist entry
+    is automatically cleaned up — we never store stale entries forever.
+    """
+    remaining = int((expires_at - datetime.now(UTC)).total_seconds())
+    if remaining > 0:
+        await redis.setex(f"{_REVOKED_PREFIX}{jti}", remaining, "1")
+
+
+async def is_refresh_token_revoked(redis, jti: str) -> bool:
+    """Return True if *jti* has been revoked (already used or explicitly invalidated)."""
+    return bool(await redis.exists(f"{_REVOKED_PREFIX}{jti}"))
 
 
 # ---------------------------------------------------------------------------
