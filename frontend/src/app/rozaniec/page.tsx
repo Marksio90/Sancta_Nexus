@@ -25,11 +25,11 @@ interface CommunitySession {
   intention?: string;
 }
 
-const MYSTERY_META: Record<MysteryType, { label: string; days: string; color: string; border: string; icon: string }> = {
-  radosne:  { label: "Tajemnice radosne",  days: "Pon · Sob", color: "from-sky-900/60 to-sky-800/30",    border: "border-sky-700/40",    icon: "🌟" },
-  bolesne:  { label: "Tajemnice bolesne",  days: "Wt · Pt",   color: "from-red-900/60 to-red-800/30",    border: "border-red-700/40",    icon: "✝" },
-  chwalebne:{ label: "Tajemnice chwalebne",days: "Śr · Nd",   color: "from-amber-900/60 to-amber-800/30",border: "border-amber-700/40",  icon: "☀" },
-  swietlne: { label: "Tajemnice światła",  days: "Czw",        color: "from-blue-900/60 to-blue-800/30",  border: "border-blue-700/40",   icon: "💡" },
+const MYSTERY_META: Record<MysteryType, { label: string; days: string; color: string; border: string; icon: string; latin: string }> = {
+  radosne:  { label: "Tajemnice radosne",  days: "Pon · Sob", color: "from-[#0d1a0f]/80 to-[#0d0b1a]", border: "border-white/10",          icon: "✦", latin: "Gaudia" },
+  bolesne:  { label: "Tajemnice bolesne",  days: "Wt · Pt",   color: "from-[#1a0a0a]/80 to-[#0d0b1a]", border: "border-white/10",          icon: "✝", latin: "Dolores" },
+  chwalebne:{ label: "Tajemnice chwalebne",days: "Śr · Nd",   color: "from-[#1a1400]/80 to-[#0d0b1a]", border: "border-[#d4af37]/20",      icon: "✦", latin: "Gloria" },
+  swietlne: { label: "Tajemnice światła",  days: "Czw",        color: "from-[#0a1020]/80 to-[#0d0b1a]", border: "border-white/10",          icon: "☽", latin: "Luminis" },
 };
 
 export default function RozaniecPage() {
@@ -165,63 +165,81 @@ export default function RozaniecPage() {
   if (appState === "menu") {
     return (
       <main className="min-h-screen bg-[#0d0b1a] text-white">
-        <div className="max-w-2xl mx-auto px-4 py-10 pb-24">
-          <div className="text-center mb-8">
-            <div className="text-5xl mb-3">📿</div>
-            <h1 className="text-2xl font-bold text-[#d4af37] mb-1">Różaniec</h1>
-            <p className="text-gray-400 text-sm">20 tajemnic · Medytacja AI · Wspólnota</p>
-          </div>
-
+        {/* Hero */}
+        <div className="relative bg-gradient-to-b from-[#12091f]/90 to-[#0d0b1a] pt-10 pb-8 px-4 text-center border-b border-white/5">
+          <div className="text-3xl mb-3 tracking-widest text-[#d4af37]/70">✦ ✝ ✦</div>
+          <h1 className="text-2xl font-bold text-white mb-1">Święty Różaniec</h1>
+          <p className="text-xs tracking-[0.2em] text-gray-500 uppercase">
+            Modlitwa różańcowa z rozważaniem
+          </p>
           {todayMystery && (
-            <div className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-2xl p-4 mb-6">
-              <div className="text-xs text-[#d4af37] mb-1">Dzisiaj modlimy się nad:</div>
-              <div className="font-semibold text-white">{MYSTERY_META[todayMystery].label}</div>
-              <div className="text-xs text-gray-500">{MYSTERY_META[todayMystery].days}</div>
+            <div className="mt-4 inline-block">
+              <div className="text-[10px] tracking-[0.15em] text-[#d4af37]/70 uppercase mb-1">Dziś rozważamy</div>
+              <div className="text-sm font-semibold text-white">{MYSTERY_META[todayMystery].label}</div>
             </div>
           )}
+        </div>
 
-          <div className="space-y-3 mb-6">
-            {(Object.keys(MYSTERY_META) as MysteryType[]).map((type) => {
-              const meta = MYSTERY_META[type];
-              const isToday = type === todayMystery;
-              return (
-                <button
-                  key={type}
-                  onClick={() => selectMysteryType(type)}
-                  className={`w-full rounded-xl border ${meta.border} bg-gradient-to-r ${meta.color} p-4 text-left hover:scale-[1.01] transition-all`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{meta.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">{meta.label}</span>
-                        {isToday && (
-                          <span className="text-xs bg-[#d4af37] text-black px-2 py-0.5 rounded-full font-medium">
-                            Dziś
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-400">{meta.days}</div>
+        <div className="max-w-2xl mx-auto px-4 py-6 pb-28 space-y-2">
+          <div className="text-[10px] tracking-[0.2em] text-gray-600 uppercase text-center mb-4">Wybierz tajemnice</div>
+
+          {(Object.keys(MYSTERY_META) as MysteryType[]).map((type) => {
+            const meta = MYSTERY_META[type];
+            const isToday = type === todayMystery;
+            return (
+              <button
+                key={type}
+                onClick={() => selectMysteryType(type)}
+                className={`w-full rounded-xl border bg-gradient-to-r ${meta.color} ${
+                  isToday ? "border-[#d4af37]/30" : meta.border
+                } p-4 text-left transition-all hover:border-[#d4af37]/20 group`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className={`text-xl w-6 text-center flex-shrink-0 ${
+                    type === "bolesne" ? "text-red-400/80" : "text-[#d4af37]/60"
+                  }`}>{meta.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-semibold text-white group-hover:text-[#d4af37] transition-colors">
+                        {meta.label}
+                      </span>
+                      {isToday && (
+                        <span className="text-[9px] tracking-[0.15em] bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/30 px-2 py-0.5 rounded-full uppercase font-medium">
+                          Dziś
+                        </span>
+                      )}
                     </div>
-                    <span className="text-gray-500 text-sm">5 tajemnic →</span>
+                    <div className="text-[10px] text-gray-600 tracking-wide">
+                      {meta.latin} · {meta.days} · 5 tajemnic
+                    </div>
                   </div>
-                </button>
-              );
-            })}
+                  <span className="text-gray-600 text-xs group-hover:text-[#d4af37] transition-colors">→</span>
+                </div>
+              </button>
+            );
+          })}
+
+          <div className="pt-2">
+            <button
+              onClick={() => { loadCommunity(); setAppState("community"); }}
+              className="w-full rounded-xl border border-white/8 bg-white/3 p-4 text-left transition-all hover:border-white/20 group"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-xl w-6 text-center flex-shrink-0 text-gray-500">👥</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-white group-hover:text-[#d4af37] transition-colors">
+                    Różaniec wspólnotowy
+                  </div>
+                  <div className="text-[10px] text-gray-600">Dołącz do sesji modlitewnej z innymi</div>
+                </div>
+                <span className="text-gray-600 text-xs group-hover:text-[#d4af37] transition-colors">→</span>
+              </div>
+            </button>
           </div>
 
-          <button
-            onClick={() => { loadCommunity(); setAppState("community"); }}
-            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 text-left transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">👥</span>
-              <div>
-                <div className="font-medium text-white">Różaniec wspólnotowy</div>
-                <div className="text-xs text-gray-500">Dołącz do sesji z innymi</div>
-              </div>
-            </div>
-          </button>
+          <p className="text-[10px] text-gray-700 text-center pt-3 leading-relaxed">
+            „Różaniec jest modlitwą i rozważaniem" — Błogosławiony Jan Paweł II
+          </p>
         </div>
       </main>
     );
