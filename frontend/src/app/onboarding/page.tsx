@@ -29,7 +29,7 @@ const PRAYER_TIMES = [
 ] as const;
 
 const PRACTICES = [
-  { value: "/dzisiaj",            label: "Liturgia dnia",       description: "Dzisiaj, święty patrona, brewiarz",   icon: "☀" },
+  { value: "/dzisiaj",            label: "Liturgia dnia",       description: "Dzisiaj, święty patrona, brewiarz",   icon: "🗓" },
   { value: "/lectio-divina",      label: "Lectio Divina",       description: "Modlitewne czytanie Pisma Świętego",  icon: "📖" },
   { value: "/rozaniec",           label: "Różaniec",            description: "20 tajemnic, medytacja AI",           icon: "📿" },
   { value: "/rachunek-sumienia",  label: "Rachunek Sumienia",   description: "Ignacjański Examen wieczorny",        icon: "🔥" },
@@ -37,6 +37,24 @@ const PRACTICES = [
 ];
 
 const TOTAL_STEPS = 5;
+
+const CLOSING_SCRIPTURES = [
+  { text: "Będziesz miłował Pana Boga swego z całego serca swego, z całej duszy swojej i ze wszystkich sił swoich.", ref: "Pwt 6,5" },
+  { text: "Pan jest moim pasterzem, nie brak mi niczego.", ref: "Ps 23,1" },
+  { text: "Szukajcie najpierw królestwa Bożego i jego sprawiedliwości, a wszystko inne będzie wam dodane.", ref: "Mt 6,33" },
+  { text: "Wszystko mogę w Tym, który mnie umacnia.", ref: "Flp 4,13" },
+  { text: "Wiem, komu zawierzyłem.", ref: "2 Tm 1,12" },
+  { text: "Zaufaj Panu z całego serca swego, na własnym rozumie się nie opieraj.", ref: "Prz 3,5" },
+  { text: "Albowiem dla mnie żyć — to Chrystus, a umrzeć — to zysk.", ref: "Flp 1,21" },
+  { text: "Nie lękaj się, bo jestem z tobą.", ref: "Iz 41,10" },
+  { text: "Twoje słowo jest lampą dla moich kroków i światłem na mojej ścieżce.", ref: "Ps 119,105" },
+  { text: "Proście, a będzie wam dane; szukajcie, a znajdziecie; kołaczcie, a otworzone będzie wam.", ref: "Mt 7,7" },
+];
+
+function getDailyScripture() {
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return CLOSING_SCRIPTURES[dayIndex % CLOSING_SCRIPTURES.length];
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -95,6 +113,7 @@ export default function OnboardingPage() {
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
   const progress = (step / TOTAL_STEPS) * 100;
+  const closingScripture = getDailyScripture();
 
   return (
     <main className={`min-h-screen bg-[#0d0b1a] text-white flex flex-col transition-opacity duration-400 ${leaving ? "opacity-0" : "opacity-100"}`}>
@@ -254,7 +273,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 5: Gotowy! ──────────────────────────────────────── */}
+                {/* ── Step 5: Gotowy! ─────────────────────── */}
         {step === 5 && (
           <div className="flex-1 flex flex-col justify-center animate-in fade-in duration-300">
             <div className="text-center mb-8">
@@ -270,9 +289,8 @@ export default function OnboardingPage() {
             </div>
 
             <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl p-4 mb-8 text-sm text-gray-400 italic text-center leading-relaxed">
-              «Będziesz miłował Pana Boga swego z całego serca swego,
-              z całej duszy swojej i ze wszystkich sił swoich.»
-              <div className="text-xs text-gray-600 mt-1 not-italic">Pwt 6,5</div>
+              {`„${closingScripture.text}”`}
+              <div className="text-xs text-gray-600 mt-1 not-italic">{closingScripture.ref}</div>
             </div>
 
             <div className="space-y-3">

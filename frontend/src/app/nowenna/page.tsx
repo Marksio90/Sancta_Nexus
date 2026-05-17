@@ -277,7 +277,7 @@ export default function NowennaPage() {
               )}
 
               {(meditation || loadingMeditation) && (
-                <div className="bg-amber-900/20 border border-amber-700/30 rounded-2xl p-5 mb-4 text-sm text-gray-200 leading-loose whitespace-pre-wrap">
+                <div className="bg-[#d4af37]/8 border border-[#d4af37]/20 rounded-2xl p-5 mb-4 text-sm text-gray-200 leading-loose whitespace-pre-wrap">
                   {loadingMeditation ? (
                     <span className="text-gray-500 animate-pulse">Generuję medytację...</span>
                   ) : meditation}
@@ -347,7 +347,7 @@ export default function NowennaPage() {
                       <div className="font-semibold text-sm text-white">{n.novena_title}</div>
                       {n.intention && (
                         <div className="text-xs text-gray-500 mt-0.5 italic">
-                          «{n.intention}»
+                          „{n.intention}”
                         </div>
                       )}
                     </div>

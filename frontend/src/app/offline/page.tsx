@@ -11,9 +11,9 @@ export default function OfflinePage() {
       </p>
       <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl p-5 max-w-sm mb-8">
         <p className="text-sm text-gray-300 italic leading-relaxed">
-          «Pan jest pasterzem moim, nie brak mi niczego.
+          „Pan jest pasterzem moim, nie brak mi niczego.
           Pozwala mi leżeć na zielonych pastwiskach.
-          Prowadzi mnie nad wody, gdzie mogę odpocząć.»
+          Prowadzi mnie nad wody, gdzie mogę odpocząć.”
         </p>
         <p className="text-xs text-gray-600 mt-2">Psalm 23,1-2</p>
       </div>

@@ -38,7 +38,7 @@ export function VerseShareButton({ text, ref_ }: VerseShareButtonProps) {
   return (
     <button
       onClick={handleShare}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-[--color-sacred-border] px-3 py-1.5 text-xs text-[--color-sacred-text-muted]/60 transition-all hover:border-[--color-gold]/30 hover:text-[--color-gold]"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-500 transition-all hover:border-[#d4af37]/40 hover:bg-[#d4af37]/5 hover:text-[#d4af37]"
       title="Podziel się tym wersetem"
     >
       {copied ? (

@@ -40,21 +40,21 @@ const STAGES: LectioDivinaStage[] = [
 
 const STAGE_LABELS: Record<LectioDivinaStage, string> = {
   welcome: "Powitanie",
-  lectio: "Lectio",
-  meditatio: "Meditatio",
-  oratio: "Oratio",
-  contemplatio: "Contemplatio",
-  actio: "Actio",
+  lectio: "Lectio · Czytanie",
+  meditatio: "Meditatio · Rozważanie",
+  oratio: "Oratio · Modlitwa",
+  contemplatio: "Contemplatio · Kontemplacja",
+  actio: "Actio · Działanie",
 };
 
 /* ── Fallback data (shown when backend is unavailable) ── */
 const MOCK_SCRIPTURE = {
-  book: "Ewangelia wg sw. Jana",
+  book: "Ewangelia wg św. Jana",
   chapter: 15,
   startVerse: 4,
   endVerse: 5,
-  text: "Trwajcie we Mnie, a Ja w was trwac bede. Podobnie jak latorosl nie moze przynosic owocu sama z siebie — o ile nie trwa w winnym krzewie — tak samo i wy, jezeli we Mnie trwac nie bedziecie. Ja jestem krzewem winnym, wy — latoroslami. Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity, poniewaz beze Mnie nic nie mozecie uczynic.",
-  translation: "Biblia Tysiaclecia V",
+  text: "Trwajcie we Mnie, a Ja w was trwać będę. Podobnie jak latorosl nie moze przynosic owocu sama z siebie — o ile nie trwa w winnym krzewie — tak samo i wy, jeżeli we Mnie trwać nie będziecie. Ja jestem krzewem winnym, wy — latoroslami. Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity, ponieważ beze Mnie nic nie możecie uczynić.",
+  translation: "Biblia Tysiąclecia V",
   historicalContext: "Fragment ten pochodzi z Mowy Pozegnalnej Jezusa podczas Ostatniej Wieczerzy. Metafora winnego krzewu (gr. ampelos) byla dobrze znana w kulturze zydowskiej — Izrael byl czesto porownywany do winnicy Pana (Iz 5:1-7). Jezus nadaje tej metaforze nowe, glebsze znaczenie, wskazujac na osobista relacje z Nim jako zrodlo duchowego zycia.",
   patristicNote: "Sw. Augustyn: 'Latorosl nie daje zycia korzeniowi, lecz korzen latorosli. Tak i uczniowie nie daja Chrystusowi tego, czego potrzebuja, lecz od Chrystusa otrzymuja to, co jest im potrzebne do zycia.'",
   originalLanguageKey: "meno (gr.) — trwac, pozostawac, zamieszkiwac. Wskazuje na gleboka, osobista, trwala relacje.",
@@ -62,38 +62,38 @@ const MOCK_SCRIPTURE = {
 };
 
 const MOCK_QUESTIONS = [
-  { text: "Ktore slowo z tego fragmentu najbardziej przyciaga Twoja uwage i dlaczego?", layer: "literalis" as const, scriptureEcho: "trwajcie we Mnie" },
-  { text: "W jaki sposob Jezus jest 'krzewem winnym' w Twoim codziennym zyciu?", layer: "allegoricus" as const, scriptureEcho: "Ja jestem krzewem winnym" },
+  { text: "Które słowo z tego fragmentu najbardziej przyciąga Twoją uwagę i dlaczego?", layer: "literalis" as const, scriptureEcho: "trwajcie we Mnie" },
+  { text: "W jaki sposób Jezus jest 'krzewem winnym' w Twoim codziennym życiu?", layer: "allegoricus" as const, scriptureEcho: "Ja jestem krzewem winnym" },
   { text: "Co konkretnie przeszkadza Ci w 'przynoszeniu owocu obfitego'?", layer: "moralis" as const, scriptureEcho: "przynosi owoc obfity" },
-  { text: "Gdybys mogl/a usiasc w ciszy z jednym slowem z tego fragmentu, ktore by to bylo?", layer: "anagogicus" as const, scriptureEcho: "" },
+  { text: "Gdybyś mógł/a usiąść w ciszy z jednym słowem z tego fragmentu, które by to było?", layer: "anagogicus" as const, scriptureEcho: "" },
 ];
 
 const MOCK_REFLECTION_LAYERS = {
-  literalis: "Greckie 'meno' (trwac) pojawia sie w Ewangelii Jana az 40 razy. Dla sw. Jana 'trwanie' to nie statyczne 'bycie', lecz dynamiczna, zywa relacja z Chrystusem. Sw. Jan Chryzostom pisal: 'Trwac w Chrystusie to nie kwestia miejsca, lecz woli i milosci.'",
+  literalis: "Greckie 'meno' (trwac) pojawia się w Ewangelii Jana az 40 razy. Dla św. Jana 'trwanie' to nie statyczne 'bycie', lecz dynamiczna, żywa relacja z Chrystusem. Sw. Jan Chryzostom pisal: 'Trwac w Chrystusie to nie kwestia miejsca, lecz woli i milosci.'",
   allegoricus: "Krzew winny jest typem Chrystusa — tak jak Izrael byl winna latorosla Boga (Iz 5), tak Jezus jest prawdziwym krzewem, z ktorego czerpiemy zycie. Kazdy owoc — milosc, radosc, pokoj — jest owocem Ducha (Ga 5,22), nie naszej ludzkiej sily.",
   moralis: "Pytanie 'beze Mnie nic nie mozecie uczynic' jest zaproszeniem do pokory. Nie chodzi o ludzka bezradnosc, lecz o prawde, ze najglebsze dobro rodzi sie z relacji z Bogiem. Jakie 'owoce' w Twoim zyciu sa owocem wlasnego wysilku, a jakie sa darem Bozej laski?",
   anagogicus: "Obraz krzewu winnego otwiera przestrzen mistyczna: zjednoczenie z Chrystusem jest juz tutaj, na ziemi, zapowiedzia pelnego zjednoczenia w wiecznosci. Sw. Jan od Krzyza pisal: 'Dusza, ktora trwa w Bogu, jest jak latorosl w ogniu — plonie, ale nie spala sie, bo jej ogniem jest Milosc.'",
 };
 
-const MOCK_PRAYER = "Panie Jezu, Ty jestes prawdziwym Krzewem Winnym, a ja pragne byc Twoja latorosla. Pomoz mi trwac w Tobie kazdego dnia — w modlitwie, w sakramentach, w milosci do bliznich. Wiem, ze beze Ciebie nic nie moge uczynic. Oczysz mnie ze wszystkiego, co przeszkadza mi w przynoszeniu owocu. Napelnij mnie Twoim Duchem, abym zyl tak, jak Ty tego pragniesz. Przez Chrystusa, Pana naszego. Amen.";
+const MOCK_PRAYER = "Panie Jezu, Ty jesteś prawdziwym Krzewem Winnym, a ja pragnę być Twoją latoroślą. Pomóż mi trwać w Tobie każdego dnia — w modlitwie, w sakramentach, w milosci do bliznich. Wiem, że beze Ciebie nic nie mogę uczynić. Oczyść mnie ze wszystkiego, co przeszkadza mi w przynoszeniu owocu. Napełnij mnie Twoim Duchem, abym żył tak, jak Ty tego pragniesz. Przez Chrystusa, Pana naszego. Amen.";
 
 const MOCK_CONTEMPLATION = {
   sacredWord: "Trwaj",
-  sacredWordMeaning: "meno (gr.) — pozostawac w zywa, osobistej relacji z Bogiem",
+  sacredWordMeaning: "meno (gr.) — pozostawać w żywej, osobistej relacji z Bogiem",
   jesusPrayerRhythm: "Wdech: 'Panie Jezu Chryste...' Wydech: '...pozwol mi trwac w Tobie.'",
-  closingPrayer: "Dziekuje Ci, Panie, za te chwile ciszy w Twoim winnym ogrodzie. Amen.",
+  closingPrayer: "Dziękuję Ci, Panie, za tę chwilę ciszy w Twoim winnym ogrodzie. Amen.",
 };
 
 const MOCK_CHALLENGE = {
-  text: "Dzis poswiec 5 minut na cicha modlitwe ze slowem 'trwaj'. W kazdej chwili wyboru zatrzymaj sie i zapytaj: 'Panie, jak moge teraz trwac w Tobie?' Wieczorem zapisz jeden moment, w ktorym poczules/as Jego obecnosc.",
+  text: "Dziś poświęć 5 minut na cichą modlitwę ze słowem 'trwaj'. W każdej chwili wyboru zatrzymaj się i zapytaj: 'Panie, jak mogę teraz trwać w Tobie?' Wieczorem zapisz jeden moment, w którym poczułeś/aś Jego obecność.",
   category: "prayer",
   difficulty: "easy",
-  virteFocus: "stalość",
+  virteFocus: "stałość",
   scriptureAnchor: "Kto trwa we Mnie, a Ja w nim, ten przynosi owoc obfity",
   eveningExamen: {
-    retrospection: "Czy udalo ci sie dzis zatrzymac ze slowem 'trwaj'? W jakim momencie?",
-    divinePresence: "Gdzie w tym dniu poczules/as najbardziej Boza obecnosc?",
-    resolution: "Jaka mala praktyke 'trwania' chcesz kontynuowac jutro?",
+    retrospection: "Czy udało ci się dziś zatrzymać ze słowem 'trwaj'? W jakim momencie?",
+    divinePresence: "Gdzie w tym dniu poczułeś/aś najbardziej Bożą obecność?",
+    resolution: "Jaką małą praktykę 'trwania' chcesz kontynuować jutro?",
   },
 };
 
@@ -237,17 +237,17 @@ export default function LectioDivinaPage() {
                 <Heart className="h-8 w-8 text-[--color-gold]" />
               </div>
               <h1 className="font-heading mb-4 text-3xl text-[--color-gold]">
-                Jak sie dzis czujesz?
+                Jak się dziś czujesz?
               </h1>
               <p className="mx-auto mb-8 max-w-md text-[--color-sacred-text-muted]">
-                Podziel sie swoim stanem ducha. Pomoze to dobrac odpowiedni
-                fragment Pisma Swietego i poprowadzic Twoja modlitwe.
+                Podziel się swoim stanem ducha. Pomoże to dobrać odpowiedni
+                fragment Pisma Świętego i poprowadzić Twoją modlitwę.
               </p>
               <div className="relative mx-auto w-full max-w-lg">
                 <textarea
                   value={emotion}
                   onChange={(e) => setEmotion(e.target.value)}
-                  placeholder="Np. Czuje spokoj, ale tez lekki niepokoj o przyszlosc..."
+                  placeholder="Np. Czuję spokój, ale też lekki niepokój o przyszłość…"
                   className="block w-full resize-none rounded-xl border border-[--color-sacred-border] bg-[--color-sacred-surface] p-4 pb-12 text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/50 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
                   rows={4}
                 />
@@ -452,7 +452,7 @@ export default function LectioDivinaPage() {
             <div className="animate-fade-in text-center">
               <h2 className="font-heading mb-2 text-3xl text-[--color-gold]">Actio</h2>
               <p className="mb-8 text-[--color-sacred-text-muted]">
-                Idz i zyj tym, co otrzymales/as.
+                Idź i żyj tym, co otrzymałeś/aś.
               </p>
 
               {(() => {
@@ -476,17 +476,10 @@ export default function LectioDivinaPage() {
                       </p>
 
                       {ch.scriptureAnchor && (
-                        <p className="mt-4 text-xs text-[--color-gold]/50">
-                          Zakotwiczenie: &ldquo;{ch.scriptureAnchor}&rdquo;
+                        <p className="mt-5 border-t border-[--color-gold]/10 pt-4 text-xs italic text-[--color-gold]/60">
+                          ✦ &ldquo;{ch.scriptureAnchor}&rdquo;
                         </p>
                       )}
-
-                      <div className="mt-4 flex items-center justify-center gap-2">
-                        <span className="rounded-full bg-[--color-gold]/10 px-3 py-1 text-xs text-[--color-gold]/70">
-                          {ch.category}
-                        </span>
-                        <DifficultBadge difficulty={ch.difficulty} />
-                      </div>
                     </div>
 
                     {/* Evening Examen */}

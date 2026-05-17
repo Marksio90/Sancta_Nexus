@@ -6,31 +6,23 @@ import { useAuthStore } from "@/stores/auth";
 import { useProgressStore } from "@/stores/progress";
 import { api } from "@/lib/api";
 
-// ── Stałe sezonowe ────────────────────────────────────────────────────────────
+// ── Kolory liturgiczne ─────────────────────────────────────────────────────────
 
-const SEASON_COLORS: Record<string, string> = {
-  advent:   "from-[#1a0a2e]/80 to-[#0d0b1a] border-purple-800/40",
-  christmas:"from-[#1a1000]/80 to-[#0d0b1a] border-yellow-700/40",
-  lent:     "from-[#1a0a00]/80 to-[#0d0b1a] border-purple-900/40",
-  easter:   "from-[#001a08]/80 to-[#0d0b1a] border-yellow-600/40",
-  ordinary: "from-[#001408]/80 to-[#0d0b1a] border-green-800/40",
-};
-
-const SEASON_BADGE: Record<string, string> = {
-  advent:   "bg-purple-900/40 text-purple-300 border-purple-700/40",
-  christmas:"bg-yellow-900/40 text-yellow-300 border-yellow-700/40",
-  lent:     "bg-red-900/30 text-red-300 border-red-800/40",
-  easter:   "bg-yellow-800/30 text-yellow-200 border-yellow-600/40",
-  ordinary: "bg-green-900/30 text-green-300 border-green-700/40",
+const SEASON_HERO: Record<string, { bg: string; glow: string; accent: string; badge: string }> = {
+  advent:   { bg: "from-purple-950/70 via-[#0d0b1a] to-[#0d0b1a]",  glow: "via-purple-900/20",  accent: "text-purple-300",  badge: "bg-purple-900/50 text-purple-200 border-purple-700/50" },
+  christmas:{ bg: "from-yellow-950/70 via-[#0d0b1a] to-[#0d0b1a]",  glow: "via-yellow-900/15",  accent: "text-yellow-200",  badge: "bg-yellow-900/50 text-yellow-200 border-yellow-700/50" },
+  lent:     { bg: "from-[#1c0a00]/80 via-[#0d0b1a] to-[#0d0b1a]",   glow: "via-red-950/20",     accent: "text-red-300",     badge: "bg-red-950/50 text-red-200 border-red-900/50" },
+  easter:   { bg: "from-[#001a06]/80 via-[#0d0b1a] to-[#0d0b1a]",   glow: "via-emerald-950/20", accent: "text-emerald-300", badge: "bg-emerald-950/50 text-emerald-200 border-emerald-800/50" },
+  ordinary: { bg: "from-[#001208]/70 via-[#0d0b1a] to-[#0d0b1a]",   glow: "via-green-950/15",   accent: "text-green-300",   badge: "bg-green-950/50 text-green-200 border-green-800/50" },
 };
 
 const COLOR_DOT: Record<string, string> = {
-  white:  "bg-white",
-  red:    "bg-red-500",
-  green:  "bg-green-500",
-  purple: "bg-purple-500",
-  gold:   "bg-yellow-400",
-  rose:   "bg-rose-400",
+  white:  "bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]",
+  red:    "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]",
+  green:  "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]",
+  purple: "bg-purple-500 shadow-[0_0_6px_rgba(168,85,247,0.6)]",
+  gold:   "bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.6)]",
+  rose:   "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.6)]",
 };
 
 const DAY_PL: Record<string, string> = {
@@ -38,32 +30,21 @@ const DAY_PL: Record<string, string> = {
   Thursday: "Czwartek", Friday: "Piątek", Saturday: "Sobota", Sunday: "Niedziela",
 };
 
-const GREETING_HOUR: Record<number, string> = {
-  0:  "Dobranoc",
-  1:  "Dobranoc",
-  2:  "Dobranoc",
-  3:  "Dobranoc",
-  4:  "Dzień dobry",
-  5:  "Dzień dobry",
-  6:  "Dzień dobry",
-  7:  "Dzień dobry",
-  8:  "Dzień dobry",
-  9:  "Dzień dobry",
-  10: "Dzień dobry",
-  11: "Dzień dobry",
-  12: "Dobry dzień",
-  13: "Dobry dzień",
-  14: "Dobry dzień",
-  15: "Dobry dzień",
-  16: "Dobry wieczór",
-  17: "Dobry wieczór",
-  18: "Dobry wieczór",
-  19: "Dobry wieczór",
-  20: "Dobry wieczór",
-  21: "Dobry wieczór",
-  22: "Dobranoc",
-  23: "Dobranoc",
-};
+const HOUR_GREETING: [number, string][] = [
+  [5,  "Dobranoc"],
+  [12, "Dzień dobry"],
+  [17, "Dobry dzień"],
+  [22, "Dobry wieczór"],
+  [24, "Dobranoc"],
+];
+
+const HOUR_ICON: [number, string][] = [
+  [5,  "✦"],
+  [12, "☀"],
+  [17, "🌤"],
+  [22, "🌙"],
+  [24, "✦"],
+];
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -116,38 +97,20 @@ function saveCompletedToday(completed: Set<string>) {
   );
 }
 
-// ── Komponent streak ──────────────────────────────────────────────────────────
+function getGreeting(hour: number): string {
+  for (const [h, g] of HOUR_GREETING) if (hour < h) return g;
+  return "Dzień dobry";
+}
 
-function StreakWidget({ streak }: { streak: number }) {
-  const nextMilestone = STREAK_MILESTONES.find((m) => m > streak) ?? streak + 1;
-  const progress = Math.min(100, (streak / nextMilestone) * 100);
+function getHourIcon(hour: number): string {
+  for (const [h, icon] of HOUR_ICON) if (hour < h) return icon;
+  return "✦";
+}
 
-  if (streak === 0) return null;
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 
-  return (
-    <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/20 border border-orange-700/30 rounded-2xl p-4 mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🔥</span>
-          <div>
-            <div className="text-sm font-bold text-white">
-              {streak} {streak === 1 ? "dzień" : streak < 5 ? "dni" : "dni"} z rzędu
-            </div>
-            <div className="text-xs text-orange-300/70">
-              Do kolejnego milestone: {nextMilestone - streak} {nextMilestone - streak === 1 ? "dzień" : "dni"}
-            </div>
-          </div>
-        </div>
-        <div className="text-2xl font-bold text-[#d4af37]">{streak}</div>
-      </div>
-      <div className="w-full bg-white/10 rounded-full h-1.5">
-        <div
-          className="bg-gradient-to-r from-orange-500 to-[#d4af37] h-1.5 rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
+function Skeleton({ className }: { className: string }) {
+  return <div className={`animate-pulse bg-white/5 rounded-xl ${className}`} />;
 }
 
 // ── Komponent główny ──────────────────────────────────────────────────────────
@@ -167,24 +130,18 @@ export default function DzisiajPage() {
   useEffect(() => {
     loadFromStorage();
     loadProgress();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedTasks(loadCompletedToday());
-
-    // Sprawdź czy notif już ustawione dziś
     const notifDone = localStorage.getItem("sancta_notif_set");
-    if (notifDone) setNotifSet(true);
+    if (notifDone) { setNotifSet(true); setNotifTime(notifDone); }
 
-    // Pobierz dane liturgiczne — endpoint publiczny, api.ts dodaje JWT jeśli jest
     api.get<DailyData>("/api/v1/breviary/daily-engagement")
       .then((d) => { setData(d); setLoading(false); })
-      .catch(() => {
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, [loadFromStorage, loadProgress]);
 
   const toggleTask = useCallback((href: string) => {
-    setCompletedTasks((prev) => {
-      const next = new Set(prev);
+    setCompletedTasks((prev: Set<string>) => {
+      const next = new Set<string>(prev);
       if (next.has(href)) next.delete(href);
       else next.add(href);
       saveCompletedToday(next);
@@ -203,8 +160,6 @@ export default function DzisiajPage() {
       if (permission !== "granted") { setNotifLoading(false); return; }
 
       const reg = await navigator.serviceWorker.ready;
-
-      // Pobierz VAPID public key z backendu
       const vapidData = await api.get<{ publicKey: string }>("/api/v1/notifications/vapid-public-key");
       const vapidKey = vapidData.publicKey;
 
@@ -221,250 +176,286 @@ export default function DzisiajPage() {
       }
 
       await api.post("/api/v1/notifications/daily-reminder", { time: notifTime });
-
       localStorage.setItem("sancta_notif_set", notifTime);
       setNotifSet(true);
     } catch {
-      // Powiadomienia niedostępne — nie blokujemy
+      // Powiadomienia niedostępne
     } finally {
       setNotifLoading(false);
     }
   }, [notifTime]);
 
-  // ── Powitanie ─────────────────────────────────────────────────────────────
-
   const hour = new Date().getHours();
-  const greeting = GREETING_HOUR[hour] ?? "Dzień dobry";
+  const greeting = getGreeting(hour);
+  const hourIcon = getHourIcon(hour);
   const firstName = user?.displayName?.split(" ")[0] ?? user?.email?.split("@")[0] ?? null;
   const completedCount = completedTasks.size;
-  const allDone = data && completedCount >= data.suggested_practices.length;
+  const totalCount = data?.suggested_practices.length ?? 0;
+  const allDone = totalCount > 0 && completedCount >= totalCount;
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  const seasonKey = data?.liturgical.season ?? "ordinary";
+  const season = SEASON_HERO[seasonKey] ?? SEASON_HERO.ordinary;
+  const dotClass = COLOR_DOT[data?.liturgical.color ?? ""] ?? "bg-gray-400";
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#0d0b1a] text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#d4af37]/30 border-t-[#d4af37] rounded-full animate-spin" />
-          <p className="text-xs text-gray-500">Ładowanie liturgii dnia…</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!data) {
-    return (
-      <main className="min-h-screen bg-[#0d0b1a] text-white flex items-center justify-center px-4">
-        <div className="text-center space-y-3">
-          <p className="text-gray-400">Nie można załadować danych liturgicznych.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-sm text-[#d4af37] underline"
-          >
-            Spróbuj ponownie
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  const seasonKey = data.liturgical.season;
-  const gradientClass = SEASON_COLORS[seasonKey] || SEASON_COLORS.ordinary;
-  const badgeClass = SEASON_BADGE[seasonKey] || SEASON_BADGE.ordinary;
-  const dotClass = COLOR_DOT[data.liturgical.color] || "bg-gray-400";
-  const dayPl = DAY_PL[data.day_of_week] || data.day_of_week;
-
-  const dateObj = new Date(data.date + "T12:00:00");
+  const dateObj = data ? new Date(data.date + "T12:00:00") : new Date();
   const dateFormatted = dateObj.toLocaleDateString("pl-PL", {
     day: "numeric", month: "long", year: "numeric",
   });
+  const dayPl = data ? (DAY_PL[data.day_of_week] ?? data.day_of_week) : DAY_PL[["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()]];
+
+  const nextMilestone = STREAK_MILESTONES.find((m) => m > prayerStreak) ?? prayerStreak + 1;
+  const streakProgress = Math.min(100, (prayerStreak / nextMilestone) * 100);
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-[#0d0b1a] text-white">
-      <div className="max-w-2xl mx-auto px-4 py-8 pb-28 space-y-4">
 
-        {/* ── Nagłówek z pozdrowieniem ────────────────────────────────────── */}
-        <div className="text-center mb-2">
-          <div className="text-xs text-gray-500 mb-1">{dayPl}</div>
-          <h1 className="text-2xl font-bold text-[#d4af37]">{dateFormatted}</h1>
-          {isAuthenticated && firstName && (
-            <p className="text-sm text-gray-400 mt-1">
-              {greeting}, <span className="text-white font-medium">{firstName}</span> 🙏
+      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      <div className={`relative bg-gradient-to-b ${season.bg} pt-10 pb-8 px-4 overflow-hidden`}>
+        {/* glow blob */}
+        <div className={`absolute inset-0 bg-gradient-to-b from-transparent ${season.glow} to-transparent opacity-60 pointer-events-none`} />
+
+        <div className="relative max-w-2xl mx-auto text-center">
+          {/* Krzyż / ikona pory dnia */}
+          <div className="text-4xl mb-3 opacity-70">{hourIcon}</div>
+
+          {/* Data */}
+          <div className="text-xs tracking-[0.2em] text-gray-500 uppercase mb-1">{dayPl}</div>
+          <h1 className="text-2xl font-bold text-[#d4af37] mb-1">{dateFormatted}</h1>
+
+          {/* Powitanie */}
+          {isAuthenticated && firstName ? (
+            <p className="text-sm text-gray-400">
+              {greeting},{" "}
+              <span className="text-white font-medium">{firstName}</span>
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">{greeting}</p>
+          )}
+
+          {/* Odznaka liturgiczna */}
+          {loading ? (
+            <div className="mt-4 flex justify-center">
+              <Skeleton className="h-6 w-32" />
+            </div>
+          ) : data && (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dotClass}`} />
+              <span className={`text-xs px-3 py-1 rounded-full border ${season.badge}`}>
+                {data.liturgical.season_label}
+              </span>
+              {data.liturgical.feast && (
+                <span className={`text-xs ${season.accent} font-medium`}>{data.liturgical.feast}</span>
+              )}
+            </div>
+          )}
+
+          {/* Postęp dnia */}
+          {totalCount > 0 && (
+            <div className="mt-5 max-w-xs mx-auto">
+              <div className="flex justify-between text-xs text-gray-600 mb-1.5">
+                <span>Postęp dnia</span>
+                <span className={allDone ? "text-[#d4af37]" : "text-gray-500"}>
+                  {allDone ? "✓ Ukończono" : `${completedCount} / ${totalCount}`}
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                {data?.suggested_practices.map((p) => (
+                  <div
+                    key={p.href}
+                    className={`flex-1 h-1 rounded-full transition-all duration-500 ${
+                      completedTasks.has(p.href) ? "bg-[#d4af37]" : "bg-white/15"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── CONTENT ───────────────────────────────────────────────────────── */}
+      <div className="max-w-2xl mx-auto px-4 py-6 pb-28 space-y-4">
+
+        {/* Streak */}
+        {prayerStreak > 0 && (
+          <div className="bg-gradient-to-r from-orange-950/60 to-amber-950/40 border border-orange-800/30 rounded-2xl px-4 py-3 flex items-center gap-4">
+            <span className="text-2xl">🔥</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-white">
+                {prayerStreak} {prayerStreak === 1 ? "dzień" : "dni"} z rzędu
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-1 mt-1.5">
+                <div
+                  className="bg-gradient-to-r from-orange-500 to-[#d4af37] h-1 rounded-full transition-all duration-500"
+                  style={{ width: `${streakProgress}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-[#d4af37] flex-shrink-0">{prayerStreak}</div>
+          </div>
+        )}
+
+        {/* ── Patron dnia ─────────────────────────────────────────────────── */}
+        {loading ? (
+          <Skeleton className="h-36" />
+        ) : data && (
+          <div className="relative rounded-2xl border border-[#d4af37]/20 bg-gradient-to-br from-[#d4af37]/8 via-[#0d0b1a] to-[#0d0b1a] p-5 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#d4af37]/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0 leading-none mt-0.5">{data.saint.icon}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] tracking-[0.15em] text-[#d4af37]/70 uppercase mb-1">
+                  Patron dnia
+                </div>
+                <h2 className="text-lg font-bold text-white mb-1.5 leading-tight">
+                  {data.saint.name}
+                </h2>
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  {data.saint.description}
+                </p>
+                {data.saint.patronage && (
+                  <p className="text-xs text-gray-600 mt-2">
+                    Patron: <span className="text-gray-500">{data.saint.patronage}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Modlitwa poranna ─────────────────────────────────────────────── */}
+        {loading ? (
+          <Skeleton className="h-14" />
+        ) : data && (
+          <div className="rounded-2xl border border-white/8 bg-white/3 overflow-hidden">
+            <button
+              onClick={() => setPrayerExpanded(!prayerExpanded)}
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-white/3 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">🙏</span>
+                <span className="text-sm font-medium text-gray-300">Modlitwa poranna</span>
+              </div>
+              <span
+                className="text-gray-600 text-xs transition-transform duration-200"
+                style={{ transform: prayerExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+              >
+                ▼
+              </span>
+            </button>
+            {prayerExpanded && (
+              <div className="px-5 pb-5 pt-1 border-t border-white/5">
+                <p className="text-sm text-gray-300 leading-loose italic">
+                  {data.morning_prayer}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Praktyki dnia ─────────────────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-white/8" />
+            <span className="text-[10px] tracking-[0.2em] text-gray-600 uppercase">Praktyki na dziś</span>
+            <div className="h-px flex-1 bg-white/8" />
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+              <Skeleton className="h-28" />
+            </div>
+          ) : data && data.suggested_practices.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {data.suggested_practices.map((p) => {
+                const done = completedTasks.has(p.href);
+                return (
+                  <div key={p.href} className="flex flex-col gap-1.5">
+                    <Link
+                      href={p.href}
+                      className={`group flex flex-col p-4 rounded-xl border transition-all duration-200 ${
+                        done
+                          ? "bg-[#d4af37]/10 border-[#d4af37]/30"
+                          : "bg-white/4 border-white/8 hover:bg-white/8 hover:border-[#d4af37]/25"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-2xl leading-none">{p.icon}</span>
+                        {done && (
+                          <span className="w-4 h-4 bg-[#d4af37] rounded-full flex items-center justify-center">
+                            <span className="text-black text-[9px] font-black">✓</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-sm font-medium leading-tight transition-colors ${
+                        done
+                          ? "text-[#d4af37]"
+                          : "text-white group-hover:text-[#d4af37]"
+                      }`}>
+                        {p.label}
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => toggleTask(p.href)}
+                      className={`text-[11px] py-1.5 rounded-lg border transition-all ${
+                        done
+                          ? "border-[#d4af37]/20 text-[#d4af37]/50 hover:text-red-400/70 hover:border-red-400/20"
+                          : "border-white/8 text-gray-600 hover:text-[#d4af37]/80 hover:border-[#d4af37]/20"
+                      }`}
+                    >
+                      {done ? "✓ Wykonano" : "Oznacz"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : !loading && (
+            <p className="text-sm text-gray-600 text-center py-6">
+              Brak praktyk na dziś — spoczywaj w Panu.
             </p>
           )}
         </div>
 
-        {/* ── Streak modlitewny ────────────────────────────────────────────── */}
-        <StreakWidget streak={prayerStreak} />
-
-        {/* ── Postęp dnia ─────────────────────────────────────────────────── */}
-        {data.suggested_practices.length > 0 && (
-          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-            <div className="flex gap-1.5">
-              {data.suggested_practices.map((p) => (
-                <div
-                  key={p.href}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    completedTasks.has(p.href) ? "bg-[#d4af37]" : "bg-white/20"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-xs text-gray-400">
-              {allDone ? (
-                <span className="text-[#d4af37]">✓ Wszystkie praktyki dnia ukończone!</span>
-              ) : (
-                `${completedCount}/${data.suggested_practices.length} praktyk ukończono`
-              )}
-            </span>
-          </div>
-        )}
-
-        {/* ── Karta liturgiczna ────────────────────────────────────────────── */}
-        <div className={`rounded-2xl border bg-gradient-to-b ${gradientClass} p-5`}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${dotClass}`} />
-            <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeClass}`}>
-              {data.liturgical.season_label}
-            </span>
-            <span className="text-xs text-gray-500 capitalize">{data.liturgical.rank}</span>
-          </div>
-          {data.liturgical.feast ? (
-            <>
-              <h2 className="text-lg font-bold text-white mb-1">{data.liturgical.feast}</h2>
-              <p className="text-xs text-gray-400">Uroczystość / Święto liturgiczne</p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-bold text-white">Dzień powszedni</h2>
-              <p className="text-xs text-gray-400 mt-1">Brak wspomnienia liturgicznego</p>
-            </>
-          )}
-        </div>
-
-        {/* ── Patron dnia ─────────────────────────────────────────────────── */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <div className="flex items-start gap-3">
-            <div className="text-3xl flex-shrink-0">{data.saint.icon}</div>
-            <div className="min-w-0">
-              <div className="text-xs text-[#d4af37] mb-1">Patron dnia</div>
-              <h3 className="font-semibold text-white mb-2">{data.saint.name}</h3>
-              <p className="text-sm text-gray-300 leading-relaxed">{data.saint.description}</p>
-              {data.saint.patronage && (
-                <p className="text-xs text-gray-500 mt-2">
-                  <span className="text-gray-600">Patron: </span>
-                  {data.saint.patronage}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Modlitwa poranna ─────────────────────────────────────────────── */}
-        <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl overflow-hidden">
-          <button
-            onClick={() => setPrayerExpanded(!prayerExpanded)}
-            className="w-full px-5 py-4 text-left flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🙏</span>
-              <span className="text-sm font-medium text-[#d4af37]">Modlitwa poranna</span>
-            </div>
-            <span className="text-gray-500 text-xs transition-transform duration-200" style={{
-              transform: prayerExpanded ? "rotate(180deg)" : "rotate(0deg)"
-            }}>▼</span>
-          </button>
-          {prayerExpanded && (
-            <div className="px-5 pb-5 border-t border-[#d4af37]/10">
-              <p className="text-sm text-gray-200 leading-relaxed pt-3 italic">
-                {data.morning_prayer}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* ── Praktyki dnia ────────────────────────────────────────────────── */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Praktyki na dziś
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {data.suggested_practices.map((p) => {
-              const done = completedTasks.has(p.href);
-              return (
-                <div key={p.href} className="relative group">
-                  <Link
-                    href={p.href}
-                    className={`flex flex-col p-4 rounded-xl border transition-all ${
-                      done
-                        ? "bg-[#d4af37]/10 border-[#d4af37]/40"
-                        : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-[#d4af37]/30"
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">{p.icon}</div>
-                    <div className={`text-sm font-medium transition-colors ${
-                      done ? "text-[#d4af37]" : "text-white group-hover:text-[#d4af37]"
-                    }`}>
-                      {p.label}
-                    </div>
-                    {done && (
-                      <div className="absolute top-2 right-2 w-5 h-5 bg-[#d4af37] rounded-full flex items-center justify-center">
-                        <span className="text-black text-xs font-bold">✓</span>
-                      </div>
-                    )}
-                  </Link>
-                  {/* Przycisk oznacz jako wykonane */}
-                  <button
-                    onClick={() => toggleTask(p.href)}
-                    className={`mt-1.5 w-full text-xs py-1 rounded-lg border transition-colors ${
-                      done
-                        ? "border-[#d4af37]/30 text-[#d4af37]/60 hover:text-red-400 hover:border-red-400/30"
-                        : "border-white/10 text-gray-600 hover:text-[#d4af37] hover:border-[#d4af37]/30"
-                    }`}
-                  >
-                    {done ? "✓ Wykonano" : "Oznacz jako wykonane"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Przypomnienie poranne ─────────────────────────────────────────── */}
+        {/* ── Powiadomienie ─────────────────────────────────────────────────── */}
         {!notifSet ? (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div className="rounded-2xl border border-white/8 bg-white/3 p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">🔔</span>
-              <span className="text-sm font-medium text-white">Przypomnienie poranne</span>
+              <span>🔔</span>
+              <span className="text-sm font-medium text-white">Jutrznia na każdy dzień</span>
             </div>
-            <p className="text-xs text-gray-400 mb-3">
-              Imię świętego patrona i liturgia dnia — codziennie o wybranej godzinie.
+            <p className="text-xs text-gray-500 mb-3">
+              Patron dnia i liturgia — codziennie o wybranej godzinie.
             </p>
             <div className="flex gap-2">
               <input
                 type="time"
                 value={notifTime}
                 onChange={(e) => setNotifTime(e.target.value)}
-                className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                className="bg-white/8 border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#d4af37]"
               />
               <button
                 onClick={setupDailyNotification}
                 disabled={notifLoading}
-                className="flex-1 bg-[#d4af37]/20 hover:bg-[#d4af37]/30 border border-[#d4af37]/40 text-[#d4af37] text-sm font-medium rounded-lg py-2 transition-colors disabled:opacity-50"
+                className="flex-1 bg-[#d4af37]/15 hover:bg-[#d4af37]/25 border border-[#d4af37]/30 text-[#d4af37] text-sm font-medium rounded-lg py-2 transition-colors disabled:opacity-50"
               >
                 {notifLoading ? "…" : "Ustaw"}
               </button>
             </div>
           </div>
         ) : (
-          <div className="bg-green-900/20 border border-green-700/30 rounded-2xl p-4 flex items-center justify-between">
-            <span className="text-green-300 text-sm">✓ Przypomnienie ustawione na {notifTime}</span>
+          <div className="bg-emerald-950/40 border border-emerald-800/30 rounded-2xl p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-green-400 text-sm">✓</span>
+              <span className="text-green-300 text-sm">Przypomnienie: {notifSet ? notifTime : ""}</span>
+            </div>
             <button
-              onClick={() => {
-                localStorage.removeItem("sancta_notif_set");
-                setNotifSet(false);
-              }}
-              className="text-xs text-gray-500 hover:text-white"
+              onClick={() => { localStorage.removeItem("sancta_notif_set"); setNotifSet(false); }}
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
             >
               Zmień
             </button>
@@ -473,15 +464,15 @@ export default function DzisiajPage() {
 
         {/* ── Szybkie linki ─────────────────────────────────────────────────── */}
         {isAuthenticated && (
-          <div className="pt-2 border-t border-white/5 flex justify-center gap-6">
+          <div className="pt-3 border-t border-white/5 flex justify-center gap-8">
             <Link href="/dziennik" className="text-xs text-gray-600 hover:text-[#d4af37] transition-colors">
               Dziennik
             </Link>
-            <Link href="/konto" className="text-xs text-gray-600 hover:text-[#d4af37] transition-colors">
-              Moje konto
-            </Link>
             <Link href="/dashboard" className="text-xs text-gray-600 hover:text-[#d4af37] transition-colors">
-              Postęp duchowy
+              Mój postęp
+            </Link>
+            <Link href="/konto" className="text-xs text-gray-600 hover:text-[#d4af37] transition-colors">
+              Konto
             </Link>
           </div>
         )}
