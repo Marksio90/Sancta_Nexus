@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 
 // ── Typy ─────────────────────────────────────────────────────────────────────
 
@@ -275,15 +276,24 @@ export default function RachunekSumieniaPage() {
           {/* Pole refleksji */}
           <div>
             <label className="text-xs text-gray-400 mb-2 block">Twoja refleksja</label>
-            <textarea
-              value={reflection}
-              onChange={(e) => setReflection(e.target.value)}
-              maxLength={2000}
-              rows={6}
-              autoFocus
-              placeholder="Pisz swobodnie — nikt tego nie ocenia. To rozmowa z Bogiem."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] resize-none leading-relaxed"
-            />
+            <div className="relative">
+              <textarea
+                value={reflection}
+                onChange={(e) => setReflection(e.target.value)}
+                maxLength={2000}
+                rows={6}
+                autoFocus
+                placeholder="Pisz swobodnie — nikt tego nie ocenia. To rozmowa z Bogiem."
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pb-10 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#d4af37] resize-none leading-relaxed"
+              />
+              <div className="absolute bottom-2.5 left-3 flex items-center gap-2">
+                <VoiceRecorder
+                  onTranscript={(text) => setReflection((prev) => prev ? `${prev} ${text}` : text)}
+                  placeholder="Mów swoją refleksję…"
+                />
+                <span className="text-[10px] text-gray-600">lub mów głosem</span>
+              </div>
+            </div>
             <div className="text-right text-xs text-gray-600 mt-1">{reflection.length}/2000</div>
           </div>
 
