@@ -122,17 +122,18 @@ export default function DzisiajPage() {
   const [data, setData] = useState<DailyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [prayerExpanded, setPrayerExpanded] = useState(false);
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
-  const [notifTime, setNotifTime] = useState("07:00");
-  const [notifSet, setNotifSet] = useState(false);
+  const [completedTasks, setCompletedTasks] = useState<Set<string>>(() => loadCompletedToday());
+  const [notifTime, setNotifTime] = useState(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("sancta_notif_set") ?? "07:00") : "07:00"
+  );
+  const [notifSet, setNotifSet] = useState(() =>
+    typeof window !== "undefined" ? !!localStorage.getItem("sancta_notif_set") : false
+  );
   const [notifLoading, setNotifLoading] = useState(false);
 
   useEffect(() => {
     loadFromStorage();
     loadProgress();
-    setCompletedTasks(loadCompletedToday());
-    const notifDone = localStorage.getItem("sancta_notif_set");
-    if (notifDone) { setNotifSet(true); setNotifTime(notifDone); }
 
     api.get<DailyData>("/api/v1/breviary/daily-engagement")
       .then((d) => { setData(d); setLoading(false); })

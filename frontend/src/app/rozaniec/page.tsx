@@ -238,7 +238,7 @@ export default function RozaniecPage() {
           </div>
 
           <p className="text-[10px] text-gray-700 text-center pt-3 leading-relaxed">
-            „Różaniec jest modlitwą i rozważaniem" — Błogosławiony Jan Paweł II
+            &bdquo;Różaniec jest modlitwą i rozważaniem&rdquo; &mdash; Błogosławiony Jan Paweł II
           </p>
         </div>
       </main>
