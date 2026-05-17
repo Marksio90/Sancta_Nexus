@@ -220,10 +220,10 @@ export function VoiceRecorder({
         aria-label={isRecording ? "Zatrzymaj nagrywanie modlitwy" : "Nagraj modlitwę głosem"}
         className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all ${
           isRecording
-            ? "animate-pulse border-[--color-sacred-red]/60 bg-[--color-sacred-red]/15 text-[--color-sacred-red-light]"
+            ? "animate-pulse border-[#ef4444]/60 bg-[#ef4444]/15 text-[#fca5a5]"
             : isError
-            ? "border-[--color-sacred-red]/30 bg-transparent text-[--color-sacred-red-light]/50"
-            : "border-[--color-gold]/30 bg-[--color-sacred-surface] text-[--color-gold]/60 hover:border-[--color-gold]/60 hover:text-[--color-gold]"
+            ? "border-[#ef4444]/30 bg-transparent text-[#fca5a5]/50"
+            : "border-[#d4af37]/30 bg-[#0d0b1a] text-[#d4af37]/60 hover:border-[#d4af37]/60 hover:text-[#d4af37]"
         } disabled:cursor-wait disabled:opacity-40`}
       >
         {isProcessing ? (
@@ -237,13 +237,13 @@ export function VoiceRecorder({
 
       {/* Live interim transcript */}
       {interim && (
-        <span className="text-xs italic text-[--color-sacred-text-muted]/60 animate-fade-in">
+        <span className="text-xs italic text-gray-500/60 animate-fade-in">
           {interim}
         </span>
       )}
 
       {isError && (
-        <span className="text-xs text-[--color-sacred-red-light]/60">
+        <span className="text-xs text-[#fca5a5]/60">
           Nie udało się rozpoznać mowy
         </span>
       )}

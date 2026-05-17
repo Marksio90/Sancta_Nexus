@@ -26,6 +26,7 @@ import {
   UpdateEntryData,
 } from "@/stores/journal";
 import { useInsightsStore, PATTERN_LABELS } from "@/stores/insights";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 const MOODS = [
@@ -116,13 +117,22 @@ function EntryForm({ initial, onSave, onCancel, isSaving }: EntryFormProps) {
         <label className="mb-1 block text-xs font-medium text-gray-500">
           Refleksja <span className="text-[#d4af37]">*</span>
         </label>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Napisz swoją refleksję, modlitwę lub owoc Lectio Divina…"
-          rows={6}
-          className="w-full resize-y rounded-lg border border-white/10 bg-[#0d0b1a] px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:border-[#d4af37]/50 focus:outline-none"
-        />
+        <div className="relative">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Napisz swoją refleksję, modlitwę lub owoc Lectio Divina…"
+            rows={6}
+            className="w-full resize-y rounded-lg border border-white/10 bg-[#0d0b1a] px-4 py-3 pb-10 text-sm text-gray-200 placeholder-gray-600 focus:border-[#d4af37]/50 focus:outline-none"
+          />
+          <div className="absolute bottom-2.5 left-3 flex items-center gap-2">
+            <VoiceRecorder
+              onTranscript={(text) => setContent((prev) => prev ? `${prev} ${text}` : text)}
+              placeholder="Mów swoją refleksję…"
+            />
+            <span className="text-[10px] text-gray-600">lub mów głosem</span>
+          </div>
+        </div>
         {formError && (
           <p className="mt-1 text-xs text-red-400">{formError}</p>
         )}

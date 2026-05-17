@@ -228,6 +228,8 @@ _ROUTERS: list[tuple[str, str, list[str]]] = [
     ("app.api.routes.doctrinal_review", "/api/v1/doctrinal-review", ["doctrinal-review"]),
     # Diocese licensing — B2B SaaS for dioceses
     ("app.api.routes.diocese", "/api/v1/diocese", ["diocese"]),
+    # AI dynamic content — unique generated reflections, no static pools
+    ("app.api.routes.ai_reflection", "/api/v1/ai/reflection", ["ai-reflection"]),
 ]
 
 for _module_path, _prefix, _tags in _ROUTERS:

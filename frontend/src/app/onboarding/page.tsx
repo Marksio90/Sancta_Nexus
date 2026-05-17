@@ -38,23 +38,7 @@ const PRACTICES = [
 
 const TOTAL_STEPS = 5;
 
-const CLOSING_SCRIPTURES = [
-  { text: "Będziesz miłował Pana Boga swego z całego serca swego, z całej duszy swojej i ze wszystkich sił swoich.", ref: "Pwt 6,5" },
-  { text: "Pan jest moim pasterzem, nie brak mi niczego.", ref: "Ps 23,1" },
-  { text: "Szukajcie najpierw królestwa Bożego i jego sprawiedliwości, a wszystko inne będzie wam dodane.", ref: "Mt 6,33" },
-  { text: "Wszystko mogę w Tym, który mnie umacnia.", ref: "Flp 4,13" },
-  { text: "Wiem, komu zawierzyłem.", ref: "2 Tm 1,12" },
-  { text: "Zaufaj Panu z całego serca swego, na własnym rozumie się nie opieraj.", ref: "Prz 3,5" },
-  { text: "Albowiem dla mnie żyć — to Chrystus, a umrzeć — to zysk.", ref: "Flp 1,21" },
-  { text: "Nie lękaj się, bo jestem z tobą.", ref: "Iz 41,10" },
-  { text: "Twoje słowo jest lampą dla moich kroków i światłem na mojej ścieżce.", ref: "Ps 119,105" },
-  { text: "Proście, a będzie wam dane; szukajcie, a znajdziecie; kołaczcie, a otworzone będzie wam.", ref: "Mt 7,7" },
-];
-
-function getDailyScripture() {
-  const dayIndex = Math.floor(Date.now() / 86_400_000);
-  return CLOSING_SCRIPTURES[dayIndex % CLOSING_SCRIPTURES.length];
-}
+interface AiReflection { verse: string; ref: string; reflection: string }
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -64,6 +48,8 @@ export default function OnboardingPage() {
   const [primaryPractice, setPrimaryPractice] = useState("/dzisiaj");
   const [reminderTime, setReminderTime] = useState("07:00");
   const [leaving, setLeaving] = useState(false);
+  const [closingReflection, setClosingReflection] = useState<AiReflection | null>(null);
+  const [reflectionLoading, setReflectionLoading] = useState(false);
 
   useEffect(() => {
     loadFromStorage();
@@ -109,11 +95,25 @@ export default function OnboardingPage() {
     setTimeout(() => router.push(practice), 400);
   };
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  const next = () => setStep((s) => {
+    const ns = Math.min(s + 1, TOTAL_STEPS);
+    // Pre-fetch AI reflection as soon as step 5 is approached
+    if (ns === TOTAL_STEPS && !closingReflection && !reflectionLoading) {
+      setReflectionLoading(true);
+      api.get<AiReflection>("/api/v1/ai/reflection/daily")
+        .then(setClosingReflection)
+        .catch(() => setClosingReflection({
+          verse: "Pan jest blisko ludzi skruszonych w sercu.",
+          ref: "Ps 34,19",
+          reflection: "",
+        }))
+        .finally(() => setReflectionLoading(false));
+    }
+    return ns;
+  });
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
   const progress = (step / TOTAL_STEPS) * 100;
-  const closingScripture = getDailyScripture();
 
   return (
     <main className={`min-h-screen bg-[#0d0b1a] text-white flex flex-col transition-opacity duration-400 ${leaving ? "opacity-0" : "opacity-100"}`}>
@@ -288,9 +288,22 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl p-4 mb-8 text-sm text-gray-400 italic text-center leading-relaxed">
-              {`„${closingScripture.text}”`}
-              <div className="text-xs text-gray-600 mt-1 not-italic">{closingScripture.ref}</div>
+            <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-2xl p-4 mb-8 text-sm text-gray-400 italic text-center leading-relaxed min-h-[72px] flex flex-col justify-center">
+              {reflectionLoading ? (
+                <div className="flex justify-center py-1">
+                  <div className="w-5 h-5 border-2 border-[#d4af37]/20 border-t-[#d4af37]/60 rounded-full animate-spin" />
+                </div>
+              ) : closingReflection ? (
+                <>
+                  {`„${closingReflection.verse}”`}
+                  <div className="text-xs text-gray-600 mt-1 not-italic">{closingReflection.ref}</div>
+                  {closingReflection.reflection && (
+                    <div className="text-xs text-gray-500 mt-2 not-italic leading-relaxed">
+                      {closingReflection.reflection}
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
 
             <div className="space-y-3">
