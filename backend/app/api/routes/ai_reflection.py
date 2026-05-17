@@ -10,7 +10,7 @@ import datetime
 import json
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.core.llm import get_llm_fast
@@ -40,7 +40,7 @@ class DailyReflectionResponse(BaseModel):
 
 @router.get("/daily", response_model=DailyReflectionResponse)
 async def get_daily_reflection(
-    _current_user: User = Depends(require_authenticated),
+    _current_user: User = require_authenticated,
 ) -> DailyReflectionResponse:
     """Generate a unique AI-crafted scripture verse + meditation for today.
 
