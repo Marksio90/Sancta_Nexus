@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { useReflectionStore } from "@/stores/reflection";
+import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 
 /* ── Disclaimer text ─────────────────────────────────────────────────────── */
 const DISCLAIMER =
@@ -307,23 +308,32 @@ export default function AsystentRefleksjiPage() {
             className="border-t border-[--color-sacred-border] p-4"
           >
             <div className="flex gap-3">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  sessionReady
-                    ? "Podziel się refleksją… (Enter = wyślij)"
-                    : "Wybierz tradycję powyżej, aby rozpocząć…"
-                }
-                rows={2}
-                className="w-full resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[--color-gold]/50 focus:outline-none"
-                disabled={isLoading || (!sessionReady && !showTraditionSelector)}
-              />
+              <div className="relative flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    sessionReady
+                      ? "Podziel się refleksją… (Enter = wyślij)"
+                      : "Wybierz tradycję powyżej, aby rozpocząć…"
+                  }
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-[--color-sacred-border] bg-[--color-sacred-bg] px-4 py-3 pb-9 text-sm text-[--color-sacred-text] placeholder-[--color-sacred-text-muted]/40 transition-colors focus:border-[#d4af37]/50 focus:outline-none"
+                  disabled={isLoading || (!sessionReady && !showTraditionSelector)}
+                />
+                <div className="absolute bottom-2 left-3">
+                  <VoiceRecorder
+                    onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
+                    placeholder="Mów swoją refleksję…"
+                    disabled={isLoading || (!sessionReady && !showTraditionSelector)}
+                  />
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={!input.trim() || isLoading}
-                className="self-end flex items-center gap-2 rounded-lg border border-[--color-gold]/40 bg-[--color-gold]/10 px-5 py-3 text-[--color-gold] transition-all hover:bg-[--color-gold]/20 disabled:cursor-not-allowed disabled:opacity-30"
+                className="self-end flex items-center gap-2 rounded-lg border border-[#d4af37]/40 bg-[#d4af37]/10 px-5 py-3 text-[#d4af37] transition-all hover:bg-[#d4af37]/20 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <Send className="h-4 w-4" />
                 <span className="hidden sm:inline">Wyślij</span>

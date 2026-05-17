@@ -8,25 +8,26 @@ const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY ?? "";
 const YEARLY_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY ?? "";
 
 const FREE_FEATURES = [
-  { text: "Różaniec — 20 tajemnic (modlitwa bez AI)", icon: "📿" },
-  { text: "Liturgia Godzin (Brewiarz)",               icon: "📖" },
-  { text: "Dziennik duchowy — 3 wpisy / miesiąc",     icon: "📓" },
-  { text: "Intencje modlitewne",                       icon: "🕯" },
-  { text: "Przeglądanie sesji wspólnotowych",          icon: "👥" },
+  { text: "Różaniec — 20 tajemnic (bez AI)", icon: "📿" },
+  { text: "Liturgia Godzin — Brewiarz", icon: "📖" },
+  { text: "Dziennik duchowy — 3 wpisy / miesiąc", icon: "📓" },
+  { text: "Intencje modlitewne — bez limitu", icon: "🕯" },
+  { text: "Przeglądanie sesji wspólnotowych", icon: "👥" },
+  { text: "Dostęp do Nowenn (bez śledzenia)", icon: "✦" },
 ];
 
 const PREMIUM_FEATURES = [
-  { text: "Medytacje AI do każdej tajemnicy różańca",    icon: "✦" },
-  { text: "Różaniec wspólnotowy na żywo",                icon: "📿" },
-  { text: "Nieograniczony dziennik duchowy",             icon: "📓" },
-  { text: "Ignacjański Rachunek Sumienia (Examen)",      icon: "🔥" },
-  { text: "Lectio Divina z asystentem AI",               icon: "📖" },
-  { text: "Asystent refleksji duchowej",                 icon: "🙏" },
-  { text: "Historia i wgląd w postęp duchowy",           icon: "📊" },
-  { text: "Powiadomienia (Jutrznia, Anioł Pański…)",     icon: "🔔" },
+  { text: "Lectio Divina — pełny pipeline AI", icon: "📖" },
+  { text: "Medytacje AI do każdej tajemnicy różańca", icon: "📿" },
+  { text: "Różaniec wspólnotowy na żywo", icon: "👥" },
+  { text: "Nieograniczony dziennik duchowy", icon: "📓" },
+  { text: "Ignacjański Rachunek Sumienia (Examen)", icon: "🔥" },
+  { text: "Asystent refleksji duchowej (AI chat)", icon: "🙏" },
+  { text: "Historia i wgląd w postęp duchowy", icon: "📊" },
+  { text: "Śledzenie postępu Nowenn — 9 dni", icon: "✦" },
+  { text: "Powiadomienia push (Jutrznia, Anioł Pański)", icon: "🔔" },
+  { text: "Głosowe wprowadzanie modlitw (Whisper AI)", icon: "🎙" },
 ];
-
-const PAYMENT_CONFIGURED = Boolean(MONTHLY_PRICE_ID && YEARLY_PRICE_ID);
 
 function CheckoutBanners() {
   const searchParams = useSearchParams();
@@ -60,7 +61,6 @@ export default function CennikPage() {
   }, [fetchStatus]);
 
   const handleSubscribe = (priceId: string) => {
-    if (!priceId) return;
     startCheckout(priceId);
   };
 
@@ -71,7 +71,7 @@ export default function CennikPage() {
       {/* Hero */}
       <div className="relative bg-gradient-to-b from-[#1a1200]/80 to-[#0d0b1a] pt-10 pb-8 px-4 text-center border-b border-[#d4af37]/10">
         <div className="text-3xl text-[#d4af37]/60 mb-3">✝</div>
-        <h1 className="text-2xl font-bold text-white mb-1">Formacja duchowa bez barier</h1>
+        <h1 className="text-2xl font-bold text-white mb-1">Wybierz swoją drogę formacji</h1>
         <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
           Darmowy plan pozostaje bezpłatny na zawsze.
           Premium odblokuje pełne towarzyszenie AI.
@@ -123,7 +123,7 @@ export default function CennikPage() {
 
         {/* Karty planów */}
         <div className="grid md:grid-cols-2 gap-4">
-          {/* FREE */}
+          {/* FREE — Pielgrzym */}
           <div className="rounded-2xl border border-white/8 bg-white/3 p-6 flex flex-col">
             <div className="mb-5">
               <div className="text-[10px] text-gray-600 uppercase tracking-[0.2em] mb-2">Pielgrzym</div>
@@ -149,7 +149,7 @@ export default function CennikPage() {
             )}
           </div>
 
-          {/* PREMIUM */}
+          {/* PREMIUM — Uczeń / Oblat */}
           <div className="rounded-2xl border border-[#d4af37]/40 bg-gradient-to-b from-[#d4af37]/8 to-[#d4af37]/3 p-6 flex flex-col relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute top-4 right-4">
@@ -194,7 +194,7 @@ export default function CennikPage() {
                     Zarządzaj subskrypcją →
                   </button>
                 </div>
-              ) : PAYMENT_CONFIGURED ? (
+              ) : (
                 <button
                   onClick={() =>
                     handleSubscribe(
@@ -206,22 +206,34 @@ export default function CennikPage() {
                 >
                   {loading ? "Ładowanie…" : "Rozpocznij Premium →"}
                 </button>
-              ) : (
-                <div className="w-full text-center border border-white/10 rounded-xl py-3 text-sm text-gray-500">
-                  Wkrótce dostępne
-                </div>
               )}
             </div>
           </div>
         </div>
 
+        {/* Wspólnota / Parafia — coming soon */}
+        <div className="mt-6 rounded-2xl border border-[#d4af37]/25 bg-[#d4af37]/3 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#d4af37]/60 font-semibold">
+                Wspólnota / Parafia
+              </span>
+              <span className="text-[9px] font-bold bg-[#d4af37]/15 text-[#d4af37]/80 border border-[#d4af37]/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Wkrótce
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Plan grupowy dla wspólnot, parafii i grup modlitewnych — wspólna formacja, intencje grupy, admin parafii.
+            </p>
+          </div>
+          <div className="shrink-0 text-2xl text-[#d4af37]/20 select-none">👥</div>
+        </div>
+
         {/* Gwarancja i disclaimer */}
         <div className="mt-8 text-center space-y-2">
-          {PAYMENT_CONFIGURED && (
-            <p className="text-xs text-gray-700">
-              Płatność przez Stripe · Anuluj w dowolnym momencie · 14 dni na zwrot bez pytań
-            </p>
-          )}
+          <p className="text-xs text-gray-700">
+            Płatność przez Stripe · Anuluj w dowolnym momencie · 14 dni na zwrot bez pytań
+          </p>
           <p className="text-xs text-gray-700 italic">
             Sancta Nexus nie zastępuje kapłana, spowiednika ani kierownika duchowego.
           </p>
